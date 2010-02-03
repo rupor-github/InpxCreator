@@ -7,6 +7,7 @@ SET NAME=flibusta
 SET SITE=http://www.flibusta.net
 SET CDIR=%~dp0
 SET WDIR=%~dp0%NAME%
+SET TF=%TEMP%\%~n0.tmp
 
 IF NOT .%2. == .. GOTO skip
 
@@ -19,6 +20,26 @@ DEL %CDIR%\log_%NAME%_archives.log
 REM Download latest daily archives
 wget --progress=dot:mega --user-agent=Mozilla/5.0 --append-output=%CDIR%\log_%NAME%_archives.log --recursive --span-hosts --no-directories --no-parent --no-remove-listing --accept=*.zip --directory-prefix=%1\%NAME% --no-clobber -e robots=off %SITE%/daily
 
+forfiles /D +0 /P %1 /M f.??????-??????.zip /C "cmd /c echo @path" 2>NUL >%TF%
+IF %ERRORLEVEL% GTR 0 (DEL %TF% & GOTO :db_load)
+IF NOT EXIST %TF% GOTO :db_load
+
+REM Test new archives and remove broken ones
+FOR /F %%a IN (%TF%) DO call :TEST_ZIP %%a
+
+REM Remove non-FB2 files
+REM FOR /F %%a IN (%TF%) DO (IF EXIST %%a (7za.exe d %%a *.* -x!*.fb2))
+
+DEL %TF%
+
+GOTO db_load
+
+:TEST_ZIP
+7za.exe t %1 >NUL
+IF %ERRORLEVEL% GTR 0 DEL %1
+
+:db_load
+
 DEL %CDIR%\log_%NAME%_sql.log
 
 REM Download latest database
@@ -27,8 +48,8 @@ FOR %%t IN (libgenrelist libbook libavtoraliase libavtorname libavtor libgenre l
 :skip
 
 REM Create INPX file for FB2
-%CDIR%\lib2inpx.exe --db-name=%NAME% --process=fb2 --archives=%1\%NAME% %WDIR%
-IF %ERRORLEVEL% GTR 0 GOTO fin
+%CDIR%\lib2inpx.exe --db-name=%NAME% --process=fb2 --archives=%1;%1\%NAME% %WDIR%
+IF %ERRORLEVEL% GTR 0 GOTO :EOF
 
 REM Create INPX file for FB2 (complete database, online usage)
 %CDIR%\lib2inpx.exe --db-name=%NAME% --process=fb2 --no-import --clean-when-done %WDIR%
@@ -40,6 +61,5 @@ echo Need path to local archives, for example: "sync_script.cmd c:\librusec\loca
 echo If there is second parameter - daily archives and dumps would not be downloaded,
 echo for example "sync_script.cmd c:\librusec\local skip"
 
-:fin
 ENDLOCAL
 
