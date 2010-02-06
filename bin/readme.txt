@@ -31,7 +31,7 @@
 
 
 Import file (INPX) preparation tool for MyHomeLib
-Version 3.2 (MYSQL 5.1.42)
+Version 3.5 (MYSQL 5.1.42)
 
 Usage: lib2inpx.exe [options] <path to SQL dump files>
 

@@ -376,7 +376,7 @@ void get_book_rate( const mysql_connection& mysql, const string& book_id, string
 
    rate.erase();
 
-   mysql.query( string( "SELECT ROUND(AVG(Rate),2) FROM librate WHERE BookId =" ) + book_id + ";" );
+   mysql.query( string( "SELECT ROUND(AVG(Rate),0) FROM librate WHERE BookId =" ) + book_id + ";" );
 
    mysql_results res( mysql );
 
@@ -905,7 +905,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 3.4 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 3.5 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
