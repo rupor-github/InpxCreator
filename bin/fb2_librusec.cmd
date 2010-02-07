@@ -50,18 +50,13 @@ FOR %%t IN (libgenrelist libbook libavtoraliase libavtorname libavtor libgenre l
 :skip
 
 REM Create INPX file for FB2
-%CDIR%\lib2inpx.exe --db-name=%NAME% --process=fb2 --read-fb2=last --quick-fix --archives=%1;%1\%NAME% %WDIR%
-REM %CDIR%\lib2inpx.exe --db-name=%NAME% --process=fb2 --archives=%1;%1\%NAME% %WDIR%
-IF %ERRORLEVEL% GTR 0 GOTO :EOF
-
-REM Create INPX file for FB2 (complete database, online usage)
-%CDIR%\lib2inpx.exe --db-name=%NAME% --process=fb2 --no-import --quick-fix --clean-when-done %WDIR%
+%CDIR%\lib2inpx.exe --db-name=%NAME% --process=fb2 --read-fb2=last --db-format=2010-02-06 --quick-fix --archives=%1;%1\%NAME% --clean-when-done %WDIR%
 
 GOTO :EOF
 
 :usage
-echo Need path to local archives, for example: "sync_script.cmd c:\librusec\local"
+echo Need path to local archives, for example: "fb2_librusec.cmd c:\library\local"
 echo If there is second parameter - daily archives and dumps would not be downloaded,
-echo for example "sync_script.cmd c:\librusec\local skip"
+echo for example "fb2_librisec c:\library\local skip"
 
 ENDLOCAL

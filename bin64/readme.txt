@@ -29,9 +29,8 @@
 
 Для запуска наберите lib2inpx.exe в командном окне:
 
-
 Import file (INPX) preparation tool for MyHomeLib
-Version 3.5 (MYSQL 5.1.42)
+Version 3.6 (MYSQL 5.1.42)
 
 Usage: lib2inpx.exe [options] <path to SQL dump files>
 
@@ -63,6 +62,14 @@ options:
   --comment arg         File name of template (UTF-8) for INPX comment
   --update arg          Starting with "<arg>.zip" produce "daily_update.zip" 
                         (Works only for "fb2")
+  --db-format arg       Database format, change date (YYYY-MM-DD). Supported: 
+                        2010-02-06. (Default - old librusec format before 
+                        2010-02-06)
+  --quick-fix           Enforce MyHomeLib database size limits, works with 
+                        fix-config parameter. (default: MyHomeLib 1.6.2 
+                        constrains)
+  --fix-config arg      Allows to specify configuration file with MyHomeLib 
+                        database size constrains
 
 Предположим, что сегодняшние дампы Либрусека лежат в уже распакованном
 виде в директории d:\librusec\sql (программа подберет все файлы с расширением
@@ -219,6 +226,9 @@ Database processing
 Опция --db-name=flibusta везде заменит "librusec" на "flibusta", т.е. в имени
 базы данных, именах произведенных файлов и комментариях в них будет использоваться
 другое название.
+
+Опция --db-format=2010-02-06 позволит обработать базы данных с изменившимся после 
+5 февраля 2010 года форматом (творчество Librusec).
 
 Ключ --quick-fix обрежет поля, которые при импорте в MyHomeLib не поместятся в базу.
 По умолчанию будет использоваться длина из MyHomeLib 1.6.2. Используя --fix-config 
