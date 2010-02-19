@@ -8,10 +8,10 @@ function Get-ScriptDirectory
 }
 
 # -----------------------------------------------------------------------------
-# Following variables cound be changed
+# Following variables could be changed
 # -----------------------------------------------------------------------------
 
-# $proxy   = "http://address:port/"
+# $proxy   = "http://host:port/"
 $name    = "librusec"
 $site    = "http://lib.rus.ec"
 $retries = 10
@@ -25,6 +25,8 @@ $glog    = Join-Path $mydir $name"_result.log"
 # -----------------------------------------------------------------------------
 # Main body
 # -----------------------------------------------------------------------------
+
+$tmp = [System.IO.Path]::GetTempFileName()
 
 if( $glog ) { Start-Transcript $glog }
 Trap { if( $glog ) { Stop-Transcript }; break }
@@ -73,7 +75,7 @@ if( $diff_dir )
          elseif( $arc.Length -gt 22 )
          {
             Write-Output "--Testing integrity of archive $warc"
-            & $mydir/7za t $warc | out-null
+            & $mydir/7za t $warc | Tee-Object -FilePath $tmp
             if( ! $? )
             {
                Write-Output "***Archive $warc is corrupted..."
@@ -84,8 +86,8 @@ if( $diff_dir )
             {
                # remove non-fb2 content
                Write-Output "--Removing non-FB2 books in archive $warc"
-               & $mydir/7za d $warc "*.*" "-x!*.fb2" | out-null
-               if( ! $? ) { Write-Output "Archive $warc is corrupted..."; exit 1 }
+               & $mydir/7za d $warc "*.*" "-w" "-x!*.fb2" | Tee-Object -FilePath $tmp
+               if( ! $? ) { Write-Error "Archive $warc is corrupted..."; exit $LASTEXITCODE }
             }
          }
       }
@@ -116,8 +118,8 @@ $tables | foreach `
    if( !(Test-Path -Path $warc) )            { Write-Error "Unable to download $arc !"; exit 1 }
    if( $(Get-ChildItem $warc).Length -le 0 ) { Remove-Item $warc; Write-Error "Unable to download $arc !"; exit 1 }
 
-   & $mydir/7za e "-o$wdir" $warc | out-null
-   if( ! $? ) { Write-Error "Database file $arc is corrupted"; exit 1 }
+   & $mydir/7za e "-o$wdir" $warc | Tee-Object -FilePath $tmp
+   if( ! $? ) { Write-Error "Database file $arc is corrupted"; exit $LASTEXITCODE }
    Remove-Item $warc
 }
 
@@ -130,8 +132,8 @@ $log = Join-Path $mydir $name"_inpx.log"
                   "--db-format=2010-02-06" `
                   "--clean-when-done" `
                   "--archives=$archive_path`;$adir" `
-                  "$wdir" | Tee-Object -FilePath $log
+                  "$wdir" | Tee-Object -FilePath $tmp
 
-if( ! $? ) { Write-Error "Unable to build INPX!"; exit 1 }
+if( ! $? ) { Write-Error "Unable to build INPX!"; exit $LASTEXITCODE }
 if( $glog ) { Stop-Transcript }
 
