@@ -129,7 +129,7 @@ $log = Join-Path $mydir $name"_inpx.log"
                   "--process=fb2" `
                   "--read-fb2=last" `
                   "--quick-fix" `
-                  "--db-format=2010-02-06" `
+                  "--db-format=2010-03-17" `
                   "--clean-when-done" `
                   "--archives=$archive_path`;$adir" `
                   "$wdir" | Tee-Object -FilePath $tmp
@@ -137,3 +137,4 @@ $log = Join-Path $mydir $name"_inpx.log"
 if( ! $? ) { Write-Error "Unable to build INPX!"; exit $LASTEXITCODE }
 if( $glog ) { Stop-Transcript }
 
+Remove-Item $tmp | out-null

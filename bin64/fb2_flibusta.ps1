@@ -137,3 +137,4 @@ $log = Join-Path $mydir $name"_inpx.log"
 if( ! $? ) { Write-Error "Unable to build INPX!" exit $LASTEXITCODE; }
 if( $glog ) { Stop-Transcript }
 
+Remove-Item $tmp | out-null

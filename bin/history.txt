@@ -1,4 +1,6 @@
-﻿
+﻿3.7 (2010-03-17 10:30 EST)
+
+   Опять изменился формат базы Либрусека - новoe значение db-format: 2010-03-17
    .CMD scripts are replaced with PowerShell ones...
    gzip is replaced with 7za...
 

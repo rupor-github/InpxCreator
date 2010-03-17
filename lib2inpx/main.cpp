@@ -55,7 +55,8 @@ static processing_type g_process = eFB2;
 enum database_format
 {
    eDefault = 0,
-   e20100206
+   e20100206,
+   e20100317
 };
 static database_format g_format = eDefault;
 
@@ -342,15 +343,15 @@ void get_book_author( const mysql_connection& mysql, const string& book_id, stri
 
    string str;
 
-   str = (e20100206 == g_format) ? "SELECT `aid` FROM `libavtor` WHERE bid=" :
-                                   "SELECT `AvtorId` FROM `libavtor` WHERE BookId=" ;
+   str = (eDefault == g_format) ? "SELECT `AvtorId` FROM `libavtor` WHERE BookId=" :
+                                  "SELECT `aid` FROM `libavtor` WHERE bid=";
 
    mysql.query( str + book_id + ";" );
 
    mysql_results avtor_ids( mysql );
 
-   str = (e20100206 == g_format) ? "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE aid=" :
-                                   "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE AvtorId=" ;
+   str = (eDefault == g_format) ? "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE AvtorId=" :
+                                  "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE aid=" ;
 
    while( record = avtor_ids.fetch_row() )
    {
@@ -391,8 +392,8 @@ void get_book_rate( const mysql_connection& mysql, const string& book_id, string
 
    rate.erase();
 
-   string str = (e20100206 == g_format) ? "SELECT ROUND(AVG(Rate),0) FROM librate WHERE bid =" :
-                                          "SELECT ROUND(AVG(Rate),0) FROM librate WHERE BookId =" ;
+   string str = (eDefault == g_format) ? "SELECT ROUND(AVG(Rate),0) FROM librate WHERE BookId =" :
+                                         "SELECT ROUND(AVG(Rate),0) FROM librate WHERE bid =" ;
 
    mysql.query( str + book_id + ";" );
 
@@ -411,15 +412,15 @@ void get_book_genres( const mysql_connection& mysql, const string& book_id, stri
 
    genres.erase();
 
-   string str = (e20100206 == g_format) ? "SELECT gid FROM libgenre WHERE bid=" :
-                                          "SELECT GenreID FROM libgenre WHERE BookId=" ;
+   string str = (eDefault == g_format) ? "SELECT GenreID FROM libgenre WHERE BookId=" :
+                                         "SELECT gid FROM libgenre WHERE bid=" ;
 
    mysql.query( str + book_id + ";" );
 
    mysql_results genre_ids( mysql );
 
-   str = (e20100206 == g_format) ? "SELECT GenreCode FROM libgenrelist WHERE gid=" :
-                                   "SELECT GenreCode FROM libgenrelist WHERE GenreId=" ;
+   str = (eDefault == g_format) ? "SELECT GenreCode FROM libgenrelist WHERE GenreId=" :
+                                  "SELECT GenreCode FROM libgenrelist WHERE gid=" ;
 
    while( record = genre_ids.fetch_row() )
    {
@@ -449,8 +450,11 @@ void get_book_squence( const mysql_connection& mysql, const string& book_id, str
    sequence.erase();
    seq_numb.erase();
 
-   string str = (e20100206 == g_format) ? "SELECT `sid`,`SeqNumb` FROM libseq WHERE bid=" :
-                                          "SELECT `SeqId`,`SeqNumb` FROM libseq WHERE BookId=" ;
+   string str;
+
+   if     ( e20100206 == g_format ) { str = "SELECT `sid`,`SeqNumb` FROM libseq WHERE bid=";      }
+   else if( e20100317 == g_format ) { str = "SELECT `sid`,`sn` FROM libseq WHERE bid=";           }
+   else                             { str = "SELECT `SeqId`,`SeqNumb` FROM libseq WHERE BookId="; }
 
    mysql.query( str + book_id + ";" );
 
@@ -462,8 +466,8 @@ void get_book_squence( const mysql_connection& mysql, const string& book_id, str
 
       seq_numb = record[ 1 ];
 
-      str = (e20100206 == g_format) ? "SELECT SeqName FROM libseqname WHERE sid=" :
-                                      "SELECT SeqName FROM libseqname WHERE SeqId=" ;
+      str = (eDefault == g_format) ? "SELECT SeqName FROM libseqname WHERE SeqId=" :
+                                     "SELECT SeqName FROM libseqname WHERE sid=" ;
 
       mysql.query( str + seq_id + ";" );
 
@@ -720,8 +724,8 @@ void process_local_archives( const mysql_connection& mysql, const zip& zz, const
             if( (g_process == eAll) || ((g_process == eFB2)) )
             {
                name_to_bookid( uz.current(), book_id, ext );
-               stmt = (e20100206 == g_format) ? "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE bid=" + book_id + ";" :
-                                                "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE BookId=" + book_id + ";" ;
+               stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE BookId=" + book_id + ";" :
+                                               "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE bid=" + book_id + ";" ;
             }
             else
                fdummy = true;
@@ -731,8 +735,8 @@ void process_local_archives( const mysql_connection& mysql, const zip& zz, const
             if( (g_process == eAll) || ((g_process == eUSR)) )
             {
                name_to_bookid( uz.current(), book_id, ext );
-               stmt = (e20100206 == g_format) ? "SELECT B.bid, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.N, B.KeyWords FROM libbook B, libfilename F WHERE B.bid = F.BookID AND F.FileName = \"" + uz.current() + "\";" :
-                                                "SELECT B.BookId, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.N, B.KeyWords FROM libbook B, libfilename F WHERE B.BookId = F.BookID AND F.FileName = \"" + uz.current() + "\";" ;
+               stmt = (eDefault == g_format) ? "SELECT B.BookId, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.N, B.KeyWords FROM libbook B, libfilename F WHERE B.BookId = F.BookID AND F.FileName = \"" + uz.current() + "\";" :
+                                               "SELECT B.bid, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.N, B.KeyWords FROM libbook B, libfilename F WHERE B.bid = F.BookID AND F.FileName = \"" + uz.current() + "\";" ;
             }
             else
                fdummy = true;
@@ -809,8 +813,8 @@ void bookid_to_name( const mysql_connection& mysql, const string& book_id, strin
    name.erase();
    ext.erase();
 
-   string str = (e20100206 == g_format) ? "SELECT `bid`, `FileName` FROM libfilename WHERE BookId =" :
-                                          "SELECT `BookId`, `FileName` FROM libfilename WHERE BookId =" ;
+   string str = (eDefault == g_format) ? "SELECT `BookId`, `FileName` FROM libfilename WHERE BookId =" :
+                                         "SELECT `bid`, `FileName` FROM libfilename WHERE BookId =" ;
 
    mysql.query( str + book_id + ";" );
 
@@ -830,14 +834,14 @@ void process_database( const mysql_connection& mysql, const zip& zz )
    string stmt, out_inp_name( "online.inp" );
 
    if( g_process == eAll )
-      stmt = (e20100206 == g_format) ? "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook ORDER BY bid;" :
-                                       "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook ORDER BY BookId;";
+      stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook ORDER BY BookId;" :
+                                      "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook ORDER BY bid;" ;
    else if( g_process == eFB2 )
-      stmt = (e20100206 == g_format) ? "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType = 'fb2' ORDER BY bid;" :
-                                       "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType = 'fb2' ORDER BY BookId;";
+      stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType = 'fb2' ORDER BY BookId;" :
+                                      "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType = 'fb2' ORDER BY bid;";
    else if( g_process = eUSR )
-      stmt = (e20100206 == g_format) ? "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType != 'fb2' ORDER BY bid;" :
-                                       "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType != 'fb2' ORDER BY BookId;";
+      stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType != 'fb2' ORDER BY BookId;" :
+                                      "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType != 'fb2' ORDER BY bid;";
 
    long       current = 0;
    long       records = 0;
@@ -920,7 +924,7 @@ int main( int argc, char *argv[] )
          ( "inpx",       po::value< string >(), "Full name of output file (default: <db_name>_<db_dump_date>.inpx)" )
          ( "comment",    po::value< string >(), "File name of template (UTF-8) for INPX comment" )
          ( "update",     po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")" )
-         ( "db-format",  po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06. (Default - old librusec format before 2010-02-06)" )
+         ( "db-format",  po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17. (Default - old librusec format before 2010-02-06)" )
          ( "quick-fix",                         "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)" )
          ( "fix-config", po::value< string >(), "Allows to specify configuration file with MyHomeLib database size constrains" )
          ;
@@ -944,7 +948,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 3.6 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 3.7 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1003,6 +1007,10 @@ int main( int argc, char *argv[] )
          if( 0 == _stricmp( opt.c_str(), "2010-02-06" ) )
          {
             g_format = e20100206;
+         }
+         else if( 0 == _stricmp( opt.c_str(), "2010-03-17" ) )
+         {
+            g_format = e20100317;
          }
          else
          {
@@ -1235,8 +1243,8 @@ int main( int argc, char *argv[] )
          {
             MYSQL_ROW record;
 
-            string str = (e20100206 == g_format) ? "SELECT MAX(`bid`) FROM libbook WHERE FileType = 'fb2';" :
-                                                   "SELECT MAX(`BookId`) FROM libbook WHERE FileType = 'fb2';" ;
+            string str = (eDefault == g_format) ? "SELECT MAX(`BookId`) FROM libbook WHERE FileType = 'fb2';" :
+                                                  "SELECT MAX(`bid`) FROM libbook WHERE FileType = 'fb2';" ;
 
             mysql.query( str );
 
