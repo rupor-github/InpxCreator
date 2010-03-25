@@ -26,6 +26,22 @@ $glog    = Join-Path $mydir $name"_result.log"
 # Main body
 # -----------------------------------------------------------------------------
 
+$zip = where.exe "7z.exe" 2>$null
+if( -not $zip )
+{
+   $zip = where.exe "7za.exe" 2>$null
+   if( -not $zip )
+   {
+      throw "7z archiver not found in the path: 7z.exe or 7za.exe!"
+   }
+}
+
+$wget = where.exe "wget.exe" 2>$null
+if( -not $wget )
+{
+   throw "GNU wget is not found in the path: wget.exe!"
+}
+
 $tmp = [System.IO.Path]::GetTempFileName()
 
 if( $glog ) { Start-Transcript $glog }
@@ -39,20 +55,20 @@ $log = Join-Path $mydir $name"_archives.log"
 
 $before_dir = @(dir $adir)
 
-& $mydir/wget "--progress=dot:mega" `
-              "--tries=$retries" `
-              "--user-agent=Mozilla/5.0" `
-              "--output-file=$log" `
-              "--recursive" `
-              "--span-hosts" `
-              "--no-directories" `
-              "--no-parent" `
-              "--no-remove-listing" `
-              "--accept=f.[0-9]*-[0-9]*.zip,f.fb2.[0-9]*-[0-9]*.zip" `
-              "--directory-prefix=$adir" `
-              "--no-clobber" `
-              "-e robots=off" `
-              "$site/daily" 2>$null
+& $wget "--progress=dot:mega" `
+        "--tries=$retries" `
+        "--user-agent=Mozilla/5.0" `
+        "--output-file=$log" `
+        "--recursive" `
+        "--span-hosts" `
+        "--no-directories" `
+        "--no-parent" `
+        "--no-remove-listing" `
+        "--accept=f.[0-9]*-[0-9]*.zip,f.fb2.[0-9]*-[0-9]*.zip" `
+        "--directory-prefix=$adir" `
+        "--no-clobber" `
+        "-e robots=off" `
+        "$site/daily" 2>$null
 
 $after_dir = @(dir $adir)
 
@@ -77,7 +93,7 @@ if( $diff_dir )
          elseif( $arc.Length -gt 22 )
          {
             Write-Output "--Testing integrity of archive $warc"
-            & $mydir/7za t $warc | Tee-Object -FilePath $tmp
+            & $zip "t" "$warc" | Tee-Object -FilePath $tmp
             if( ! $? )
             {
                Write-Output "***Archive $warc is corrupted..."
@@ -88,7 +104,7 @@ if( $diff_dir )
             {
                # remove non-fb2 content
                Write-Output "--Removing non-FB2 books in archive $warc"
-               & $mydir/7za d $warc "*.*" "-w" "-x!*.fb2" | Tee-Object -FilePath $tmp
+               & $zip "d" "$warc" "*.*" "-w" "-x!*.fb2" | Tee-Object -FilePath $tmp
                if( ! $? ) { Write-Error "Archive $warc is corrupted..."; exit $LASTEXITCODE }
             }
          }
@@ -109,18 +125,18 @@ $tables | foreach `
    $arc  = "lib." + $_ + ".sql.gz"
    $warc = Join-Path $wdir $arc
 
-   & $mydir/wget "--progress=dot:mega" `
-                 "--tries=$retries" `
-                 "--user-agent=Mozilla/5.0" `
-                 "--append-output=$log" `
-                 "--directory-prefix=$wdir" `
-                 "$site/sql/$arc" 2>$null
+   & $wget "--progress=dot:mega" `
+           "--tries=$retries" `
+           "--user-agent=Mozilla/5.0" `
+           "--append-output=$log" `
+           "--directory-prefix=$wdir" `
+           "$site/sql/$arc" 2>$null
 
    # Unfortunatly current wget version does not return proper error code... With 1.12 following 2 lines could be removed
    if( !(Test-Path -Path $warc) )            { Write-Error "Unable to download $arc !"; exit 1 }
    if( $(Get-ChildItem $warc).Length -le 0 ) { Remove-Item $warc; Write-Error "Unable to download $arc !"; exit 1 }
 
-   & $mydir/7za "e" "-o$wdir" "$warc" | Tee-Object -FilePath $tmp
+   & $zip "e" "-o$wdir" "$warc" | Tee-Object -FilePath $tmp
    if( ! $? ) { Write-Error "Database file $arc is corrupted"; exit $LASTEXITCODE }
    Remove-Item $warc
 }
