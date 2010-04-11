@@ -11,7 +11,7 @@ function Get-ScriptDirectory
 # Following variables could be changed
 # -----------------------------------------------------------------------------
 
-# $proxy   = "http://host:port/"
+#$proxy   = "http://host:port/"
 $name    = "flibusta"
 $site    = "http://www.flibusta.net"
 $retries = 10
@@ -34,6 +34,10 @@ if( -not $zip )
    {
       throw "7z archiver not found in the path: 7z.exe or 7za.exe!"
    }
+}
+if( $zip.Length -gt 1 )
+{
+   $zip = $zip[ 0 ]
 }
 
 $wget = where.exe "wget.exe" 2>$null
@@ -154,3 +158,5 @@ if( ! $? ) { Write-Error "Unable to build INPX!" exit $LASTEXITCODE; }
 if( $glog ) { Stop-Transcript }
 
 Remove-Item $tmp | out-null
+
+

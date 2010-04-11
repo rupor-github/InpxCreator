@@ -56,7 +56,8 @@ enum database_format
 {
    eDefault = 0,
    e20100206,
-   e20100317
+   e20100317,
+   e20100411
 };
 static database_format g_format = eDefault;
 
@@ -346,7 +347,10 @@ void get_book_author( const mysql_connection& mysql, const string& book_id, stri
    str = (eDefault == g_format) ? "SELECT `AvtorId` FROM `libavtor` WHERE BookId=" :
                                   "SELECT `aid` FROM `libavtor` WHERE bid=";
 
-   mysql.query( str + book_id + ";" );
+   str += book_id;
+   str += (e20100411 == g_format) ? " AND role=\"a\";" : ";";
+
+   mysql.query( str );
 
    mysql_results avtor_ids( mysql );
 
@@ -419,8 +423,10 @@ void get_book_genres( const mysql_connection& mysql, const string& book_id, stri
 
    mysql_results genre_ids( mysql );
 
-   str = (eDefault == g_format) ? "SELECT GenreCode FROM libgenrelist WHERE GenreId=" :
-                                  "SELECT GenreCode FROM libgenrelist WHERE gid=" ;
+   if     ( e20100206 == g_format ) { str = "SELECT GenreCode FROM libgenrelist WHERE gid=";     }
+   else if( e20100317 == g_format ) { str = "SELECT GenreCode FROM libgenrelist WHERE gid=";     }
+   else if( e20100411 == g_format ) { str = "SELECT code FROM libgenrelist WHERE gid=";          }
+   else                             { str = "SELECT GenreCode FROM libgenrelist WHERE GenreId="; }
 
    while( record = genre_ids.fetch_row() )
    {
@@ -454,6 +460,7 @@ void get_book_squence( const mysql_connection& mysql, const string& book_id, str
 
    if     ( e20100206 == g_format ) { str = "SELECT `sid`,`SeqNumb` FROM libseq WHERE bid=";      }
    else if( e20100317 == g_format ) { str = "SELECT `sid`,`sn` FROM libseq WHERE bid=";           }
+   else if( e20100411 == g_format ) { str = "SELECT `sid`,`sn` FROM libseq WHERE bid=";           }
    else                             { str = "SELECT `SeqId`,`SeqNumb` FROM libseq WHERE BookId="; }
 
    mysql.query( str + book_id + ";" );
@@ -924,7 +931,7 @@ int main( int argc, char *argv[] )
          ( "inpx",       po::value< string >(), "Full name of output file (default: <db_name>_<db_dump_date>.inpx)" )
          ( "comment",    po::value< string >(), "File name of template (UTF-8) for INPX comment" )
          ( "update",     po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")" )
-         ( "db-format",  po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17. (Default - old librusec format before 2010-02-06)" )
+         ( "db-format",  po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11. (Default - old librusec format before 2010-02-06)" )
          ( "quick-fix",                         "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)" )
          ( "fix-config", po::value< string >(), "Allows to specify configuration file with MyHomeLib database size constrains" )
          ;
@@ -948,7 +955,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 3.7 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 3.8 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1011,6 +1018,10 @@ int main( int argc, char *argv[] )
          else if( 0 == _stricmp( opt.c_str(), "2010-03-17" ) )
          {
             g_format = e20100317;
+         }
+         else if( 0 == _stricmp( opt.c_str(), "2010-04-11" ) )
+         {
+            g_format = e20100411;
          }
          else
          {

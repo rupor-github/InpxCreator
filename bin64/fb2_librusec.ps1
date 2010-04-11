@@ -11,7 +11,7 @@ function Get-ScriptDirectory
 # Following variables could be changed
 # -----------------------------------------------------------------------------
 
-# $proxy   = "http://host:port/"
+#$proxy   = "http://host:port/"
 $name    = "librusec"
 $site    = "http://lib.rus.ec"
 $retries = 10
@@ -34,6 +34,10 @@ if( -not $zip )
    {
       throw "7z archiver not found in the path: 7z.exe or 7za.exe!"
    }
+}
+if( $zip.Length -gt 1 )
+{
+   $zip = $zip[ 0 ]
 }
 
 $wget = where.exe "wget.exe" 2>$null
@@ -145,7 +149,7 @@ $log = Join-Path $mydir $name"_inpx.log"
                   "--process=fb2" `
                   "--read-fb2=last" `
                   "--quick-fix" `
-                  "--db-format=2010-03-17" `
+                  "--db-format=2010-04-11" `
                   "--clean-when-done" `
                   "--archives=$archive_path`;$adir" `
                   "$wdir" | Tee-Object -FilePath $tmp
