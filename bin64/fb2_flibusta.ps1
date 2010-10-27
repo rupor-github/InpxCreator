@@ -11,7 +11,7 @@ function Get-ScriptDirectory
 # Following variables could be changed
 # -----------------------------------------------------------------------------
 
-#$proxy   = "http://host:port/"
+# $proxy   = "http://host:port"
 $name    = "flibusta"
 $site    = "http://www.flibusta.net"
 $retries = 10
@@ -40,7 +40,7 @@ if( $zip.Length -gt 1 )
    $zip = $zip[ 0 ]
 }
 
-$wget = where.exe "wget.exe" 2>$null
+$wget = where.exe "wget-1.12.exe" 2>$null
 if( -not $wget )
 {
    throw "GNU wget is not found in the path: wget.exe!"
@@ -59,6 +59,8 @@ $log = Join-Path $mydir $name"_archives.log"
 
 $before_dir = @(dir $adir)
 
+$need_cleanup = 0
+
 & $wget "--progress=dot:mega" `
         "--tries=$retries" `
         "--user-agent=Mozilla/5.0" `
@@ -72,7 +74,9 @@ $before_dir = @(dir $adir)
         "--directory-prefix=$adir" `
         "--no-clobber" `
         "-e robots=off" `
-        "$site/daily" 2>$null
+        "$site/daily/" 2>$null
+
+if( ! $? ) { Write-Error "WGET error - $LASTEXITCODE !"; $need_cleanup = $LASTEXITCODE }
 
 $after_dir = @(dir $adir)
 
@@ -88,7 +92,7 @@ if( $diff_dir )
 
       if( ! $arc.ReparsePoint )
       {
-         if( $arc.Length -le 0 )
+         if( ($need_cleanup -gt 0) -or ($arc.Length -le 0) )
          {
             # Unfortunatly current wget version does not return proper error code... With 1.12 this clause could be removed
             Write-Output "***Archive $warc is corrupted..."
@@ -116,6 +120,8 @@ if( $diff_dir )
    }
 }
 
+if( $need_cleanup -gt 0 ) { exit $need_cleanup }
+
 Write-Output "Downloading $name databases..."
 
 if( Test-Path -Path $wdir ) { Rename-Item -Path $wdir -NewName ($wdir + (get-date -format "_MMddyyyyhhmmss")) }
@@ -136,7 +142,7 @@ $tables | foreach `
            "--directory-prefix=$wdir" `
            "$site/sql/$arc" 2>$null
 
-   # Unfortunatly current wget version does not return proper error code... With 1.12 following 2 lines could be removed
+   if( ! $? )                                { Write-Error "WGET is unable to download $arc !"; exit $LASTEXITCODE }
    if( !(Test-Path -Path $warc) )            { Write-Error "Unable to download $arc !"; exit 1 }
    if( $(Get-ChildItem $warc).Length -le 0 ) { Remove-Item $warc; Write-Error "Unable to download $arc !"; exit 1 }
 

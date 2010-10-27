@@ -11,11 +11,10 @@ function Get-ScriptDirectory
 # Following variables could be changed
 # -----------------------------------------------------------------------------
 
-#$proxy   = "http://host:port/"
+# $proxy   = "http://host:port"
 $name    = "librusec"
 $site    = "http://lib.rus.ec"
 $retries = 10
-$tables  = @("libgenrelist", "libbook", "libavtoraliase", "libavtorname", "libavtor", "libgenre", "librate", "libseq", "libseqname", "libfilename")
 
 $mydir   = Get-ScriptDirectory
 $wdir    = Join-Path $mydir $name
@@ -40,7 +39,7 @@ if( $zip.Length -gt 1 )
    $zip = $zip[ 0 ]
 }
 
-$wget = where.exe "wget.exe" 2>$null
+$wget = where.exe "wget-1.12.exe" 2>$null
 if( -not $wget )
 {
    throw "GNU wget is not found in the path: wget.exe!"
@@ -59,6 +58,8 @@ $log = Join-Path $mydir $name"_archives.log"
 
 $before_dir = @(dir $adir)
 
+$need_cleanup = 0
+
 & $wget "--progress=dot:mega" `
         "--tries=$retries" `
         "--user-agent=Mozilla/5.0" `
@@ -70,7 +71,11 @@ $before_dir = @(dir $adir)
         "--accept=*.zip" `
         "--directory-prefix=$adir" `
         "--no-clobber" `
-        "$site/all/daily" 2>$null
+        "--no-cache" `
+        "-e robots=off" `
+        "$site/all" 2>$null
+
+if( ! $? ) { Write-Error "WGET error - $LASTEXITCODE !"; $need_cleanup = $LASTEXITCODE }
 
 $after_dir = @(dir $adir)
 
@@ -86,9 +91,8 @@ if( $diff_dir )
 
       if( ! $arc.ReparsePoint )
       {
-         if( $arc.Length -le 0 )
+         if( ($need_cleanup -gt 0) -or ($arc.Length -le 0) )
          {
-            # Unfortunatly current wget version does not return proper error code... With 1.12 this clause could be removed
             Write-Output "***Archive $narc is corrupted..."
             Remove-Item $warc
          }
@@ -114,6 +118,8 @@ if( $diff_dir )
    }
 }
 
+if( $need_cleanup -gt 0 ) { exit $need_cleanup }
+
 Write-Output "Downloading $name databases..."
 
 if( Test-Path -Path $wdir ) { Rename-Item -Path $wdir -NewName ($wdir + (get-date -format "_MMddyyyyhhmmss")) }
@@ -122,24 +128,33 @@ New-Item -type directory $wdir | out-null
 $log = Join-Path $mydir $name"_sql.log"
 if( Test-Path -Path $log ) { Remove-Item $log }
 
-$tables | foreach `
+& $wget "--progress=dot:mega" `
+        "--tries=$retries" `
+        "--user-agent=Mozilla/5.0" `
+        "--output-file=$log" `
+        "--recursive" `
+        "--no-directories" `
+        "--accept=*.gz" `
+        "--no-parent" `
+        "--no-remove-listing" `
+        "--directory-prefix=$wdir" `
+        "--no-clobber" `
+        "--no-cache" `
+        "-e robots=off" `
+        "$site/sql" 2>$null
+
+if( ! $? ) { Write-Error "WGET error - $LASTEXITCODE !"; exit $LASTEXITCODE }
+
+@(dir $wdir) | foreach `
 {
-   $arc  = "lib." + $_ + ".sql.gz"
-   $warc = Join-Path $wdir $arc
+   $narc = $_
+   $warc = Join-Path $wdir $narc
 
-   & $wget "--progress=dot:mega" `
-           "--tries=$retries" `
-           "--user-agent=Mozilla/5.0" `
-           "--append-output=$log" `
-           "--directory-prefix=$wdir" `
-           "$site/sql/$arc" 2>$null
-
-   # Unfortunatly current wget version does not return proper error code... With 1.12 following 2 lines could be removed
-   if( !(Test-Path -Path $warc) )            { Write-Error "Unable to download $arc !"; exit 1 }
-   if( $(Get-ChildItem $warc).Length -le 0 ) { Remove-Item $warc; Write-Error "Unable to download $arc !"; exit 1 }
+   if( $warc.Length -le 0 ) { Remove-Item $warc; Write-Error "Unable to download $narc !"; exit 1 }
 
    & $zip "e" "-o$wdir" $warc | Tee-Object -FilePath $tmp
-   if( ! $? ) { Write-Error "Database file $arc is corrupted"; exit $LASTEXITCODE }
+   if( ! $? ) { Write-Error "Database file $narc is corrupted"; exit $LASTEXITCODE }
+
    Remove-Item $warc
 }
 

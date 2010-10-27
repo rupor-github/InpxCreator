@@ -499,14 +499,14 @@ void process_book( const mysql_connection& mysql, MYSQL_ROW record, const string
           book_deleted ( record[ 4 ] ),
           book_time    ( record[ 5 ] ),
           book_lang    ( record[ 6 ] ),
-          book_rate    ( record[ 7 ] ),
-          book_kwds    ( record[ 8 ] ),
+          book_kwds    ( record[ 7 ] ),
           book_file    ( file_name   );
 
    string book_author,
           book_genres,
           book_sequence,
-          book_sequence_num;
+          book_sequence_num,
+          book_rate;
 
    if( eFileExt == g_strict )
       book_type = ext;
@@ -731,8 +731,10 @@ void process_local_archives( const mysql_connection& mysql, const zip& zz, const
             if( (g_process == eAll) || ((g_process == eFB2)) )
             {
                name_to_bookid( uz.current(), book_id, ext );
-               stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE BookId=" + book_id + ";" :
-                                               "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE bid=" + book_id + ";" ;
+               if     ( e20100206 == g_format ) { stmt = "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE bid=" + book_id + ";";       }
+               else if( e20100317 == g_format ) { stmt = "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE bid=" + book_id + ";";       }
+               else if( e20100411 == g_format ) { stmt = "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE bid=" + book_id + ";";       }
+               else                             { stmt = "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE BookId=" + book_id + ";"; }
             }
             else
                fdummy = true;
@@ -742,8 +744,10 @@ void process_local_archives( const mysql_connection& mysql, const zip& zz, const
             if( (g_process == eAll) || ((g_process == eUSR)) )
             {
                name_to_bookid( uz.current(), book_id, ext );
-               stmt = (eDefault == g_format) ? "SELECT B.BookId, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.N, B.KeyWords FROM libbook B, libfilename F WHERE B.BookId = F.BookID AND F.FileName = \"" + uz.current() + "\";" :
-                                               "SELECT B.bid, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.N, B.KeyWords FROM libbook B, libfilename F WHERE B.bid = F.BookID AND F.FileName = \"" + uz.current() + "\";" ;
+               if     ( e20100206 == g_format ) { stmt = "SELECT B.bid, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.KeyWords FROM libbook B, libfilename F WHERE B.bid = F.BookID AND F.FileName = \"" + uz.current() + "\";";       }
+               else if( e20100317 == g_format ) { stmt = "SELECT B.bid, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.KeyWords FROM libbook B, libfilename F WHERE B.bid = F.BookID AND F.FileName = \"" + uz.current() + "\";";       }
+               else if( e20100411 == g_format ) { stmt = "SELECT B.bid, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.KeyWords FROM libbook B, libfilename F WHERE B.bid = F.BookID AND F.FileName = \"" + uz.current() + "\";";       }
+               else                             { stmt = "SELECT B.BookId, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.KeyWords FROM libbook B, libfilename F WHERE B.BookId = F.BookID AND F.FileName = \"" + uz.current() + "\";"; }
             }
             else
                fdummy = true;
@@ -931,7 +935,7 @@ int main( int argc, char *argv[] )
          ( "inpx",       po::value< string >(), "Full name of output file (default: <db_name>_<db_dump_date>.inpx)" )
          ( "comment",    po::value< string >(), "File name of template (UTF-8) for INPX comment" )
          ( "update",     po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")" )
-         ( "db-format",  po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11. (Default - old librusec format before 2010-02-06)" )
+         ( "db-format",  po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2010-10-25. (Default - old librusec format before 2010-02-06)" )
          ( "quick-fix",                         "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)" )
          ( "fix-config", po::value< string >(), "Allows to specify configuration file with MyHomeLib database size constrains" )
          ;
@@ -955,7 +959,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 3.8 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 3.9 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
