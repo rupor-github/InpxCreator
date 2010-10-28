@@ -845,14 +845,14 @@ void process_database( const mysql_connection& mysql, const zip& zz )
    string stmt, out_inp_name( "online.inp" );
 
    if( g_process == eAll )
-      stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook ORDER BY BookId;" :
-                                      "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook ORDER BY bid;" ;
+      stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook ORDER BY BookId;" :
+                                      "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook ORDER BY bid;" ;
    else if( g_process == eFB2 )
-      stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType = 'fb2' ORDER BY BookId;" :
-                                      "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType = 'fb2' ORDER BY bid;";
+      stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE FileType = 'fb2' ORDER BY BookId;" :
+                                      "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE FileType = 'fb2' ORDER BY bid;";
    else if( g_process = eUSR )
-      stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType != 'fb2' ORDER BY BookId;" :
-                                      "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`N`,`keywords` FROM libbook WHERE FileType != 'fb2' ORDER BY bid;";
+      stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE FileType != 'fb2' ORDER BY BookId;" :
+                                      "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE FileType != 'fb2' ORDER BY bid;";
 
    long       current = 0;
    long       records = 0;
@@ -959,7 +959,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 3.9 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 3.91 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
