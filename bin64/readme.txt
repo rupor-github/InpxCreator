@@ -30,7 +30,7 @@
 Для запуска наберите lib2inpx.exe в командном окне:
 
 Import file (INPX) preparation tool for MyHomeLib
-Version 3.6 (MYSQL 5.1.42)
+Version 4.0 (MYSQL 5.1.42)
 
 Usage: lib2inpx.exe [options] <path to SQL dump files>
 
@@ -65,7 +65,9 @@ options:
   --db-format arg       Database format, change date (YYYY-MM-DD). Supported: 
                         2010-02-06. (Default - old librusec format before 
                         2010-02-06)
-  --quick-fix           Enforce MyHomeLib database size limits, works with 
+  --inpx-format arg     INPX format, Supported: 1.x, 2.x, (Default - old 
+                        MyHomeLib format 1.x)
+   --quick-fix           Enforce MyHomeLib database size limits, works with 
                         fix-config parameter. (default: MyHomeLib 1.6.2 
                         constrains)
   --fix-config arg      Allows to specify configuration file with MyHomeLib 
@@ -229,6 +231,9 @@ Database processing
 
 Опции --db-format=2010-02-06 (2010-03-17) позволят обработать базы данных с изменившимся после 
 5 февраля 2010 года форматом (творчество Librusec).
+
+Опция --inpx-format=2.x приведет к тому, что в INPX файле появится collection.info, 
+содержащая ту же информацию, что и комментарий архива (новый MyHomeLib).
 
 Ключ --quick-fix обрежет поля, которые при импорте в MyHomeLib не поместятся в базу.
 По умолчанию будет использоваться длина из MyHomeLib 1.6.2. Используя --fix-config 

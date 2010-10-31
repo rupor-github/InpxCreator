@@ -61,6 +61,13 @@ enum database_format
 };
 static database_format g_format = eDefault;
 
+enum inpx_format
+{
+   e1X = 0,
+   e2X
+};
+static inpx_format g_inpx_format = e1X;
+
 static long   g_last_fb2 = 0;
 static string g_update;
 static string g_db_name  = "librusec";
@@ -926,18 +933,19 @@ int main( int argc, char *argv[] )
          ( "help",                             "Print help message"  )
          ( "ignore-dump-date",                 "Ignore date in the dump files, use current UTC date instead" )
          ( "clean-when-done",                  "Remove MYSQL database after processing" )
-         ( "process",    po::value< string >(), "What to process - \"fb2\", \"usr\", \"all\" (default: fb2)" )
-         ( "strict",     po::value< string >(), "What to put in INPX as file type - \"ext\", \"db\", \"ignore\" (default: ext). ext - use real file extension. db - use file type from database. ignore - ignore files with file extension not equal to file type" )
+         ( "process",     po::value< string >(), "What to process - \"fb2\", \"usr\", \"all\" (default: fb2)" )
+         ( "strict",      po::value< string >(), "What to put in INPX as file type - \"ext\", \"db\", \"ignore\" (default: ext). ext - use real file extension. db - use file type from database. ignore - ignore files with file extension not equal to file type" )
          ( "no-import",                         "Do not import dumps, just check dump time and use existing database" )
-         ( "db-name",    po::value< string >(), "Name of MYSQL database (default: librusec)" )
-         ( "archives",   po::value< string >(), "Path(s) to off-line archives. Multiple entries should be separated by ';'. Each path must be valid and must point to some archives, or processing would be aborted. (If not present - entire database in converted for online usage)" )
-         ( "read-fb2",   po::value< string >(), "When archived book is not present in the database - try to parse fb2 in archive to get information. \"all\" - do it for all absent books, \"last\" - only process books with ids larger than last database id (If not present - no fb2 parsing)" )
-         ( "inpx",       po::value< string >(), "Full name of output file (default: <db_name>_<db_dump_date>.inpx)" )
-         ( "comment",    po::value< string >(), "File name of template (UTF-8) for INPX comment" )
-         ( "update",     po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")" )
-         ( "db-format",  po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2010-10-25. (Default - old librusec format before 2010-02-06)" )
+         ( "db-name",     po::value< string >(), "Name of MYSQL database (default: librusec)" )
+         ( "archives",    po::value< string >(), "Path(s) to off-line archives. Multiple entries should be separated by ';'. Each path must be valid and must point to some archives, or processing would be aborted. (If not present - entire database in converted for online usage)" )
+         ( "read-fb2",    po::value< string >(), "When archived book is not present in the database - try to parse fb2 in archive to get information. \"all\" - do it for all absent books, \"last\" - only process books with ids larger than last database id (If not present - no fb2 parsing)" )
+         ( "inpx",        po::value< string >(), "Full name of output file (default: <db_name>_<db_dump_date>.inpx)" )
+         ( "comment",     po::value< string >(), "File name of template (UTF-8) for INPX comment" )
+         ( "update",      po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")" )
+         ( "db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2010-10-25. (Default - old librusec format before 2010-02-06)" )
+         ( "inpx-format", po::value< string >(), "INPX format, Supported: 1.x, 2.x, (Default - old MyHomeLib format 1.x)" )
          ( "quick-fix",                         "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)" )
-         ( "fix-config", po::value< string >(), "Allows to specify configuration file with MyHomeLib database size constrains" )
+         ( "fix-config",  po::value< string >(), "Allows to specify configuration file with MyHomeLib database size constrains" )
          ;
 
       po::options_description hidden;
@@ -959,7 +967,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 3.91 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 4.0 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1031,6 +1039,24 @@ int main( int argc, char *argv[] )
          {
             cout << endl << "Warning: unknown database format, will use default!" << endl;
             g_format = eDefault;
+         }
+      }
+
+      if( vm.count( "inpx-format" ) )
+      {
+         string opt = vm[ "inpx-format" ].as< string >();
+         if( 0 == _stricmp( opt.c_str(), "1.x" ) )
+         {
+            g_inpx_format = e1X;
+         }
+         else if( 0 == _stricmp( opt.c_str(), "2.x" ) )
+         {
+            g_inpx_format = e2X;
+         }
+         else
+         {
+            cout << endl << "Warning: unknown INPX format, will use default!" << endl;
+            g_inpx_format = e1X;
          }
       }
 
@@ -1302,6 +1328,12 @@ int main( int argc, char *argv[] )
                process_local_archives( mysql, zz, (*it) );
          }
 
+         if( e2X == g_inpx_format  )
+         {
+            zip_writer zw( zz, "collection.info" );
+            zw( comment + "\r\n" );
+            zw.close();
+         }
          {
             zip_writer zw( zz, "structure.info" );
             zw( "AUTHOR;GENRE;TITLE;SERIES;SERNO;FILE;SIZE;LIBID;DEL;EXT;DATE;LANG;LIBRATE;KEYWORDS;" );
