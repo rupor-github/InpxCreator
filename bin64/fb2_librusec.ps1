@@ -162,9 +162,10 @@ $log = Join-Path $mydir $name"_inpx.log"
 
 & $mydir/lib2inpx "--db-name=$name" `
                   "--process=fb2" `
-                  "--read-fb2=last" `
+                  "--read-fb2=all" `
                   "--quick-fix" `
                   "--db-format=2010-04-11" `
+                  "--inpx-format=2.x" `
                   "--clean-when-done" `
                   "--archives=$archive_path`;$adir" `
                   "$wdir" | Tee-Object -FilePath $tmp
