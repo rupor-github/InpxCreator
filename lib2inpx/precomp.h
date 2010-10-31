@@ -24,9 +24,9 @@
 #include <time.h>
 
 #ifdef WIN64
-#  include <mysql-5.1.42-win64\include\mysql.h>
+#  include <mysql-5.1.51-win64\include\mysql.h>
 #else
-#  include <mysql-5.1.42-win32\include\mysql.h>
+#  include <mysql-5.1.51-win32\include\mysql.h>
 #endif
 
 #include <algorithm>

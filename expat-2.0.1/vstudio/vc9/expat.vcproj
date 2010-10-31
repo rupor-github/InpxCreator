@@ -50,7 +50,7 @@
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				DebugInformationFormat="4"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -277,23 +277,23 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\xmlparse.c"
+				RelativePath="..\..\xmlparse.c"
 				>
 			</File>
 			<File
-				RelativePath=".\xmlrole.c"
+				RelativePath="..\..\xmlrole.c"
 				>
 			</File>
 			<File
-				RelativePath=".\xmltok.c"
+				RelativePath="..\..\xmltok.c"
 				>
 			</File>
 			<File
-				RelativePath=".\xmltok_impl.c"
+				RelativePath="..\..\xmltok_impl.c"
 				>
 			</File>
 			<File
-				RelativePath=".\xmltok_ns.c"
+				RelativePath="..\..\xmltok_ns.c"
 				>
 			</File>
 		</Filter>
