@@ -142,7 +142,7 @@
       <Message>Copying result</Message>
       <Command>copy $(TargetPath) ..\..\bin\$(TargetFileName)
 </Command>
-      <Outputs>..\..\bin\$(TargetFileName);%(Outputs)</Outputs>
+      <Outputs>..\..\bin\$(TargetFileName)</Outputs>
     </CustomBuildStep>
     <ClCompile>
       <Optimization>MinSpace</Optimization>
@@ -173,7 +173,7 @@
       <Message>Copying result</Message>
       <Command>copy $(TargetPath) ..\..\bin64\$(TargetFileName)
 </Command>
-      <Outputs>..\..\bin64\$(TargetFileName);%(Outputs)</Outputs>
+      <Outputs>..\..\bin64\$(TargetFileName)</Outputs>
     </CustomBuildStep>
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>

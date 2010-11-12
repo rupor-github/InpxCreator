@@ -909,7 +909,7 @@ int main( int argc, char *argv[] )
 {
    int               rc = 1;
 
-   string            spec, path, inpx, comment, comment_fname, inp_path,
+   string            spec, path, inpx, comment, comment_fname, collection_comment, inp_path,
                      inpx_name, dump_date, full_date, db_name;
 
    vector< string >  archives_path;
@@ -967,7 +967,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 4.0 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 4.1 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1302,21 +1302,26 @@ int main( int argc, char *argv[] )
             if( ! archives_path.empty() )
             {
                if( g_process == eFB2 )
-                  comment = utf8_to_ANSI( tmp_str( "%s FB2 - %s\r\n%s\r\n65536\r\nЛокальные архивы библиотеки %s (FB2) %s", g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str() ) );
+                  comment = tmp_str( "%s FB2 - %s\r\n%s\r\n65536\r\nЛокальные архивы библиотеки %s (FB2) %s", g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str() );
                else if( g_process == eUSR )
-                  comment = utf8_to_ANSI( tmp_str( "%s USR - %s\r\n%s\r\n65537\r\nЛокальные архивы библиотеки %s (не-FB2) %s", g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str() ) );
+                  comment = tmp_str( "%s USR - %s\r\n%s\r\n65537\r\nЛокальные архивы библиотеки %s (не-FB2) %s", g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str() );
                else if( g_process == eAll )
-                  comment = utf8_to_ANSI( tmp_str( "%s ALL - %s\r\n%s\r\n65537\r\nЛокальные архивы библиотеки %s (все) %s", g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str() ) );
+                  comment = tmp_str( "%s ALL - %s\r\n%s\r\n65537\r\nЛокальные архивы библиотеки %s (все) %s", g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str() );
             }
             else
             {
-               comment = utf8_to_ANSI( tmp_str( "%s FB2 online - %s\r\n%s\r\n134283264\r\nOnline коллекция %s %s", g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str() ) );
+               comment = tmp_str( "%s FB2 online - %s\r\n%s\r\n134283264\r\nOnline коллекция %s %s", g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str() );
             }
          }
          else
          {
-            comment = utf8_to_ANSI( tmp_str( comment.c_str(), inpx_name.c_str() ) );
+            comment = tmp_str( comment.c_str(), inpx_name.c_str() );
          }
+
+         collection_comment  = "\xEF\xBB\xBF";
+         collection_comment += comment;
+
+         comment = utf8_to_ANSI( comment.c_str() );
 
          zip zz( inpx, comment );
 
@@ -1331,7 +1336,7 @@ int main( int argc, char *argv[] )
          if( e2X == g_inpx_format  )
          {
             zip_writer zw( zz, "collection.info" );
-            zw( comment + "\r\n" );
+            zw( collection_comment );
             zw.close();
          }
          {
