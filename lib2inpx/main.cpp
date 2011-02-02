@@ -159,15 +159,17 @@ class mysql_connection : boost::noncopyable
       operator bool() const
          { return NULL != m_mysql; }
 
-      void query( const string& statement ) const
+      void query( const string& statement, bool throw_error = true ) const
       {
-         if( mysql_query( m_mysql, statement.c_str() ) )
+         int res = mysql_query( m_mysql, statement.c_str() );
+         if( throw_error && res )
             throw runtime_error( tmp_str( "Query error (%d) %s\n%s", mysql_errno( m_mysql ), mysql_error( m_mysql ), statement.c_str() ) );
       }
 
-      void real_query( const char* statement, long length ) const
+      void real_query( const char* statement, long length, bool throw_error = true ) const
       {
-         if( mysql_real_query( m_mysql, statement, length ) )
+         int res = mysql_real_query( m_mysql, statement, length );
+         if( throw_error && res )
             throw runtime_error( tmp_str( "Real query error (%d) %s\n", mysql_errno( m_mysql ), mysql_error( m_mysql ) ) );
       }
 
@@ -1329,8 +1331,22 @@ int main( int argc, char *argv[] )
                                                        << utf8_to_OEM( record[ 0 ] ) << "-"
                                                        << utf8_to_OEM( record[ 1 ] ) << endl;
                         if( 0 < count )
-                           mysql.query( tmp_str( "UPDATE libavtor SET aid=%s WHERE aid=%s;", first.c_str(), record1[ 0 ] ) );
+                           mysql.query( tmp_str( "UPDATE libavtor SET aid=%s WHERE aid=%s;", first.c_str(), record1[ 0 ] ), false );
                         mysql.query( tmp_str( "DELETE FROM libavtorname WHERE aid=%s;", record1[ 0 ] ) );
+                     }
+                     else
+                     {
+                        if( 0 == count )
+                        {
+                           cout << "*  De-duping author " << setw(8) << record1[ 0 ]
+                                                          << " (" << setw(4) << count << ") : "
+                                                          << utf8_to_OEM( record[ 2 ] ) << "-"
+                                                          << utf8_to_OEM( record[ 0 ] ) << "-"
+                                                          << utf8_to_OEM( record[ 1 ] ) << endl;
+
+                           mysql.query( tmp_str( "DELETE FROM libavtorname WHERE aid=%s;", record1[ 0 ] ) );
+                           first.clear();
+                        }
                      }
                   }
                }
