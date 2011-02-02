@@ -72,6 +72,8 @@ static long   g_last_fb2 = 0;
 static string g_update;
 static string g_db_name  = "librusec";
 
+static bool   g_clean_authors = false;
+
 static string sep  = "\x04";
 
 //                    AUTHOR     ;    GENRE     ;     TITLE           ; SERIES ; SERNO ; FILE ;    SIZE   ;  LIBID    ;    DEL   ;    EXT     ;       DATE        ;    LANG    ; LIBRATE  ; KEYWORDS ;
@@ -930,12 +932,12 @@ int main( int argc, char *argv[] )
 
       po::options_description options( "options" );
       options.add_options()
-         ( "help",                             "Print help message"  )
-         ( "ignore-dump-date",                 "Ignore date in the dump files, use current UTC date instead" )
-         ( "clean-when-done",                  "Remove MYSQL database after processing" )
+         ( "help",                               "Print help message"  )
+         ( "ignore-dump-date",                   "Ignore date in the dump files, use current UTC date instead" )
+         ( "clean-when-done",                    "Remove MYSQL database after processing" )
          ( "process",     po::value< string >(), "What to process - \"fb2\", \"usr\", \"all\" (default: fb2)" )
          ( "strict",      po::value< string >(), "What to put in INPX as file type - \"ext\", \"db\", \"ignore\" (default: ext). ext - use real file extension. db - use file type from database. ignore - ignore files with file extension not equal to file type" )
-         ( "no-import",                         "Do not import dumps, just check dump time and use existing database" )
+         ( "no-import",                          "Do not import dumps, just check dump time and use existing database" )
          ( "db-name",     po::value< string >(), "Name of MYSQL database (default: librusec)" )
          ( "archives",    po::value< string >(), "Path(s) to off-line archives. Multiple entries should be separated by ';'. Each path must be valid and must point to some archives, or processing would be aborted. (If not present - entire database in converted for online usage)" )
          ( "read-fb2",    po::value< string >(), "When archived book is not present in the database - try to parse fb2 in archive to get information. \"all\" - do it for all absent books, \"last\" - only process books with ids larger than last database id (If not present - no fb2 parsing)" )
@@ -943,8 +945,9 @@ int main( int argc, char *argv[] )
          ( "comment",     po::value< string >(), "File name of template (UTF-8) for INPX comment" )
          ( "update",      po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")" )
          ( "db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2010-10-25. (Default - old librusec format before 2010-02-06)" )
+         ( "clean-authors",                      "Clean duplicate authors in libavtorname table" )
          ( "inpx-format", po::value< string >(), "INPX format, Supported: 1.x, 2.x, (Default - old MyHomeLib format 1.x)" )
-         ( "quick-fix",                         "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)" )
+         ( "quick-fix",                          "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)" )
          ( "fix-config",  po::value< string >(), "Allows to specify configuration file with MyHomeLib database size constrains" )
          ;
 
@@ -967,7 +970,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 4.1 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 4.2 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1079,6 +1082,9 @@ int main( int argc, char *argv[] )
 
       if( vm.count( "no-import" ) )
          g_no_import = true;
+
+      if( vm.count( "clean-authors" ) )
+         g_clean_authors = true;
 
       if( vm.count( "dump-dir" ) )
          path = vm[ "dump-dir" ].as< string >();
@@ -1241,6 +1247,7 @@ int main( int argc, char *argv[] )
             string   buf, line;
             ifstream in( (path + *it).c_str() );
             regex    sl_comment( "^(--|#).*" );
+            bool     authors = g_clean_authors ? (0 == it->find( "libavtorname" )) : false;
 
             if( !in )
                throw runtime_error( tmp_str( "Cannot open file \"%s\"", (*it).c_str() ) );
@@ -1254,7 +1261,7 @@ int main( int argc, char *argv[] )
                   if( pos != 0 )
                      buf.erase( 0, pos );
 
-                  if( ! regex_match( buf, sl_comment ) )
+                  if( ! regex_match( buf, sl_comment ) && ! (authors && (0 == buf.find( "UNIQUE KEY `fullname` (`FirstName`,`MiddleName`,`LastName`,`NickName`)," ))) )
                   {
                      pos = buf.rfind( ';' );
                      if( pos == string::npos )
@@ -1278,6 +1285,56 @@ int main( int argc, char *argv[] )
             }
 
             cout << " - done in " << ftd.passed() << endl;
+         }
+
+         if( g_clean_authors )
+         {
+            MYSQL_ROW record;
+
+            mysql.query( "SELECT Firstname, Middlename, Lastname, Nickname FROM libavtorname GROUP BY Firstname, Middlename, Lastname, Nickname HAVING COUNT(*) > 1" );
+            mysql_results dupes( mysql );
+
+            cout << endl << "Processing duplicate authors" << endl;
+
+            while( record = dupes.fetch_row() )
+            {
+               MYSQL_ROW record1;
+               string    first;
+               bool      not_first = false;
+
+               mysql.query( tmp_str( "SELECT aid FROM libavtorname WHERE Firstname='%s' AND Middlename='%s' AND Lastname='%s' AND Nickname='%s' ORDER by aid;", record[ 0 ], record[ 1 ], record[ 2 ], record[ 3 ] ) );
+               mysql_results aids( mysql );
+
+               while( record1 = aids.fetch_row() )
+               {
+                  MYSQL_ROW record2;
+
+                  if( first.empty() )
+                     first = record1[ 0 ];
+                  else
+                     not_first = true;
+
+                  mysql.query( string( "SELECT COUNT(*) FROM libavtor WHERE aid=" ) + record1[ 0 ] + ";" );
+                  mysql_results books( mysql );
+
+                  if( (record2 = books.fetch_row()) && (0 != strlen( record2[ 0 ] )) )
+                  {
+                     long count = atol( record2[ 0 ] );
+
+                     if( not_first )
+                     {
+                        cout << "   De-duping author " << setw(8) << record1[ 0 ]
+                                                       << " (" << setw(4) << count << ") : "
+                                                       << utf8_to_OEM( record[ 2 ] ) << "-"
+                                                       << utf8_to_OEM( record[ 0 ] ) << "-"
+                                                       << utf8_to_OEM( record[ 1 ] ) << endl;
+                        if( 0 < count )
+                           mysql.query( tmp_str( "UPDATE libavtor SET aid=%s WHERE aid=%s;", first.c_str(), record1[ 0 ] ) );
+                        mysql.query( tmp_str( "DELETE FROM libavtorname WHERE aid=%s;", record1[ 0 ] ) );
+                     }
+                  }
+               }
+            }
          }
 
          if( eReadLast == g_read_fb2 )

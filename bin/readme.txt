@@ -30,7 +30,7 @@
 Для запуска наберите lib2inpx.exe в командном окне:
 
 Import file (INPX) preparation tool for MyHomeLib
-Version 4.0 (MYSQL 5.1.42)
+Version 4.2 (MYSQL 5.1.51)
 
 Usage: lib2inpx.exe [options] <path to SQL dump files>
 
@@ -57,17 +57,18 @@ options:
                         it for all absent books, "last" - only process books 
                         with ids larger than last database id (If not present -
                         no fb2 parsing)
-  --inpx arg            Full name of output file (default: <db_name>_<db_dump_d
-                        ate>.inpx)
+  --inpx arg            Full name of output file (default: 
+                        <db_name>_<db_dump_date>.inpx)
   --comment arg         File name of template (UTF-8) for INPX comment
   --update arg          Starting with "<arg>.zip" produce "daily_update.zip" 
                         (Works only for "fb2")
   --db-format arg       Database format, change date (YYYY-MM-DD). Supported: 
-                        2010-02-06. (Default - old librusec format before 
-                        2010-02-06)
+                        2010-02-06, 2010-03-17, 2010-04-11, 2010-10-25. 
+                        (Default - old librusec format before 2010-02-06)
+  --clean-authors       Clean duplicate authors in libavtorname table
   --inpx-format arg     INPX format, Supported: 1.x, 2.x, (Default - old 
                         MyHomeLib format 1.x)
-   --quick-fix           Enforce MyHomeLib database size limits, works with 
+  --quick-fix           Enforce MyHomeLib database size limits, works with 
                         fix-config parameter. (default: MyHomeLib 1.6.2 
                         constrains)
   --fix-config arg      Allows to specify configuration file with MyHomeLib 
@@ -231,6 +232,10 @@ Database processing
 
 Опции --db-format=2010-02-06 (2010-03-17) позволят обработать базы данных с изменившимся после 
 5 февраля 2010 года форматом (творчество Librusec).
+
+Опция --clean-authors позволит правильно обработать libavtorname.sql от librusec, который 
+нарушает uniqueness constrain и содержит повторяющиеся записи авторов. При этом
+все книги будут доступны.
 
 Опция --inpx-format=2.x приведет к тому, что в INPX файле появится collection.info, 
 содержащая ту же информацию, что и комментарий архива (новый MyHomeLib).

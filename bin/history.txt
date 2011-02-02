@@ -1,4 +1,8 @@
-﻿4.1 (2010-10-31 12:59 EST)
+﻿4.2 (2011-02-02 05:00 EST)
+   
+   обработка libavorname от librusec с нарушенным UNIQUE constrain (--clean-authors)
+
+4.1 (2010-10-31 12:59 EST)
 
    collection.info теперь UTF8
    Переключение на VS 2010
