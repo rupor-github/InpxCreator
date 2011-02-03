@@ -165,6 +165,7 @@ $log = Join-Path $mydir $name"_inpx.log"
                   "--read-fb2=all" `
                   "--quick-fix" `
                   "--db-format=2010-04-11" `
+                  "--clean-authors" `
                   "--inpx-format=2.x" `
                   "--clean-when-done" `
                   "--archives=$archive_path`;$adir" `

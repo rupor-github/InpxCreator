@@ -166,6 +166,7 @@ $log = Join-Path $mydir $name"_inpx.log"
                   "--quick-fix" `
                   "--db-format=2010-04-11" `
                   "--inpx-format=2.x" `
+                  "--clean-authors" `
                   "--clean-when-done" `
                   "--archives=$archive_path`;$adir" `
                   "$wdir" | Tee-Object -FilePath $tmp
