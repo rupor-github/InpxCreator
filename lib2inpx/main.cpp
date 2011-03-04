@@ -73,6 +73,7 @@ static string g_update;
 static string g_db_name  = "librusec";
 
 static bool   g_clean_authors = false;
+static bool   g_clean_aliases = false;
 
 static string sep  = "\x04";
 
@@ -948,6 +949,7 @@ int main( int argc, char *argv[] )
          ( "update",      po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")" )
          ( "db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2010-10-25. (Default - old librusec format before 2010-02-06)" )
          ( "clean-authors",                      "Clean duplicate authors in libavtorname table" )
+         ( "clean-aliases",                      "Clean libavtoraliase table" )
          ( "inpx-format", po::value< string >(), "INPX format, Supported: 1.x, 2.x, (Default - old MyHomeLib format 1.x)" )
          ( "quick-fix",                          "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)" )
          ( "fix-config",  po::value< string >(), "Allows to specify configuration file with MyHomeLib database size constrains" )
@@ -972,7 +974,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 4.2 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 4.3 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1087,6 +1089,9 @@ int main( int argc, char *argv[] )
 
       if( vm.count( "clean-authors" ) )
          g_clean_authors = true;
+
+      if( vm.count( "clean-aliases" ) )
+         g_clean_aliases = true;
 
       if( vm.count( "dump-dir" ) )
          path = vm[ "dump-dir" ].as< string >();
@@ -1249,7 +1254,8 @@ int main( int argc, char *argv[] )
             string   buf, line;
             ifstream in( (path + *it).c_str() );
             regex    sl_comment( "^(--|#).*" );
-            bool     authors = g_clean_authors ? (0 == it->find( "libavtorname" )) : false;
+            bool     authors = g_clean_authors ? (string::npos != it->find( "libavtorname" ))   : false;
+            bool     aliases = g_clean_aliases ? (string::npos != it->find( "libavtoraliase" )) : false;
 
             if( !in )
                throw runtime_error( tmp_str( "Cannot open file \"%s\"", (*it).c_str() ) );
@@ -1268,12 +1274,27 @@ int main( int argc, char *argv[] )
                      pos = buf.rfind( ';' );
                      if( pos == string::npos )
                      {
-                        line += buf;
+                        if( aliases && (0 == buf.find( "`AliaseId` int(11) NOT NULL auto_increment," )) )
+                        {
+                           line += buf;
+                           line += "`dummyId` int(11) NOT NULL default '0',";
+                        }
+                        else
+                        {
+                           line += buf;
+                        }
                         buf.erase();
                         goto C_o_n_t;
                      }
                      else
                      {
+                        if( aliases && (0 == buf.find( "INSERT INTO `libavtoraliase`" )) )
+                        {
+                           size_t len = strlen( "INSERT INTO `libavtoraliase`" );
+                           line += "INSERT INTO `libavtoraliase` (dummyId, BadId, GoodId)";
+                           buf.erase( 0, len );
+                           pos -= len;
+                        }
                         line += buf.substr( 0, pos + 1 );
                         buf.erase( 0, pos + 1 );
                      }

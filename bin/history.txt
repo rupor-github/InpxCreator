@@ -1,4 +1,8 @@
-﻿4.2 (2011-02-02 18:00 EST)
+﻿4.3 (2011-03-03 22:30 EST)
+   
+   обработка libavoraliase от flibusta (--clean-aliases)
+
+4.2 (2011-02-02 18:00 EST)
    
    обработка libavorname от librusec с нарушенным UNIQUE constrain (--clean-authors)
 

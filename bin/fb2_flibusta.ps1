@@ -157,6 +157,7 @@ $log = Join-Path $mydir $name"_inpx.log"
                   "--process=fb2" `
                   "--quick-fix" `
                   "--inpx-format=2.x" `
+                  "--clean-aliases" `
                   "--clean-when-done" `
                   "--archives=$archive_path`;$adir" `
                   "$wdir"  | Tee-Object -FilePath $tmp
