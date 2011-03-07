@@ -159,8 +159,9 @@ $log = Join-Path $mydir $name"_inpx.log"
                   "--inpx-format=2.x" `
                   "--clean-aliases" `
                   "--clean-when-done" `
-                  "--archives=$archive_path`;$adir" `
-                  "$wdir"  | Tee-Object -FilePath $tmp
+                  "--follow-links" `
+                  "--archives=$adir" `
+                  "$wdir" 2>&1 | Tee-Object -FilePath $tmp
 
 if( ! $? ) { Write-Error "Unable to build INPX!" exit $LASTEXITCODE; }
 if( $glog ) { Stop-Transcript }

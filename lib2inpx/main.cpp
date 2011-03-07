@@ -74,6 +74,7 @@ static string g_db_name  = "librusec";
 
 static bool   g_clean_authors = false;
 static bool   g_clean_aliases = false;
+static bool   g_follow_links  = false;
 
 static string sep  = "\x04";
 
@@ -670,8 +671,21 @@ void process_local_archives( const mysql_connection& mysql, const zip& zz, const
 
    do
    {
-      if( (0 == (fd.attrib & FILE_ATTRIBUTE_REPARSE_POINT)) && (fd.size > 22) )
-        files.push_back( fd.name );
+       if( g_follow_links )
+       {
+          if( 0 != (fd.attrib & FILE_ATTRIBUTE_REPARSE_POINT) )
+             files.push_back( fd.name );
+          else
+          {
+             if( fd.size > 22 )
+                files.push_back( fd.name );
+          }
+       }
+       else
+       {
+          if( (0 == (fd.attrib & FILE_ATTRIBUTE_REPARSE_POINT)) && (fd.size > 22) )
+             files.push_back( fd.name );
+       }
    }
    while( 0 == _findnext( archives, &fd ) );
 
@@ -950,6 +964,7 @@ int main( int argc, char *argv[] )
          ( "db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2010-10-25. (Default - old librusec format before 2010-02-06)" )
          ( "clean-authors",                      "Clean duplicate authors in libavtorname table" )
          ( "clean-aliases",                      "Clean libavtoraliase table" )
+         ( "follow-links",                       "Do not ignore symbolic links" )
          ( "inpx-format", po::value< string >(), "INPX format, Supported: 1.x, 2.x, (Default - old MyHomeLib format 1.x)" )
          ( "quick-fix",                          "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)" )
          ( "fix-config",  po::value< string >(), "Allows to specify configuration file with MyHomeLib database size constrains" )
@@ -974,7 +989,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 4.3 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 4.4 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1092,6 +1107,9 @@ int main( int argc, char *argv[] )
 
       if( vm.count( "clean-aliases" ) )
          g_clean_aliases = true;
+
+      if( vm.count( "follow-links" ) )
+         g_follow_links = true;
 
       if( vm.count( "dump-dir" ) )
          path = vm[ "dump-dir" ].as< string >();
