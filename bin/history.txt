@@ -1,6 +1,6 @@
 ﻿4.4 (2011-03-07 16:30 EST)
    
-   обработка libavoraliase от flibusta (--clean-aliases)
+   added --follow-links   
 
 4.3 (2011-03-03 22:30 EST)
    
