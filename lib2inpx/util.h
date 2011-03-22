@@ -24,6 +24,8 @@
 #	endif
 #endif
 
+#ifndef DO_NOT_INCLUDE_PARSER
+
 struct db_limits
 {
    size_t A_Name;    // Author
@@ -41,6 +43,11 @@ extern bool      g_fix;
 void initialize_limits( const std::string& config );
 std::string fix_data( const char* pstr, size_t max_len );
 bool remove_crlf( std::string& str );
+
+#endif // DO_NOT_INCLUDE_PARSER
+
+bool is_numeric( const std::string& str );
+const char *separate_file_name( char *buf );
 
 void normalize_path( std::string& path, bool trailing = true );
 void normalize_path( char* path );
@@ -85,6 +92,11 @@ class timer
       ~timer()
          {}
 
+      void restart()
+      {
+         m_start = boost::posix_time::second_clock::local_time();
+      }
+
       std::string passed()
       {
          return boost::posix_time::to_simple_string( boost::posix_time::time_duration( boost::posix_time::second_clock::local_time() - m_start ) );
@@ -100,7 +112,7 @@ class zip : boost::noncopyable
 
    public:
 
-      zip( const std::string& name, const std::string& comment = std::string() ) : m_comment( comment ), m_opened( false ), m_name( name ), m_zf( NULL )
+      zip( const std::string& name, const std::string& comment = std::string(), bool create = true ) : m_comment( comment ), m_opened( false ), m_name( name ), m_zf( NULL )
       {
          if( ! m_func_set )
          {
@@ -108,7 +120,7 @@ class zip : boost::noncopyable
             fill_win32_filefunc( &m_ffunc );
          }
 
-         if( NULL == (m_zf = zipOpen2( m_name.c_str(), 0, NULL, &m_ffunc )) )
+         if( NULL == (m_zf = zipOpen2( m_name.c_str(), create ? APPEND_STATUS_CREATE : APPEND_STATUS_ADDINZIP, NULL, &m_ffunc )) )
          {
             throw std::runtime_error( tmp_str( "Unable to create archive zipOpen2(\"%s\")", m_name.c_str() ) );
          }
@@ -381,6 +393,8 @@ class unzip_reader : boost::noncopyable
       const unzip& m_unz;
 };
 
+#ifndef DO_NOT_INCLUDE_PARSER
+
 #ifdef XML_LARGE_SIZE
 #define XML_FMT_INT_MOD "ll"
 #else
@@ -514,5 +528,7 @@ class fb2_parser
       XML_Parser        m_parser;
       bool              m_stop_processing;
 };
+
+#endif // DO_NOT_INCLUDE_PARSER
 
 #endif // __IMPORT_UTIL_H__

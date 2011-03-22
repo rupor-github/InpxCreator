@@ -18,12 +18,15 @@
 #include <atlstr.h>
 #include <mlang.h>
 
+#define DO_NOT_INCLUDE_XML 1
 #include <util.h>
 
 #define STARTING_SIZE 0x400
 #define ENDING_SIZE   0x10000
 
 using namespace std;
+
+#ifndef DO_NOT_INCLUDE_PARSER
 
 bool g_fix = false;
 db_limits g_limits;
@@ -84,6 +87,35 @@ bool remove_crlf( string& str )
       rc = true;
    }
    return rc;
+}
+
+#endif // DO_NOT_INCLUDE_PARSER
+
+bool is_numeric( const string& str )
+{
+   for( string::const_iterator it = str.begin(); it != str.end(); ++it )
+   {
+      if( ! isdigit( *it ) )
+         return false;
+   }
+   return true;
+}
+
+const char *separate_file_name( char *buf )
+{
+char *ptr = buf + strlen( buf );
+
+   while( ptr != buf )
+   {
+      if( (*ptr == '\\') || (*ptr == '/') )
+      {
+         *ptr = '\0';
+         ptr++;
+         break;
+      }
+      ptr--;
+   }
+   return ptr;
 }
 
 void normalize_path( string& path, bool trailing )
@@ -251,6 +283,8 @@ zlib_filefunc_def zip::m_ffunc;
 
 bool unzip::m_func_set = false;
 zlib_filefunc_def unzip::m_ffunc;
+
+#ifndef DO_NOT_INCLUDE_PARSER
 
 class multi_lang
 {
@@ -592,3 +626,4 @@ void fb2_parser::on_sequence( const std::string& str, const attributes_t& attrs 
    if( attrs.end() != it ) m_seq = (*it).second;
 }
 
+#endif // DO_NOT_INCLUDE_PARSER

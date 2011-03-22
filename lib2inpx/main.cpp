@@ -214,36 +214,9 @@ class mysql_results : boost::noncopyable
 
 };
 
-const char *separate_file_name( char *buf )
-{
-char *ptr = buf + strlen( buf );
-
-   while( ptr != buf )
-   {
-      if( (*ptr == '\\') || (*ptr == '/') )
-      {
-         *ptr = '\0';
-         ptr++;
-         break;
-      }
-      ptr--;
-   }
-   return ptr;
-}
-
 bool is_after_last( const string& book_id )
 {
    return (g_last_fb2 < atol( book_id.c_str() ));
-}
-
-bool is_numeric( const string& str )
-{
-   for( string::const_iterator it = str.begin(); it != str.end(); ++it )
-   {
-      if( ! isdigit( *it ) )
-         return false;
-   }
-   return true;
 }
 
 bool is_fictionbook( const string& file )
