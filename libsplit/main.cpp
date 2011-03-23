@@ -69,7 +69,7 @@ int main( int argc, char *argv[] )
          ( "help",                                               "Print help message"  )
          ( "from", po::value< string >(),                        "Directory with fb2 books" )
          ( "to",   po::value< string >(),                        "Directory to put resulting archives into" )
-         ( "size", po::value<long>(&rsize)->default_value(2047), "Individual archive size in MB")
+         ( "size", po::value<long>(&rsize)->default_value(2000), "Individual archive size in MB")
          ;
 
       po::variables_map vm;
@@ -151,6 +151,7 @@ int main( int argc, char *argv[] )
       string temp_name = to + "temp.zip";
 
       vector< long >::const_iterator it = files.begin();
+      string now = to_iso_extended_string( second_clock::universal_time() );
 
       while( it != files.end() )
       {
@@ -163,8 +164,8 @@ int main( int argc, char *argv[] )
          long book_end   = 0;
 
          while( (current_size > 0) && (it != files.end()) )
-         {
-            zip zz( temp_name, "library", new_zip );
+         {           
+            zip zz( temp_name, now, new_zip );
 
             new_zip = false;
 
