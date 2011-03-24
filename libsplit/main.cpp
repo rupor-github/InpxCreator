@@ -58,6 +58,8 @@ int main( int argc, char *argv[] )
    long              total_count = 0;
    timer             td;
 
+   bool              f_binary = true;
+
    try
    {
       ::GetModuleFileName( NULL, module_path, sizeof module_path );
@@ -66,11 +68,12 @@ int main( int argc, char *argv[] )
 
       po::options_description options( "options" );
       options.add_options()
-         ( "help",                                               "Print help message"  )
-         ( "from", po::value< string >(),                        "Directory with fb2 books" )
-         ( "to",   po::value< string >(),                        "Directory to put resulting archives into" )
-         ( "size", po::value<long>(&rsize)->default_value(2000), "Individual archive size in MB")
-         ;
+         ( "help",                                                 "Print help message"  )
+         ( "from",   po::value< string >(),                        "Directory with fb2 books" )
+         ( "to",     po::value< string >(),                        "Directory to put resulting archives into" )
+         ( "size",   po::value<long>(&rsize)->default_value(2000), "Individual archive size in MB")
+         ( "text",                                                 "Open books in text mode")
+          ;
 
       po::variables_map vm;
 
@@ -117,6 +120,9 @@ int main( int argc, char *argv[] )
 
           normalize_path( to );
       }
+
+      if( vm.count( "text" ) )
+        f_binary = false;
 
       cout << endl << "Processing books...";
 
@@ -172,7 +178,7 @@ int main( int argc, char *argv[] )
             for( ; it != files.end(); ++it )
             {
                tmp_str      book_name( "%d.fb2", *it );
-               ifstream     in( from + book_name );
+               ifstream     in( from + book_name, f_binary ? ios_base::in | ios_base::binary : ios_base::in );
                stringstream ss;
 
                book_end = *it;
