@@ -164,7 +164,7 @@ int main( int argc, char *argv[] )
          long book_end   = 0;
 
          while( (current_size > 0) && (it != files.end()) )
-         {           
+         {
             zip zz( temp_name, now, new_zip );
 
             new_zip = false;
@@ -216,7 +216,7 @@ int main( int argc, char *argv[] )
          total_count += count;
       }
 
-      cout << "Processing of " << total_count << " books completed in " << td.passed() << endl;
+      cout << endl << endl << "Processing of " << total_count << " books completed in " << td.passed() << endl;
 
       rc = 0;
    }
