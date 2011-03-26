@@ -30,7 +30,7 @@
 Для запуска наберите lib2inpx.exe в командном окне:
 
 Import file (INPX) preparation tool for MyHomeLib
-Version 4.3 (MYSQL 5.1.51)
+Version 4.4 (MYSQL 5.1.51)
 
 Usage: lib2inpx.exe [options] <path to SQL dump files>
 
@@ -67,6 +67,7 @@ options:
                         (Default - old librusec format before 2010-02-06)
   --clean-authors       Clean duplicate authors in libavtorname table
   --clean-aliases       Clean libavtoraliase table
+  --follow-links        Do not ignore symbolic links
   --inpx-format arg     INPX format, Supported: 1.x, 2.x, (Default - old 
                         MyHomeLib format 1.x)
   --quick-fix           Enforce MyHomeLib database size limits, works with 
@@ -260,7 +261,26 @@ Database processing
 максимально приближенном к тем, что использует MyHomeLib для "стандартных" коллекций
 Либрусека.
 
-В предлагаемые архивы в качестве примера входят 2 PowerShell скрипта: fb2_librusec.ps1
+В комплект теперь также входит программа позволяющая аккуратно нарезать библиотечные 
+ZIP архивы. Ее использование максимально просто, обычно нужно просто указать директорию
+с FB2 файлами (например содержащую все книги flibusta) и директорию для результатирующих 
+архивов.  
+
+Tool to prepare library archives
+Version 1.0
+
+Usage: libsplit.exe [options]
+
+options:
+  --help                Print help message
+  --from arg            Directory with fb2 books
+  --to arg              Directory to put resulting archives into
+  --size arg (=2000)    Individual archive size in MB
+  --text                Open books in text mode
+
+Архивы будут содержать упорядоченные по номерам книги и иметь правильные имена.
+
+В предлагаемый дистрибутив в качестве примера входят 2 PowerShell скрипта: fb2_librusec.ps1
 и fb2_flibusta.ps1, которыe принимают единственный параметр – путь к локальным архивам:
 “fb2_flibusta.ps1 d:\library\local”.  При выполнении каждый скрипт
 

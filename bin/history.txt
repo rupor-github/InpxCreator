@@ -1,4 +1,6 @@
-﻿   added libsplit utility
+﻿4.41 (2011-03-25 20:30 EST)
+
+   added libsplit utility
 
 4.4 (2011-03-07 16:30 EST)
    
