@@ -934,7 +934,7 @@ int main( int argc, char *argv[] )
          ( "inpx",        po::value< string >(), "Full name of output file (default: <db_name>_<db_dump_date>.inpx)" )
          ( "comment",     po::value< string >(), "File name of template (UTF-8) for INPX comment" )
          ( "update",      po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")" )
-         ( "db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2010-10-25. (Default - old librusec format before 2010-02-06)" )
+         ( "db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11. (Default - old librusec format before 2010-02-06)" )
          ( "clean-authors",                      "Clean duplicate authors in libavtorname table" )
          ( "clean-aliases",                      "Clean libavtoraliase table" )
          ( "follow-links",                       "Do not ignore symbolic links" )
@@ -962,7 +962,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 4.4 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 4.5 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;

@@ -452,6 +452,12 @@ void fb2_parser::on_end_element( const char* name )
          if( NULL != props.data_handler )
             ((*this).*(props.data_handler))( props.text, props.attributes );
 
+         graph_traits< graph_t >::out_edge_iterator e, e_end;
+         for( tie( e, e_end ) = out_edges( m_current, m_graph ); e != e_end; ++e )
+         {
+            props_map[ target( *e, m_graph ) ].count = 0;
+         }
+
          m_current = m_path.back();
          m_path.pop_back();
       }
