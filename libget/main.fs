@@ -12,13 +12,18 @@ let re_numbers = Regex("\s*([0-9]+)-([0-9]+).zip",RegexOptions.Compiled)
 
 let library = ref "flibusta"
 let retry   = ref 3
+let nosql   = ref false
 let dest    = ref Environment.CurrentDirectory
-let config  = ref (Path.Combine( Environment.CurrentDirectory, "libget.conf" ))
+let destsql = ref (Path.Combine(Environment.CurrentDirectory, String.Format("{0}_{1:yyyyMMdd_hhmmss}", !library, DateTime.Now)))
+let config  = ref (Path.Combine(Environment.CurrentDirectory, "libget.conf"))
 let usage   = [ "--library", CommandLine.ArgType.String(fun s -> library := s), "(flibusta) name of the library profile";
                 "--retry",   CommandLine.ArgType.Int(fun s -> retry := s),      "(3) number of re-tries";
-                "--to",      CommandLine.ArgType.String(fun s -> dest := s),    "(current directory) destination directory"; 
+                "--nosql",   CommandLine.ArgType.Set(nosql),                    "(false) do not download database";
+                "--to",      CommandLine.ArgType.String(fun s -> dest := s),    "(current directory) archives destination directory"; 
+                "--tosql",   CommandLine.ArgType.String(fun s -> destsql := s), "(current directory) database destination directory"; 
                 "--config",  CommandLine.ArgType.String(fun s -> config := s),  "(libget.conf) configuration file"; 
               ] |> List.map (fun (sh, ty, desc) -> CommandLine.ArgInfo(sh, ty, desc))
+let usageText = "\nTool to download library updates\nVersion 1.1\n\nUsage: libget.exe [options]\n"
 
 let rec fetchStr(client: WebClient, url: Uri, attempt) = 
     try
@@ -32,7 +37,7 @@ let rec fetchFile (client: WebClient, url: Uri, file: string, attempt, temp:Opti
               | None -> Path.GetTempFileName()
               | Some t -> t
     try
-       printfn "Downloading archive \"%s\" (#%d)" url.AbsoluteUri attempt
+       printfn "Downloading file \"%s\" (#%d)" url.AbsoluteUri attempt
        client.DownloadFile (url, tmp)
        File.Move (tmp, file)
     with 
@@ -53,13 +58,12 @@ let getLinks client (pattern:Regex) url =
    let matchToUrl (urlMatch : Match) = urlMatch.Groups.Item(1).Value
    matches |> Seq.cast |> Seq.map matchToUrl
 
-let disect s =
-   let m = re_numbers.Match(s)
-   (Convert.ToInt32(m.Groups.Item(1).Value), Convert.ToInt32(m.Groups.Item(2).Value))
-
 [<EntryPoint>]
-let main _ = 
-   CommandLine.ArgParser.Parse (usage, usageText="\nTool to download library updates\nVersion 1.0\n\nUsage: libget.exe [options]\n")
+let main args = 
+   if Array.isEmpty args then
+      CommandLine.ArgParser.Usage (usage, usageText)
+      exit 0
+   CommandLine.ArgParser.Parse (usage, usageText=usageText)
    try 
       let conf = (getConfig !config).libraries |> Array.find (fun r -> r.name = !library)
       printfn "\nProcessing library \"%s\"\n" conf.name
@@ -68,18 +72,35 @@ let main _ =
       client.CachePolicy <- new RequestCachePolicy(RequestCacheLevel.BypassCache)
       client.Headers.Add("user-agent", "Mozilla/5.0 (Windows; en-US)")
 
+      let disect s =
+         let m = re_numbers.Match(s)
+         (Convert.ToInt32(m.Groups.Item(1).Value), Convert.ToInt32(m.Groups.Item(2).Value))
       let last_book = getArchives !dest |> Seq.fold (fun acc elem -> if acc < snd (disect elem) then snd (disect elem) else acc) 0 
       let new_links = getLinks client (Regex(conf.pattern, RegexOptions.Compiled ||| RegexOptions.IgnoreCase)) (new Uri(conf.url)) |> 
                          Seq.choose (fun elem -> if last_book < fst (disect elem) then Some(elem) else None )
-      // Downloading                              
+
+      // Downloading archives
       do new_links |> Seq.iter (fun elem -> fetchFile(client,(new Uri(Path.Combine(conf.url, elem))),(Path.Combine(!dest, elem)),1,None))
       let len = Seq.length new_links
-      printfn "\nProcessed %d new archive(s)" len
+      printfn "\nProcessed %d new archive(s)\n" len
+
+      if !nosql then exit len
+
+      // Downloading tables
+      let tables = getLinks client (Regex(conf.patternSQL, RegexOptions.Compiled ||| RegexOptions.IgnoreCase)) (new Uri(conf.urlSQL))
+      if not (Seq.isEmpty tables) && not (Directory.Exists !destsql) then
+         Directory.CreateDirectory !destsql |> ignore
+      do tables |> Seq.iter (fun elem -> fetchFile(client,(new Uri(Path.Combine(conf.urlSQL, elem))),(Path.Combine(!destsql, elem)),1,None))
+      printfn "\nProcessed database\n"
+
       exit len
    with 
-   | :? KeyNotFoundException -> Console.WriteLine("\nUnable to find configuration record for library: " + !library)
+   | :? KeyNotFoundException -> Console.Error.WriteLine("\nUnable to find configuration record for library: " + !library)
+                                Console.Error.Flush()
                                 exit -1
-   | :? WebException as wex  -> Console.WriteLine("\nCommunication error: " + wex.Message)
+   | :? WebException as wex  -> Console.Error.WriteLine("\nCommunication error: " + wex.Message)
+                                Console.Error.Flush()
                                 exit -2
-   | ex ->                      Console.WriteLine("\nUnexpected error: " + ex.Message)
+   | ex ->                      Console.Error.WriteLine("\nUnexpected error: " + ex.Message)
+                                Console.Error.Flush()
                                 exit -3                                        

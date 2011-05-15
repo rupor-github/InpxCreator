@@ -36,44 +36,44 @@ Usage: lib2inpx.exe [options] <path to SQL dump files>
 
 options:
   --help                Print help message
-  --ignore-dump-date    Ignore date in the dump files, use current UTC date 
+  --ignore-dump-date    Ignore date in the dump files, use current UTC date
                         instead
   --clean-when-done     Remove MYSQL database after processing
   --process arg         What to process - "fb2", "usr", "all" (default: fb2)
-  --strict arg          What to put in INPX as file type - "ext", "db", 
+  --strict arg          What to put in INPX as file type - "ext", "db",
                         "ignore" (default: ext). ext - use real file extension.
                         db - use file type from database. ignore - ignore files
                         with file extension not equal to file type
-  --no-import           Do not import dumps, just check dump time and use 
+  --no-import           Do not import dumps, just check dump time and use
                         existing database
   --db-name arg         Name of MYSQL database (default: librusec)
-  --archives arg        Path(s) to off-line archives. Multiple entries should 
-                        be separated by ';'. Each path must be valid and must 
+  --archives arg        Path(s) to off-line archives. Multiple entries should
+                        be separated by ';'. Each path must be valid and must
                         point to some archives, or processing would be aborted.
-                        (If not present - entire database in converted for 
+                        (If not present - entire database in converted for
                         online usage)
   --read-fb2 arg        When archived book is not present in the database - try
-                        to parse fb2 in archive to get information. "all" - do 
-                        it for all absent books, "last" - only process books 
+                        to parse fb2 in archive to get information. "all" - do
+                        it for all absent books, "last" - only process books
                         with ids larger than last database id (If not present -
                         no fb2 parsing)
-  --inpx arg            Full name of output file (default: 
+  --inpx arg            Full name of output file (default:
                         <db_name>_<db_dump_date>.inpx)
   --comment arg         File name of template (UTF-8) for INPX comment
-  --update arg          Starting with "<arg>.zip" produce "daily_update.zip" 
+  --update arg          Starting with "<arg>.zip" produce "daily_update.zip"
                         (Works only for "fb2")
-  --db-format arg       Database format, change date (YYYY-MM-DD). Supported: 
-                        2010-02-06, 2010-03-17, 2010-04-11, 2010-10-25. 
+  --db-format arg       Database format, change date (YYYY-MM-DD). Supported:
+                        2010-02-06, 2010-03-17, 2010-04-11, 2010-10-25.
                         (Default - old librusec format before 2010-02-06)
   --clean-authors       Clean duplicate authors in libavtorname table
   --clean-aliases       Clean libavtoraliase table
   --follow-links        Do not ignore symbolic links
-  --inpx-format arg     INPX format, Supported: 1.x, 2.x, (Default - old 
+  --inpx-format arg     INPX format, Supported: 1.x, 2.x, (Default - old
                         MyHomeLib format 1.x)
-  --quick-fix           Enforce MyHomeLib database size limits, works with 
-                        fix-config parameter. (default: MyHomeLib 1.6.2 
+  --quick-fix           Enforce MyHomeLib database size limits, works with
+                        fix-config parameter. (default: MyHomeLib 1.6.2
                         constrains)
-  --fix-config arg      Allows to specify configuration file with MyHomeLib 
+  --fix-config arg      Allows to specify configuration file with MyHomeLib
                         database size constrains
 
 Предположим, что сегодняшние дампы Либрусека лежат в уже распакованном
@@ -127,11 +127,11 @@ Complete processing took 00:00:59
 Этот режим работает только для FB2 и MyHomeLib версии 1.6 и позже - созданный файл
 нужно скопировать в директорию MyHomeLib и инициировать update.
 
-При анализе архивов программа намеренно игнорирует "soft links" unless --follow-links 
-option is specified (MyHomeLib этого не делает), что позволяет определенную гибкость 
-при хранении архивов. Например можно расположить архивы, общие для flibusta и librusec 
-в базовой директории и хранить дневные обновления, отличающиеся для библиотек отдельно 
-друг от друга, воспользовавшись "soft links" для создания путей с полными библиотеками 
+При анализе архивов программа намеренно игнорирует "soft links" unless --follow-links
+option is specified (MyHomeLib этого не делает), что позволяет определенную гибкость
+при хранении архивов. Например можно расположить архивы, общие для flibusta и librusec
+в базовой директории и хранить дневные обновления, отличающиеся для библиотек отдельно
+друг от друга, воспользовавшись "soft links" для создания путей с полными библиотеками
 для MyHomeLib. При этом при создании INPX для таких коллекций опция --archives позволяет
 перечислить несколько путей к архивам, разделяя их ";". Например:
 "--archives=d:\library\local;d:\library\local\librusec"
@@ -189,11 +189,11 @@ Processing - "181964-182094.zip"       - done in 00:00:00 (0:85:0 records)
 Processing - "182095-182284.zip"       - done in 00:00:00 (0:155:0 records)
 Processing - "fb2-173909-180344.zip"   - done in 00:00:03 (4049:561:1 records)
 
-Первый номер в скобках - количество записей, созданное из базы данных, второй - 
+Первый номер в скобках - количество записей, созданное из базы данных, второй -
 количество записей, созданное путем разбора FB2 и третий - количество пропущенных
 книг (dummy).
 
-Если указать "--read-fb2=all", то для всех FB2 книг, отсутствующих в базе будет 
+Если указать "--read-fb2=all", то для всех FB2 книг, отсутствующих в базе будет
 сделана попытка прочесть информацию из FB2.
 
 Обратите пожалуйста внимание на то, что некоторые архивы Либрусека в настоящий момент
@@ -232,21 +232,21 @@ Database processing
 базы данных, именах произведенных файлов и комментариях в них будет использоваться
 другое название.
 
-Опции --db-format=2010-02-06 (2010-03-17) позволят обработать базы данных с изменившимся после 
+Опции --db-format=2010-02-06 (2010-03-17) позволят обработать базы данных с изменившимся после
 5 февраля 2010 года форматом (творчество Librusec).
 
-Опция --clean-authors позволит правильно обработать libavtorname.sql от librusec, который 
+Опция --clean-authors позволит правильно обработать libavtorname.sql от librusec, который
 нарушает uniqueness constrain и содержит повторяющиеся записи авторов. При этом
 все книги будут доступны.
 
 Опция --clean-aliases позволит правильно обработать lib.libavtoraliase.sql от flibusta.
 
-Опция --inpx-format=2.x приведет к тому, что в INPX файле появится collection.info, 
+Опция --inpx-format=2.x приведет к тому, что в INPX файле появится collection.info,
 содержащая ту же информацию, что и комментарий архива (новый MyHomeLib).
 
 Ключ --quick-fix обрежет поля, которые при импорте в MyHomeLib не поместятся в базу.
-По умолчанию будет использоваться длина из MyHomeLib 1.6.2. Используя --fix-config 
-можно специфицировать другие размеры полей. Список поддерживаемых проверок и пример 
+По умолчанию будет использоваться длина из MyHomeLib 1.6.2. Используя --fix-config
+можно специфицировать другие размеры полей. Список поддерживаемых проверок и пример
 находится в файле limits.conf.
 
 Оставшиеся ключи программы не особенно важны: ”clean-when-done” удалит созданную
@@ -261,10 +261,10 @@ Database processing
 максимально приближенном к тем, что использует MyHomeLib для "стандартных" коллекций
 Либрусека.
 
-В комплект теперь также входит программа позволяющая аккуратно нарезать библиотечные 
+В комплект теперь также входит программа позволяющая аккуратно нарезать библиотечные
 ZIP архивы. Ее использование максимально просто, обычно нужно просто указать директорию
-с FB2 файлами (например содержащую все книги flibusta) и директорию для результатирующих 
-архивов.  
+с FB2 файлами (например содержащую все книги flibusta) и директорию для результатирующих
+архивов.
 
 Tool to prepare library archives
 Version 1.0
@@ -280,24 +280,27 @@ options:
 
 Архивы будут содержать упорядоченные по номерам книги и иметь правильные имена.
 
-Имеется так же очень простая утилита для загрузки новых библиотечных архивов (синхронизация)
+Имеется так же очень простая утилита для загрузки новых библиотечных архивов и баз данных (синхронизация)
 
 Tool to download library updates
-Version 1.0
+Version 1.1
 
 Usage: libget.exe [options]
 
-        --library <string>: (flibusta) name of the library profile
-        --retry <int>: (3) number of re-tries
-        --to <string>: (current directory) destination directory
-        --config <string>: (libget.conf) configuration file
-        --help: display this list of options
+	--library <string>: (flibusta) name of the library profile
+	--retry <int>: (3) number of re-tries
+	--nosql: (false) do not download database
+	--to <string>: (current directory) archives destination directory
+	--tosql <string>: (current directory) database destination directory
+	--config <string>: (libget.conf) configuration file
+	--help: display this list of options
 
-Она смотрит на имена файлов в директории, указанной параметром --to, находит из 
-них ID последней книги и пытается загрузить архивы, содержащие книги с большими ID.
-В архивы она не лезет - все решения принимаются исключительно на основании анализа
-имен файлов! Эта программа написана на .NET - соответственно требуется его наличие.
+Она разбирает имена файлов в директории, указанной параметром --to, находит из
+них ID последней книги и пытается загрузить из указанной библиотеки архивы, содержащие книги с
+большими ID. В сами архивы программа не лезет - все решения принимаются исключительно на основании
+анализа имен файлов. Так же могут быть загружены в директорию --tosql и SQL таблички библиотеки.
 Вся конфигурация для программы лежит в файле libget.conf (JSON).
+Эта программа написана на .NET - соответственно требуется наличие .NET 4.0 (client profile).
 
 В предлагаемый дистрибутив в качестве примера входят 2 PowerShell скрипта: fb2_librusec.ps1
 и fb2_flibusta.ps1, которыe принимают единственный параметр – путь к локальным архивам:

@@ -104,7 +104,7 @@ type ArgParser() =
 
     static member Usage (specs,?usage) = 
         let usage = defaultArg usage ""
-        System.Console.Error.WriteLine (getUsage (Seq.toList specs) usage)
+        System.Console.WriteLine (getUsage (Seq.toList specs) usage)
 
     static member Parse (specs,?other,?usageText) = 
         let current = ref 0

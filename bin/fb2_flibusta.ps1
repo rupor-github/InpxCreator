@@ -15,10 +15,9 @@ function Get-ScriptDirectory
 $name    = "flibusta"
 $site    = "http://www.flibusta.net"
 $retries = 10
-$tables  = @("libgenrelist", "libbook", "libavtoraliase", "libavtorname", "libavtor", "libgenre", "librate", "libseq", "libseqname", "libfilename")
 
 $mydir   = Get-ScriptDirectory
-$wdir    = Join-Path $mydir $name
+$wdir    = Join-Path $mydir ($name + (get-date -format "_yyyyMMdd_hhmmss"))
 $adir    = Join-Path $archive_path $name
 $glog    = Join-Path $mydir ($name + "_res" + (get-date -format "_yyyyMMdd") + ".log")
 
@@ -30,21 +29,9 @@ $zip = where.exe "7z.exe" 2>$null
 if( -not $zip )
 {
    $zip = where.exe "7za.exe" 2>$null
-   if( -not $zip )
-   {
-      throw "7z archiver not found in the path: 7z.exe or 7za.exe!"
-   }
+   if( -not $zip ) { throw "7z archiver not found in the path: 7z.exe or 7za.exe!" }
 }
-if( $zip.Length -gt 1 )
-{
-   $zip = $zip[ 0 ]
-}
-
-$wget = where.exe "wget-1.12.exe" 2>$null
-if( -not $wget )
-{
-   throw "GNU wget is not found in the path: wget.exe!"
-}
+if( $zip.Length -gt 1 ) { $zip = $zip[ 0 ] }
 
 $tmp = [System.IO.Path]::GetTempFileName()
 
@@ -53,12 +40,17 @@ Trap { if( $glog ) { Stop-Transcript }; break }
 
 if( $proxy ) { $env:http_proxy=$proxy }
 
-Write-Output "Downloading $name archives..."
+Write-Output "Downloading $name ..."
 
 $new_archives = 0
 $before_dir = @(dir $adir)
 
-& $mydir/libget --library $name --retry $retries --to $adir --config $mydir/libget.conf 2>&1 | Tee-Object -FilePath $tmp
+& $mydir/libget "--library $name" `
+                "--retry $retries" `
+                "--to $adir" `
+                "--tosql $wdir" `
+                "--config $mydir/libget.conf" 2>&1 | Tee-Object -FilePath $tmp
+
 if( $LASTEXITCODE -lt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !" }
 if( $LASTEXITCODE -eq 0 ) { Write-Output "No new archives..."; ; exit 0; }
 
@@ -97,32 +89,16 @@ if( $diff_dir )
 
 if( $new_archives -eq 0 ) { Write-Output "Nothing to do..."; exit 1 }
 
-Write-Output "Downloading $name databases..."
-
-if( Test-Path -Path $wdir ) { Rename-Item -Path $wdir -NewName ($wdir + (get-date -format "_yyyyMMdd_hhmmss")) }
-New-Item -type directory $wdir | out-null
-
-$log = Join-Path $mydir ($name + "_sql" + (get-date -format "_yyyyMMdd") + ".log")
-if( Test-Path -Path $log ) { Remove-Item $log }
-
-$tables | foreach `
+@(dir $wdir) | foreach `
 {
-   $arc  = "lib." + $_ + ".sql.gz"
-   $warc = Join-Path $wdir $arc
+   $narc = $_
+   $warc = Join-Path $wdir $narc
 
-   & $wget "--progress=dot:mega" `
-           "--tries=$retries" `
-           "--user-agent=Mozilla/5.0" `
-           "--append-output=$log" `
-           "--directory-prefix=$wdir" `
-           "$site/sql/$arc" 2>$null
+   if( $warc.Length -le 0 ) { Remove-Item $warc; Write-Error "Unable to download $narc !"; exit 1 }
 
-   if( ! $? )                                { Write-Error "WGET is unable to download $arc !"; exit $LASTEXITCODE }
-   if( !(Test-Path -Path $warc) )            { Write-Error "Unable to download $arc !"; exit 2 }
-   if( $(Get-ChildItem $warc).Length -le 0 ) { Remove-Item $warc; Write-Error "Unable to download $arc !"; exit 2 }
+   & $zip "e" "-o$wdir" $warc | Tee-Object -FilePath $tmp
+   if( ! $? ) { Write-Error "Database file $narc is corrupted"; exit $LASTEXITCODE }
 
-   & $zip "e" "-o$wdir" "$warc" | Tee-Object -FilePath $tmp
-   if( ! $? ) { Write-Error "Database file $arc is corrupted"; exit $LASTEXITCODE }
    Remove-Item $warc
 }
 
@@ -136,7 +112,7 @@ $tables | foreach `
                   "--archives=$adir" `
                   "$wdir" 2>&1 | Tee-Object -FilePath $tmp
 
-if( ! $? ) { Write-Error "Unable to build INPX!"; exit $LASTEXITCODE; }
+if( ! $? ) { Write-Error "Unable to build INPX!"; exit $LASTEXITCODE }
 if( $glog ) { Stop-Transcript }
 
 Remove-Item $tmp | out-null

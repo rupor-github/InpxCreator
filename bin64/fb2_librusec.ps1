@@ -17,7 +17,7 @@ $site    = "http://lib.rus.ec"
 $retries = 10
 
 $mydir   = Get-ScriptDirectory
-$wdir    = Join-Path $mydir $name
+$wdir    = Join-Path $mydir ($name + (get-date -format "_yyyyMMdd_hhmmss"))
 $adir    = Join-Path $archive_path $name
 $glog    = Join-Path $mydir ($name + "_res" + (get-date -format "_yyyyMMdd") + ".log")
 
@@ -29,21 +29,9 @@ $zip = where.exe "7z.exe" 2>$null
 if( -not $zip )
 {
    $zip = where.exe "7za.exe" 2>$null
-   if( -not $zip )
-   {
-      throw "7z archiver not found in the path: 7z.exe or 7za.exe!"
-   }
+   if( -not $zip ) { throw "7z archiver not found in the path: 7z.exe or 7za.exe!" }
 }
-if( $zip.Length -gt 1 )
-{
-   $zip = $zip[ 0 ]
-}
-
-$wget = where.exe "wget-1.12.exe" 2>$null
-if( -not $wget )
-{
-   throw "GNU wget is not found in the path: wget.exe!"
-}
+if( $zip.Length -gt 1 ) { $zip = $zip[ 0 ] }
 
 $tmp = [System.IO.Path]::GetTempFileName()
 
@@ -52,12 +40,13 @@ Trap { if( $glog ) { Stop-Transcript }; break }
 
 if( $proxy ) { $env:http_proxy=$proxy }
 
-Write-Output "Downloading $name archives..."
+Write-Output "Downloading $name ..."
 
 $new_archives = 0
 $before_dir = @(dir $adir)
 
-& $mydir/libget --library $name --retry $retries --to $adir --config $mydir/libget.conf 2>&1 | Tee-Object -FilePath $tmp
+& $mydir/libget --library $name --retry $retries --to $adir --tosql $wdir --config $mydir/libget.conf 2>&1 | Tee-Object -FilePath $tmp
+
 if( $LASTEXITCODE -lt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !" }
 if( $LASTEXITCODE -eq 0 ) { Write-Output "No new archives..."; ; exit 0; }
 
@@ -96,31 +85,6 @@ if( $diff_dir )
 
 if( $new_archives -eq 0 ) { Write-Output "Nothing to do..."; exit 1 }
 
-Write-Output "Downloading $name databases..."
-
-if( Test-Path -Path $wdir ) { Rename-Item -Path $wdir -NewName ($wdir + (get-date -format "_yyyyMMdd_hhmmss")) }
-New-Item -type directory $wdir | out-null
-
-$log = Join-Path $mydir ($name + "_sql" + (get-date -format "_yyyyMMdd") + ".log")
-if( Test-Path -Path $log ) { Remove-Item $log }
-
-& $wget "--progress=dot:mega" `
-        "--tries=$retries" `
-        "--user-agent=Mozilla/5.0" `
-        "--output-file=$log" `
-        "--recursive" `
-        "--no-directories" `
-        "--accept=*.gz" `
-        "--no-parent" `
-        "--no-remove-listing" `
-        "--directory-prefix=$wdir" `
-        "--no-clobber" `
-        "--no-cache" `
-        "-e robots=off" `
-        "$site/sql" 2>$null
-
-if( ! $? ) { Write-Error "WGET error - $LASTEXITCODE !"; exit $LASTEXITCODE }
-
 @(dir $wdir) | foreach `
 {
    $narc = $_
@@ -144,7 +108,7 @@ if( ! $? ) { Write-Error "WGET error - $LASTEXITCODE !"; exit $LASTEXITCODE }
                   "--clean-when-done" `
                   "--follow-links" `
                   "--archives=$adir" `
-                  "$wdir" | Tee-Object -FilePath $tmp
+                  "$wdir" 2>&1 | Tee-Object -FilePath $tmp
 
 if( ! $? ) { Write-Error "Unable to build INPX!"; exit $LASTEXITCODE }
 if( $glog ) { Stop-Transcript }

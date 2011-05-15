@@ -11,11 +11,15 @@ module Config =
    [<DataContract>]
    type Librecord = {
       [<field: DataMember(Name = "name")>]
-      name:    string;
+      name:       string;
       [<field: DataMember(Name = "pattern")>]
-      pattern: string;
+      pattern:    string;
       [<field: DataMember(Name = "url")>]
-      url:     string;
+      url:        string;
+      [<field: DataMember(Name = "patternSQL")>]
+      patternSQL: string;
+      [<field: DataMember(Name = "urlSQL")>]
+      urlSQL:     string;
    }
    [<DataContract>]
    type Configuration = { 
@@ -37,8 +41,20 @@ module Config =
       { 
          libraries =  
             [| 
-               { name = "flibusta"; pattern = "<a\s+href=\"(f(?:\.fb2)*\.[0-9]+-[0-9]+.zip)\">"; url = "http://www.flibusta.net/daily" };
-               { name = "librusec"; pattern = "<a\s+href=\"([0-9]+-[0-9]+.zip)\">";              url = "http://lib.rus.ec/all/"        }; 
+               { 
+                  name       = "flibusta"; 
+                  pattern    = "<a\s+href=\"(f(?:\.fb2)*\.[0-9]+-[0-9]+.zip)\">"; 
+                  url        = "http://flibusta.net/daily" 
+                  patternSQL = "<a\s+href=\"(lib.lib\w+.sql.gz)\">";
+                  urlSQL     = "http://flibusta.net/sql" 
+               };
+               { 
+                  name       = "librusec"; 
+                  pattern    = "<a\s+href=\"([0-9]+-[0-9]+.zip)\">";
+                  url        = "http://lib.rus.ec/all/"        
+                  patternSQL = "<a\s+href=\"(lib\w+.sql.gz)\">";
+                  urlSQL     = "http://lib.rus.ec/sql/"        
+               }; 
             |] 
       }
 
@@ -51,8 +67,9 @@ module Config =
                File.WriteAllText (file, (json defConfig))
                defConfig
          with 
-         | _ -> printf "Error accessing configuration file %s" file
-                printf "Using default configuration"
+         | _ -> System.Console.Error.WriteLine( "Error accessing configuration file" + file )
+                System.Console.Error.WriteLine( "Using default configuration" )
+                System.Console.Error.Flush() 
                 defConfig
       res
    
