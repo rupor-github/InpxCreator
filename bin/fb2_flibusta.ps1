@@ -1,5 +1,5 @@
 param($archive_path="")
-if( ! $archive_path ) { Write-Error "Argument `"archive_path`" cannot be empty!" }
+if( ! $archive_path ) { Write-Error "Argument `"archive_path`" cannot be empty!"; exit 1 }
 
 function Get-ScriptDirectory
 {
@@ -20,7 +20,7 @@ $tables  = @("libgenrelist", "libbook", "libavtoraliase", "libavtorname", "libav
 $mydir   = Get-ScriptDirectory
 $wdir    = Join-Path $mydir $name
 $adir    = Join-Path $archive_path $name
-$glog    = Join-Path $mydir $name"_result.log"
+$glog    = Join-Path $mydir ($name + "_res" + (get-date -format "_yyyyMMdd") + ".log")
 
 # -----------------------------------------------------------------------------
 # Main body
@@ -55,31 +55,14 @@ if( $proxy ) { $env:http_proxy=$proxy }
 
 Write-Output "Downloading $name archives..."
 
-$log = Join-Path $mydir $name"_archives.log"
-
+$new_archives = 0
 $before_dir = @(dir $adir)
 
-$need_cleanup = 0
-
-& $wget "--progress=dot:mega" `
-        "--tries=$retries" `
-        "--user-agent=Mozilla/5.0" `
-        "--output-file=$log" `
-        "--recursive" `
-        "--span-hosts" `
-        "--no-directories" `
-        "--no-parent" `
-        "--no-remove-listing" `
-        "--accept=f.[0-9]*-[0-9]*.zip,f.fb2.[0-9]*-[0-9]*.zip" `
-        "--directory-prefix=$adir" `
-        "--no-clobber" `
-        "-e robots=off" `
-        "$site/daily/" 2>$null
-
-if( ! $? ) { Write-Error "WGET error - $LASTEXITCODE !"; $need_cleanup = $LASTEXITCODE }
+& $mydir/libget --library $name --retry $retries --to $adir --config $mydir/libget.conf 2>&1 | Tee-Object -FilePath $tmp
+if( $LASTEXITCODE -lt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !" }
+if( $LASTEXITCODE -eq 0 ) { Write-Output "No new archives..."; ; exit 0; }
 
 $after_dir = @(dir $adir)
-
 $diff_dir  = Compare-Object $before_dir $after_dir
 
 if( $diff_dir )
@@ -92,42 +75,34 @@ if( $diff_dir )
 
       if( ! $arc.ReparsePoint )
       {
-         if( ($need_cleanup -gt 0) -or ($arc.Length -le 0) )
+         Write-Output "--Testing integrity of archive $warc"
+         & $zip "t" "$warc" | Tee-Object -FilePath $tmp
+         if( ! $? )
          {
-            # Unfortunatly current wget version does not return proper error code... With 1.12 this clause could be removed
             Write-Output "***Archive $warc is corrupted..."
             Remove-Item $warc
+            continue
          }
-         elseif( $arc.Length -gt 22 )
+         else
          {
-            Write-Output "--Testing integrity of archive $warc"
-            & $zip "t" "$warc" | Tee-Object -FilePath $tmp
-            if( ! $? )
-            {
-               Write-Output "***Archive $warc is corrupted..."
-               Remove-Item $warc
-               continue
-            }
-            else
-            {
-               # remove non-fb2 content
-               Write-Output "--Removing non-FB2 books in archive $warc"
-               & $zip "d" "$warc" "*.*" "-w" "-x!*.fb2" | Tee-Object -FilePath $tmp
-               if( ! $? ) { Write-Error "Archive $warc is corrupted..."; exit $LASTEXITCODE }
-            }
+            # remove non-fb2 content
+            Write-Output "--Removing non-FB2 books in archive $warc"
+            & $zip "d" "$warc" "*.*" "-w" "-x!*.fb2" | Tee-Object -FilePath $tmp
+            if( ! $? ) { Write-Error "Archive $warc is corrupted..."; exit $LASTEXITCODE }
+            $new_archives = $new_archives + 1
          }
       }
    }
 }
 
-if( $need_cleanup -gt 0 ) { exit $need_cleanup }
+if( $new_archives -eq 0 ) { Write-Output "Nothing to do..."; exit 1 }
 
 Write-Output "Downloading $name databases..."
 
-if( Test-Path -Path $wdir ) { Rename-Item -Path $wdir -NewName ($wdir + (get-date -format "_MMddyyyyhhmmss")) }
+if( Test-Path -Path $wdir ) { Rename-Item -Path $wdir -NewName ($wdir + (get-date -format "_yyyyMMdd_hhmmss")) }
 New-Item -type directory $wdir | out-null
 
-$log = Join-Path $mydir $name"_sql.log"
+$log = Join-Path $mydir ($name + "_sql" + (get-date -format "_yyyyMMdd") + ".log")
 if( Test-Path -Path $log ) { Remove-Item $log }
 
 $tables | foreach `
@@ -143,15 +118,13 @@ $tables | foreach `
            "$site/sql/$arc" 2>$null
 
    if( ! $? )                                { Write-Error "WGET is unable to download $arc !"; exit $LASTEXITCODE }
-   if( !(Test-Path -Path $warc) )            { Write-Error "Unable to download $arc !"; exit 1 }
-   if( $(Get-ChildItem $warc).Length -le 0 ) { Remove-Item $warc; Write-Error "Unable to download $arc !"; exit 1 }
+   if( !(Test-Path -Path $warc) )            { Write-Error "Unable to download $arc !"; exit 2 }
+   if( $(Get-ChildItem $warc).Length -le 0 ) { Remove-Item $warc; Write-Error "Unable to download $arc !"; exit 2 }
 
    & $zip "e" "-o$wdir" "$warc" | Tee-Object -FilePath $tmp
    if( ! $? ) { Write-Error "Database file $arc is corrupted"; exit $LASTEXITCODE }
    Remove-Item $warc
 }
-
-$log = Join-Path $mydir $name"_inpx.log"
 
 & $mydir/lib2inpx "--db-name=$name" `
                   "--process=fb2" `
@@ -163,9 +136,7 @@ $log = Join-Path $mydir $name"_inpx.log"
                   "--archives=$adir" `
                   "$wdir" 2>&1 | Tee-Object -FilePath $tmp
 
-if( ! $? ) { Write-Error "Unable to build INPX!" exit $LASTEXITCODE; }
+if( ! $? ) { Write-Error "Unable to build INPX!"; exit $LASTEXITCODE; }
 if( $glog ) { Stop-Transcript }
 
 Remove-Item $tmp | out-null
-
-

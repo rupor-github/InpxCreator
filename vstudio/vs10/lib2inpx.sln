@@ -16,6 +16,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libsplit", "libsplit.vcxpro
 		{745DEC58-EBB3-47A9-A9B8-4C6627C01BF8} = {745DEC58-EBB3-47A9-A9B8-4C6627C01BF8}
 	EndProjectSection
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "libget", "libget.fsproj", "{7A8D9F63-6601-4AA1-B834-52646EDC143C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -71,6 +73,17 @@ Global
 		{3C5F6BA9-7543-4BE0-B995-9CA8A500FD18}.ReleaseWithoutAsm|Win32.ActiveCfg = Release|Win32
 		{3C5F6BA9-7543-4BE0-B995-9CA8A500FD18}.ReleaseWithoutAsm|Win32.Build.0 = Release|Win32
 		{3C5F6BA9-7543-4BE0-B995-9CA8A500FD18}.ReleaseWithoutAsm|x64.ActiveCfg = Release|Win32
+		{7A8D9F63-6601-4AA1-B834-52646EDC143C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7A8D9F63-6601-4AA1-B834-52646EDC143C}.Debug|Win32.Build.0 = Debug|Win32
+		{7A8D9F63-6601-4AA1-B834-52646EDC143C}.Debug|x64.ActiveCfg = Debug|x64
+		{7A8D9F63-6601-4AA1-B834-52646EDC143C}.Debug|x64.Build.0 = Debug|x64
+		{7A8D9F63-6601-4AA1-B834-52646EDC143C}.Release|Win32.ActiveCfg = Release|Win32
+		{7A8D9F63-6601-4AA1-B834-52646EDC143C}.Release|Win32.Build.0 = Release|Win32
+		{7A8D9F63-6601-4AA1-B834-52646EDC143C}.Release|x64.ActiveCfg = Release|x64
+		{7A8D9F63-6601-4AA1-B834-52646EDC143C}.Release|x64.Build.0 = Release|x64
+		{7A8D9F63-6601-4AA1-B834-52646EDC143C}.ReleaseWithoutAsm|Win32.ActiveCfg = Release|x64
+		{7A8D9F63-6601-4AA1-B834-52646EDC143C}.ReleaseWithoutAsm|x64.ActiveCfg = Release|x64
+		{7A8D9F63-6601-4AA1-B834-52646EDC143C}.ReleaseWithoutAsm|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

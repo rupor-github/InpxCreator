@@ -280,6 +280,25 @@ options:
 
 Архивы будут содержать упорядоченные по номерам книги и иметь правильные имена.
 
+Имеется так же очень простая утилита для загрузки новых библиотечных архивов (синхронизация)
+
+Tool to download library updates
+Version 1.0
+
+Usage: libget.exe [options]
+
+        --library <string>: (flibusta) name of the library profile
+        --retry <int>: (3) number of re-tries
+        --to <string>: (current directory) destination directory
+        --config <string>: (libget.conf) configuration file
+        --help: display this list of options
+
+Она смотрит на имена файлов в директории, указанной параметром --to, находит из 
+них ID последней книги и пытается загрузить архивы, содержащие книги с большими ID.
+В архивы она не лезет - все решения принимаются исключительно на основании анализа
+имен файлов! Эта программа написана на .NET - соответственно требуется его наличие.
+Вся конфигурация для программы лежит в файле libget.conf (JSON).
+
 В предлагаемый дистрибутив в качестве примера входят 2 PowerShell скрипта: fb2_librusec.ps1
 и fb2_flibusta.ps1, которыe принимают единственный параметр – путь к локальным архивам:
 “fb2_flibusta.ps1 d:\library\local”.  При выполнении каждый скрипт
