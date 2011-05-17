@@ -1,0 +1,10 @@
+Flibusta Online [FB2]
+flibusta_online_fb2
+134283264
+Online коллекция flibusta.net (fb2)
+http://flibusta.net/
+ADD name %%USER%%
+ADD password %%PASS%%
+POST %%URL%%b/%%LIBID%%/get
+GET %%RESURL%%
+CHECK
