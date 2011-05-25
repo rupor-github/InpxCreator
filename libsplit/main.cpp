@@ -84,7 +84,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Tool to prepare library archives" << endl;
-         cout << "Version 1.0" << endl;
+         cout << "Version 1.5" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options]" << endl << endl;
          cout << options << endl;

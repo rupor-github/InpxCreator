@@ -279,10 +279,10 @@ va_list marker;
 }
 
 bool zip::m_func_set = false;
-zlib_filefunc_def zip::m_ffunc;
+zlib_filefunc64_def zip::m_ffunc;
 
 bool unzip::m_func_set = false;
-zlib_filefunc_def unzip::m_ffunc;
+zlib_filefunc64_def unzip::m_ffunc;
 
 #ifndef DO_NOT_INCLUDE_PARSER
 

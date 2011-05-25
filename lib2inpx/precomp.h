@@ -54,10 +54,10 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
 
-#include <zlib-1.2.3\zlib.h>
-#include <zlib-1.2.3\contrib\minizip\unzip.h>
-#include <zlib-1.2.3\contrib\minizip\zip.h>
-#include <zlib-1.2.3\contrib\minizip\iowin32.h>
+#include <zlib-1.2.5\zlib.h>
+#include <zlib-1.2.5\contrib\minizip\unzip.h>
+#include <zlib-1.2.5\contrib\minizip\zip.h>
+#include <zlib-1.2.5\contrib\minizip\iowin32.h>
 
 #include <expat-2.0.1\expat.h>
 

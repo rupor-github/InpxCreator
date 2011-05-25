@@ -557,9 +557,9 @@ bool process_from_fb2( const unzip& uz, const string& book_id, string& inp, stri
 
    try
    {
-      unzip_reader  ur( uz );
-      fb2_parser    fb;
-      unz_file_info fi;
+      unzip_reader    ur( uz );
+      fb2_parser      fb;
+      unz_file_info64 fi;
 
       uz.current ( fi );
 
@@ -962,7 +962,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 4.5 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 5.0 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;

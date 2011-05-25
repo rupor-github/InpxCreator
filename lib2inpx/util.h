@@ -117,10 +117,10 @@ class zip : boost::noncopyable
          if( ! m_func_set )
          {
             m_func_set = true;
-            fill_win32_filefunc( &m_ffunc );
+            fill_win32_filefunc64A( &m_ffunc );
          }
 
-         if( NULL == (m_zf = zipOpen2( m_name.c_str(), create ? APPEND_STATUS_CREATE : APPEND_STATUS_ADDINZIP, NULL, &m_ffunc )) )
+         if( NULL == (m_zf = zipOpen2_64( m_name.c_str(), create ? APPEND_STATUS_CREATE : APPEND_STATUS_ADDINZIP, NULL, &m_ffunc )) )
          {
             throw std::runtime_error( tmp_str( "Unable to create archive zipOpen2(\"%s\")", m_name.c_str() ) );
          }
@@ -146,7 +146,7 @@ class zip : boost::noncopyable
       ~zip()
          { close( true ); }
 
-      static zlib_filefunc_def* ffunc()
+      static zlib_filefunc64_def* ffunc()
          { return &m_ffunc; }
 
    private:
@@ -156,8 +156,8 @@ class zip : boost::noncopyable
       std::string  m_comment;
       zipFile      m_zf;
 
-      static bool              m_func_set;
-      static zlib_filefunc_def m_ffunc;
+      static bool                m_func_set;
+      static zlib_filefunc64_def m_ffunc;
 };
 
 class zip_writer : boost::noncopyable
@@ -253,10 +253,10 @@ class unzip : boost::noncopyable
          if( ! m_func_set )
          {
             m_func_set = true;
-            fill_win32_filefunc( &m_ffunc );
+            fill_win32_filefunc64A( &m_ffunc );
          }
 
-         if( NULL == (m_uf = unzOpen2( m_name.c_str(), &m_ffunc )) )
+         if( NULL == (m_uf = unzOpen2_64( m_name.c_str(), &m_ffunc )) )
             throw std::runtime_error( tmp_str( "Unable to open archive unzOpen2(\"%s\")", m_name.c_str() ) );
 
          int zip_err = unzGetGlobalInfo( m_uf, &m_gi );
@@ -287,7 +287,7 @@ class unzip : boost::noncopyable
       {
          char name_inzip[ MAX_PATH + 1 ];
 
-         int zip_err = unzGetCurrentFileInfo( m_uf, NULL, name_inzip, sizeof( name_inzip ) - 1, NULL, 0, NULL, 0 );
+         int zip_err = unzGetCurrentFileInfo64( m_uf, NULL, name_inzip, sizeof( name_inzip ) - 1, NULL, 0, NULL, 0 );
 
          if( UNZ_OK != zip_err )
             throw std::runtime_error( tmp_str( "Problem processing archive unzGetCurrentFileInfo(%d) \"%s\"", zip_err, m_name.c_str() ) );
@@ -295,9 +295,9 @@ class unzip : boost::noncopyable
          return std::string( name_inzip );
       }
 
-      void current( unz_file_info& fi ) const
+      void current( unz_file_info64& fi ) const
       {
-         int zip_err = unzGetCurrentFileInfo( m_uf, &fi, NULL, 0, NULL, 0, NULL, 0 );
+         int zip_err = unzGetCurrentFileInfo64( m_uf, &fi, NULL, 0, NULL, 0, NULL, 0 );
 
          if( UNZ_OK != zip_err )
             throw std::runtime_error( tmp_str( "Problem processing archive unzGetCurrentFileInfo(%d) \"%s\"", zip_err, m_name.c_str() ) );
@@ -310,7 +310,7 @@ class unzip : boost::noncopyable
             throw std::runtime_error( tmp_str( "Problem processing archive unzGoToNextFile(%d) \"%s\"", zip_err, m_name.c_str() ) );
       }
 
-      static zlib_filefunc_def* ffunc()
+      static zlib_filefunc64_def* ffunc()
          { return &m_ffunc; }
 
       bool is_open() const
@@ -323,8 +323,8 @@ class unzip : boost::noncopyable
       unzFile         m_uf;
       unz_global_info m_gi;
 
-      static bool              m_func_set;
-      static zlib_filefunc_def m_ffunc;
+      static bool                m_func_set;
+      static zlib_filefunc64_def m_ffunc;
 };
 
 class unzip_reader : boost::noncopyable
