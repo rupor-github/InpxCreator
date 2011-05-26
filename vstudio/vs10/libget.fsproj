@@ -49,6 +49,8 @@
     <DocumentationFile>
     </DocumentationFile>
     <PlatformTarget>x64</PlatformTarget>
+    <StartWorkingDirectory>Q:\library\InpxCreator\vstudio\vs10\x64\libget\Debug</StartWorkingDirectory>
+    <StartArguments>--library librusec --to D:\1 --tosql aaa --fb2only</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
     <DebugType>pdbonly</DebugType>
@@ -63,6 +65,8 @@
     <NoWarn>
     </NoWarn>
     <OtherFlags>--standalone</OtherFlags>
+    <StartArguments>--library librusec --to D:\1 --tosql aaa</StartArguments>
+    <StartWorkingDirectory>Q:\library\InpxCreator\vstudio\vs10\x64\libget\Release</StartWorkingDirectory>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="ICSharpCode.SharpZipLib">
@@ -94,7 +98,7 @@
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|Win32' ">
     <PostBuildEvent>copy $(TargetPath) ..\..\..\..\..\bin\$(TargetFileName) &amp; copy $(TargetDir)\ICSharpCode.SharpZipLib.dll ..\..\..\..\..\bin\ICSharpCode.SharpZipLib.dll</PostBuildEvent>
-   </PropertyGroup>
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
     <PostBuildEvent>copy $(TargetPath) ..\..\..\..\..\bin64\$(TargetFileName) &amp; copy $(TargetDir)\ICSharpCode.SharpZipLib.dll ..\..\..\..\..\bin64\ICSharpCode.SharpZipLib.dll</PostBuildEvent>
   </PropertyGroup>

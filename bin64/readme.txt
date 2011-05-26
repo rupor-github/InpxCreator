@@ -29,9 +29,8 @@
 
 Для запуска наберите lib2inpx.exe в командном окне:
 
-
 Import file (INPX) preparation tool for MyHomeLib
-Version 4.5 (MYSQL 5.1.51)
+Version 5.0 (MYSQL 5.1.51)
 
 Usage: lib2inpx.exe [options] <path to SQL dump files>
 
@@ -509,7 +508,7 @@ ZIP архивы. Ее использование максимально про�
 архивов.
 
 Tool to prepare library archives
-Version 1.0
+Version 1.5
 
 Usage: libsplit.exe [options]
 
@@ -517,7 +516,8 @@ options:
   --help                Print help message
   --from arg            Directory with fb2 books
   --to arg              Directory to put resulting archives into
-  --size arg (=2000)    Individual archive size in MB
+  --size arg (=2000)    Individual archive size in MB, if greater than 2GB -
+                        Zip64 archive will be created
   --text                Open books in text mode
 
 Архивы будут содержать упорядоченные по номерам книги и иметь правильные имена.
@@ -525,23 +525,27 @@ options:
 Имеется и очень простая утилита для загрузки новых библиотечных архивов и баз данных (синхронизация)
 
 Tool to download library updates
-Version 1.1
+Version 1.5
 
 Usage: libget.exe [options]
 
 	--library <string>: (flibusta) name of the library profile
 	--retry <int>: (3) number of re-tries
 	--nosql: (false) do not download database
+	--fb2only: (false) clean non-FB2 entries from downloaded archives
 	--to <string>: (current directory) archives destination directory
 	--tosql <string>: (current directory) database destination directory
 	--config <string>: (libget.conf) configuration file
+	--verbose: (false) print complete error information
 	--help: display this list of options
 
 Она разбирает имена файлов в директории, указанной параметром --to, находит из
 них ID последней книги и пытается загрузить из указанной библиотеки архивы, содержащие книги с
-большими ID. В сами архивы программа не лезет - все решения принимаются исключительно на основании
-анализа имен файлов. Так же могут быть загружены в директорию --tosql и SQL таблички библиотеки.
-Вся конфигурация для программы лежит в файле libget.conf (JSON).
+большими ID. Все решения принимаются исключительно на основании анализа имен файлов.
+После загрузки архивов их integrity проверяется и если указан --fb2only из архива
+удаляются все файлы с именами, отличными от <book_id>.fb2
+Так же могут быть загружены в директорию --tosql и распакованы SQL таблички библиотеки.
+Kонфигурация для программы лежит в файле libget.conf (JSON).
 Эта программа написана на .NET - соответственно требуется наличие .NET 4.0 (client profile).
 
 В предлагаемый дистрибутив в качестве примера входят 2 PowerShell скрипта: fb2_librusec.ps1

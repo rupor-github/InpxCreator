@@ -25,14 +25,6 @@ $glog    = Join-Path $mydir ($name + "_res" + (get-date -format "_yyyyMMdd") + "
 # Main body
 # -----------------------------------------------------------------------------
 
-$zip = where.exe "7z.exe" 2>$null
-if( -not $zip )
-{
-   $zip = where.exe "7za.exe" 2>$null
-   if( -not $zip ) { throw "7z archiver not found in the path: 7z.exe or 7za.exe!" }
-}
-if( $zip.Length -gt 1 ) { $zip = $zip[ 0 ] }
-
 $tmp = [System.IO.Path]::GetTempFileName()
 
 if( $glog ) { Start-Transcript $glog }
@@ -60,43 +52,11 @@ if( $diff_dir )
       $narc = $_.InputObject
       $warc = Join-Path $adir $narc
       $arc  = Get-ChildItem $warc
-
-      if( ! $arc.ReparsePoint )
-      {
-         Write-Output "--Testing integrity of archive $warc"
-         & $zip "t" "$warc" | Tee-Object -FilePath $tmp
-         if( ! $? )
-         {
-            Write-Output "***Archive $warc is corrupted..."
-            Remove-Item $warc
-            continue
-         }
-         else
-         {
-            # remove non-fb2 content
-            Write-Output "--Removing non-FB2 books in archive $warc"
-            & $zip "d" "$warc" "*.*" "-w" "-x!*.fb2" | Tee-Object -FilePath $tmp
-            if( ! $? ) { Write-Error "Archive $warc is corrupted..."; exit $LASTEXITCODE }
-            $new_archives = $new_archives + 1
-         }
-      }
+      if( ! $arc.ReparsePoint ) { $new_archives = $new_archives + 1 }
    }
 }
 
 if( $new_archives -eq 0 ) { Write-Output "Nothing to do..."; exit 1 }
-
-@(dir $wdir) | foreach `
-{
-   $narc = $_
-   $warc = Join-Path $wdir $narc
-
-   if( $warc.Length -le 0 ) { Remove-Item $warc; Write-Error "Unable to download $narc !"; exit 1 }
-
-   & $zip "e" "-o$wdir" $warc | Tee-Object -FilePath $tmp
-   if( ! $? ) { Write-Error "Database file $narc is corrupted"; exit $LASTEXITCODE }
-
-   Remove-Item $warc
-}
 
 & $mydir/lib2inpx "--db-name=$name" `
                   "--process=fb2" `

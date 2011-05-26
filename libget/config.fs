@@ -43,16 +43,16 @@ module Config =
             [| 
                { 
                   name       = "flibusta"; 
-                  pattern    = "<a\s+href=\"(f(?:\.fb2)*\.[0-9]+-[0-9]+.zip)\">"; 
+                  pattern    = "<a\s+href=\"(f(?:\.fb2)*\.[0-9]+-[0-9]+\.zip)\">"; 
                   url        = "http://flibusta.net/daily" 
-                  patternSQL = "<a\s+href=\"(lib.lib\w+.sql.gz)\">";
+                  patternSQL = "<a\s+href=\"(lib.lib\w+\.sql\.gz)\">";
                   urlSQL     = "http://flibusta.net/sql" 
                };
                { 
                   name       = "librusec"; 
-                  pattern    = "<a\s+href=\"([0-9]+-[0-9]+.zip)\">";
+                  pattern    = "<a\s+href=\"([0-9]+-[0-9]+\.zip)\">";
                   url        = "http://lib.rus.ec/all/"        
-                  patternSQL = "<a\s+href=\"(lib\w+.sql.gz)\">";
+                  patternSQL = "<a\s+href=\"(lib\w+\.sql\.gz)\">";
                   urlSQL     = "http://lib.rus.ec/sql/"        
                }; 
             |] 
