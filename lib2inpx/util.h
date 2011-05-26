@@ -164,10 +164,10 @@ class zip_writer : boost::noncopyable
 {
    public:
 
-      zip_writer( const zip& zip, const std::string& name, bool auto_open = true ) : m_opened( false  ),
-                                                                                     m_ziperr( ZIP_OK ),
-                                                                                     m_zip   ( zip    ),
-                                                                                     m_name  ( name   )
+      zip_writer( const zip& zip, const std::string& name, bool auto_open = true, bool zip64 = false ) : m_opened( false  ),
+                                                                                                         m_ziperr( ZIP_OK ),
+                                                                                                         m_zip   ( zip    ),
+                                                                                                         m_name  ( name   )
       {
          m_zi.tmz_date.tm_sec = m_zi.tmz_date.tm_min = m_zi.tmz_date.tm_hour = m_zi.tmz_date.tm_mday = m_zi.tmz_date.tm_mon = m_zi.tmz_date.tm_year = 0;
          m_zi.dosDate         = 0;
@@ -176,15 +176,16 @@ class zip_writer : boost::noncopyable
 
          filetime( &m_zi.dosDate );
 
-         if( auto_open ) open();
+         if( auto_open ) open( zip64 );
       }
 
-      void open()
+      void open( bool zip64 = false )
       {
          if( ! m_opened )
          {
-            if( ZIP_OK != (m_ziperr = zipOpenNewFileInZip3( m_zip.m_zf, m_name.c_str(), &m_zi, NULL, 0, NULL, 0, NULL, Z_DEFLATED,
-                                                            9, 0, -MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY, NULL, 0 )) )
+            if( ZIP_OK != (m_ziperr = zipOpenNewFileInZip3_64( m_zip.m_zf, m_name.c_str(), &m_zi, NULL, 0, NULL,
+                                                               0, NULL, Z_DEFLATED, 9, 0, -MAX_WBITS, DEF_MEM_LEVEL,
+                                                               Z_DEFAULT_STRATEGY, NULL, 0, zip64 ? 1 : 0 )) )
             {
                throw std::runtime_error( tmp_str("Error writing to INPX zipOpenNewFileInZip3(%d) \"%s\"", m_ziperr, m_name.c_str()) );
             }

@@ -65,6 +65,9 @@
     <OtherFlags>--standalone</OtherFlags>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\..\SharpZipLib\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="FSharp.Core" />
     <Reference Include="System" />
@@ -90,12 +93,12 @@
   <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|Win32' ">
-    <PostBuildEvent>copy $(TargetPath) ..\..\..\..\..\bin\$(TargetFileName)</PostBuildEvent>
-  </PropertyGroup>
+    <PostBuildEvent>copy $(TargetPath) ..\..\..\..\..\bin\$(TargetFileName) &amp; copy $(TargetDir)\ICSharpCode.SharpZipLib.dll ..\..\..\..\..\bin\ICSharpCode.SharpZipLib.dll</PostBuildEvent>
+   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
-    <PostBuildEvent>copy $(TargetPath) ..\..\..\..\..\bin64\$(TargetFileName)</PostBuildEvent>
+    <PostBuildEvent>copy $(TargetPath) ..\..\..\..\..\bin64\$(TargetFileName) &amp; copy $(TargetDir)\ICSharpCode.SharpZipLib.dll ..\..\..\..\..\bin64\ICSharpCode.SharpZipLib.dll</PostBuildEvent>
   </PropertyGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
 	     Other similar extension points exist, see Microsoft.Common.targets.
 	<Target Name="BeforeBuild">
 	</Target>

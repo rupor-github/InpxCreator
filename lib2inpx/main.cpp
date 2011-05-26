@@ -1424,16 +1424,16 @@ int main( int argc, char *argv[] )
             zw( collection_comment );
             zw.close();
          }
+         else
          {
             zip_writer zw( zz, "structure.info" );
             zw( "AUTHOR;GENRE;TITLE;SERIES;SERNO;FILE;SIZE;LIBID;DEL;EXT;DATE;LANG;LIBRATE;KEYWORDS;" );
             zw.close();
          }
-         {
-            zip_writer zw( zz, "version.info" );
-            zw( dump_date + "\r\n" );
-            zw.close();
-         }
+         
+         zip_writer zw( zz, "version.info" );
+         zw( dump_date + "\r\n" );
+         zw.close();        
 
          zz.close();
 

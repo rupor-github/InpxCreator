@@ -31,7 +31,7 @@ __int64 get_file_size( const string& name )
 
    if( GetFileAttributesEx( name.c_str(), GetFileExInfoStandard, &data ) )
    {
-      res = data.nFileSizeLow;
+      res = ((__int64)(data.nFileSizeHigh)) * (0x100000000i64) + (__int64)(data.nFileSizeLow);
    }
    else
       throw runtime_error( tmp_str( "Unable to obtain file length \"%s\"", name.c_str() ) );
@@ -71,7 +71,7 @@ int main( int argc, char *argv[] )
          ( "help",                                                 "Print help message"  )
          ( "from",   po::value< string >(),                        "Directory with fb2 books" )
          ( "to",     po::value< string >(),                        "Directory to put resulting archives into" )
-         ( "size",   po::value<long>(&rsize)->default_value(2000), "Individual archive size in MB")
+         ( "size",   po::value<long>(&rsize)->default_value(2000), "Individual archive size in MB, if greater than 2GB - Zip64 archive will be created")
          ( "text",                                                 "Open books in text mode")
           ;
 
@@ -91,11 +91,11 @@ int main( int argc, char *argv[] )
          rc = 0; goto E_x_i_t;
       }
 
-      if( rsize > 2047 )
-      {
-         cout << endl << "Warning: size is too big, assuming 2047MB!" << endl;
-         rsize = 2047;
-      }
+      // if( rsize > 2047 )
+      // {
+      //    cout << endl << "Warning: size is too big, assuming 2047MB!" << endl;
+      //    rsize = 2047;
+      // }
 
       archive_size = (__int64)1024*1024*rsize;
 
@@ -191,7 +191,7 @@ int main( int argc, char *argv[] )
                if( !in && !in.eof() )
                   throw runtime_error( tmp_str( "Problem reading book file \"%s\"", book_name.c_str() ) );
 
-               zip_writer zw( zz, book_name ); zw( ss.str() );
+               zip_writer zw( zz, book_name, true, (rsize > 2047) ); zw( ss.str() );
 
                count++;
 
