@@ -111,7 +111,7 @@
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(ProjecDir)$(Platform)\expat\$(Configuration)\expat.lib;$(ProjecDir)$(Platform)\ZlibStat\$(Configuration)\zlibstat.lib;$(ProjecDir)..\..\mysql-5.1.51-win32\Embedded\static\$(Configuration)\mysqlserver.lib;WS2_32.Lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjecDir)$(Platform)\expat\$(Configuration)\expat.lib;$(ProjecDir)$(Platform)\ZlibStat\$(Configuration)\zlibstat.lib;$(ProjecDir)..\..\mysql-5.1.57-win32\Embedded\static\$(Configuration)\mysqlserver.lib;WS2_32.Lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -136,7 +136,7 @@
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(ProjecDir)$(Platform)\expat\$(Configuration)\expat.lib;$(ProjecDir)$(Platform)\ZlibStat\$(Configuration)\zlibstat.lib;$(ProjecDir)..\..\mysql-5.1.51-win64\Embedded\static\$(Configuration)\mysqlserver.lib;WS2_32.Lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjecDir)$(Platform)\expat\$(Configuration)\expat.lib;$(ProjecDir)$(Platform)\ZlibStat\$(Configuration)\zlibstat.lib;$(ProjecDir)..\..\mysql-5.1.57-winx64\Embedded\static\$(Configuration)\mysqlserver.lib;WS2_32.Lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -167,7 +167,7 @@
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(ProjecDir)$(Platform)\expat\$(Configuration)\expat.lib;$(ProjecDir)$(Platform)\ZlibStat\$(Configuration)\zlibstat.lib;$(ProjecDir)..\..\mysql-5.1.51-win32\Embedded\static\$(Configuration)\mysqlserver.lib;WS2_32.Lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjecDir)$(Platform)\expat\$(Configuration)\expat.lib;$(ProjecDir)$(Platform)\ZlibStat\$(Configuration)\zlibstat.lib;$(ProjecDir)..\..\mysql-5.1.57-win32\Embedded\static\$(Configuration)\mysqlserver.lib;WS2_32.Lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -203,7 +203,7 @@
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(ProjecDir)$(Platform)\expat\$(Configuration)\expat.lib;$(ProjecDir)$(Platform)\ZlibStat\$(Configuration)\zlibstat.lib;$(ProjecDir)..\..\mysql-5.1.51-win64\Embedded\static\$(Configuration)\mysqlserver.lib;WS2_32.Lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjecDir)$(Platform)\expat\$(Configuration)\expat.lib;$(ProjecDir)$(Platform)\ZlibStat\$(Configuration)\zlibstat.lib;$(ProjecDir)..\..\mysql-5.1.57-winx64\Embedded\static\$(Configuration)\mysqlserver.lib;WS2_32.Lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
