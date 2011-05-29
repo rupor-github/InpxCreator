@@ -45,7 +45,7 @@ module Config =
                   name       = "flibusta"; 
                   pattern    = "<a\s+href=\"(f(?:\.fb2)*\.[0-9]+-[0-9]+\.zip)\">"; 
                   url        = "http://flibusta.net/daily" 
-                  patternSQL = "<a\s+href=\"(lib.lib\w+\.sql\.gz)\">";
+                  patternSQL = "<a\s+href=\"(lib\.lib\w+\.sql\.gz)\">";
                   urlSQL     = "http://flibusta.net/sql" 
                };
                { 
