@@ -37,7 +37,7 @@ Write-Output "Downloading $name ..."
 $new_archives = 0
 $before_dir = @(dir $adir)
 
-& $mydir/libget --library $name --retry $retries --to $adir --tosql $wdir --config $mydir/libget.conf 2>&1 | Tee-Object -FilePath $tmp
+& $mydir/libget --library $name --retry $retries --continue --to $adir --tosql $wdir --config $mydir/libget.conf 2>&1 | Tee-Object -FilePath $tmp
 
 if( $LASTEXITCODE -lt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !" }
 if( $LASTEXITCODE -eq 0 ) { Write-Output "No new archives..."; ; exit 0; }

@@ -525,12 +525,15 @@ options:
 Имеется и очень простая утилита для загрузки новых библиотечных архивов и баз данных (синхронизация)
 
 Tool to download library updates
-Version 1.5
+Version 1.6
 
 Usage: libget.exe [options]
 
 	--library <string>: (flibusta) name of the library profile
 	--retry <int>: (3) number of re-tries
+	--timeout <int>: (20) communication timeout in seconds
+	--continue: (false) continue getting a partially-downloaded file
+	--progress: (false) show progress during download
 	--nosql: (false) do not download database
 	--fb2only: (false) clean non-FB2 entries from downloaded archives
 	--to <string>: (current directory) archives destination directory
