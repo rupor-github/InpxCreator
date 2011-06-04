@@ -111,6 +111,22 @@ let processFile tmp file =
                 nukeFile tmp
                 0
 
+let rec detectRanges (url:Uri) (start:int64) attempt = 
+    try
+       let req = (WebRequest.Create(url) :?> HttpWebRequest)
+       req.CachePolicy       <- new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore)
+       req.UserAgent         <- "Mozilla/5.0 (Windows; en-US)"
+       req.Timeout           <- !timeout * 1000
+       req.AllowAutoRedirect <- true
+       req.Method            <- "HEAD"
+       req.AddRange(start)
+       use resp   = req.GetResponse() :?> HttpWebResponse
+       let supported = resp.StatusCode = HttpStatusCode.PartialContent
+       resp.Close()
+       supported
+    with 
+    | :? WebException -> if attempt < !retry then detectRanges url start (attempt + 1) else reraise()
+
 let rec fetchFile (url:Uri) (file:string) attempt (temp:Option<string>) = 
     let tmp, len = match temp with
                    | None   -> (Path.GetTempFileName(), 0L)
@@ -122,14 +138,13 @@ let rec fetchFile (url:Uri) (file:string) attempt (temp:Option<string>) =
        req.UserAgent         <- "Mozilla/5.0 (Windows; en-US)"
        req.Timeout           <- !timeout * 1000
        req.AllowAutoRedirect <- true
-       use out = if !ranges && len > 0L then
+       use out = if !ranges && len > 0L && (detectRanges url len 1) then               
                     req.AddRange(len)
                     new FileStream(tmp, FileMode.Append, FileAccess.Write, FileShare.None)
                  else
                     new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None)      
        use resp   = req.GetResponse()
-       use stream = resp.GetResponseStream()
-       
+       use stream = resp.GetResponseStream()      
        StreamUtils.Copy(stream, out, dataBuffer, (fun (sender:Object) (event:ProgressEventArgs) -> out.Flush()
                                                                                                    if !progress then printf "\r\t%s \t%d\r" event.Name event.Processed),
                         TimeSpan(0,0,1), null, "progress")
@@ -153,8 +168,7 @@ let rec fetchStr (url:Uri) attempt =
        req.Timeout           <- !timeout * 1000
        req.AllowAutoRedirect <- true
        use resp   = req.GetResponse()
-       ranges := if not (resp.Headers.["Accept-Ranges"] = null) && (resp.Headers.["Accept-Ranges"] = "bytes") then printfn "AAAAAAAAAA!"; true
-                 else false
+       let contentLen = resp.ContentLength
        use stream = resp.GetResponseStream()
        use reader = new StreamReader(stream)
        let page   = reader.ReadToEnd()
