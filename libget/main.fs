@@ -160,7 +160,7 @@ let rec fetchFile (url:Uri) (file:string) attempt (temp:Option<string>) =
 
 let rec fetchStr (url:Uri) attempt =
     try
-       printfn "Downloading index for \"%s\" (#%d) " url.AbsoluteUri attempt
+       printfn "Downloading index for \"%s\" (%d) " url.AbsoluteUri attempt
        let req = prepareReq url (fun r -> ())
        use resp   = req.GetResponse()
        let contentLen = resp.ContentLength
