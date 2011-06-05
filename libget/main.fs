@@ -1,4 +1,4 @@
-﻿module internal LibGet.Driver 
+﻿module internal LibGet.Driver
 
 open System
 open System.IO
@@ -27,7 +27,7 @@ let ranges  = ref false
 let progress= ref false
 let verbose = ref false
 let dest    = ref Environment.CurrentDirectory
-let destsql = ref (Path.Combine(Environment.CurrentDirectory, String.Format("{0}_{1:yyyyMMdd_hhmmss}", !library, DateTime.Now)))
+let destsql = ref ""
 let config  = ref (Path.Combine(Environment.CurrentDirectory, "libget.conf"))
 let usage   = [ "--library",  CommandLine.ArgType.String(fun s -> library := s), "(flibusta) name of the library profile";
                 "--retry",    CommandLine.ArgType.Int(fun s -> retry := s),      "(3) number of re-tries";
@@ -36,9 +36,9 @@ let usage   = [ "--library",  CommandLine.ArgType.String(fun s -> library := s),
                 "--progress", CommandLine.ArgType.Set(progress),                 "(false) show progress during download";
                 "--nosql",    CommandLine.ArgType.Set(nosql),                    "(false) do not download database";
                 "--fb2only",  CommandLine.ArgType.Set(fb2only),                  "(false) clean non-FB2 entries from downloaded archives";
-                "--to",       CommandLine.ArgType.String(fun s -> dest := s),    "(current directory) archives destination directory"; 
-                "--tosql",    CommandLine.ArgType.String(fun s -> destsql := s), "(current directory) database destination directory"; 
-                "--config",   CommandLine.ArgType.String(fun s -> config := s),  "(libget.conf) configuration file"; 
+                "--to",       CommandLine.ArgType.String(fun s -> dest := s),    "(current directory) archives destination directory";
+                "--tosql",    CommandLine.ArgType.String(fun s -> destsql := s), "(current directory) database destination directory";
+                "--config",   CommandLine.ArgType.String(fun s -> config := s),  "(libget.conf) configuration file";
                 "--verbose",  CommandLine.ArgType.Set(verbose),                  "(false) print complete error information";
               ] |> List.map (fun (sh, ty, desc) -> CommandLine.ArgInfo(sh, ty, desc))
 let usageText = "\nTool to download library updates\nVersion 1.6\n\nUsage: libget.exe [options]\n"
@@ -48,25 +48,26 @@ exception BadArchive of string
 let nukeFile file =
     try File.Delete file with _ -> ()
 
-let testZip (tmp:string) = 
+let testZip (tmp:string) =
     use z = new ZipFile (tmp)
-    match z.TestArchive true with 
+    match z.TestArchive true with
     | false -> raise(BadArchive("\tDownloaded archive is corrupted!"))
     | true  -> printfn "\tDownloaded archive is OK - integrity test passed"
 
-let fromZip (s:ZipInputStream) : seq<ZipEntry> = 
+let fromZip (s:ZipInputStream) : seq<ZipEntry> =
     seq { let deleted = ref 0
           let overall = ref 0
           let e = ref (s.GetNextEntry())
           while (!e <> null) do
-             if (!e).IsFile && re_fb2.IsMatch((!e).Name,0) then 
+             if (!e).IsFile && re_fb2.IsMatch((!e).Name,0) 
+             then
                 overall := !overall + 1
-                yield !e 
-             else 
+                yield !e
+             else
                 overall := !overall + 1
                 deleted := !deleted + 1
-             e := s.GetNextEntry() 
-          printfn "\tDownloaded archive cleaning - %d entries out of %d deleted" !deleted !overall }    
+             e := s.GetNextEntry()
+          printfn "\tDownloaded archive cleaning - %d entries out of %d deleted" !deleted !overall }
 
 let cleanZip (tmp:string) (file:string) =
     use si = new ZipInputStream(File.OpenRead(tmp))
@@ -81,13 +82,13 @@ let cleanZip (tmp:string) (file:string) =
     so.Close()
     si.Close()
 
-let processZip (tmp:string) (file:string) = 
+let processZip (tmp:string) (file:string) =
     try
        testZip tmp
        if !fb2only then cleanZip  tmp file
        else             File.Move (tmp, file)
     with
-    | _ -> nukeFile tmp; 
+    | _ -> nukeFile tmp;
            reraise()
 
 let processGz (tmp:string) (file:string) =
@@ -96,7 +97,7 @@ let processGz (tmp:string) (file:string) =
        use fs = File.Create(Path.ChangeExtension(file,null))
        StreamUtils.Copy(s, fs, dataBuffer)
     with
-    | _ -> nukeFile tmp; 
+    | _ -> nukeFile tmp;
            reraise()
 
 let processFile tmp file =
@@ -111,40 +112,37 @@ let processFile tmp file =
                 nukeFile tmp
                 0
 
-let rec detectRanges (url:Uri) (start:int64) attempt = 
+let prepareReq (url:Uri) func = 
+    let req = (WebRequest.Create(url) :?> HttpWebRequest)
+    req.CachePolicy       <- new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore)
+    req.UserAgent         <- "Mozilla/5.0 (Windows; en-US)"
+    req.Timeout           <- !timeout * 1000
+    req.AllowAutoRedirect <- true
+    func req
+    req
+
+let rec detectRanges (url:Uri) (start:int64) attempt =
     try
-       let req = (WebRequest.Create(url) :?> HttpWebRequest)
-       req.CachePolicy       <- new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore)
-       req.UserAgent         <- "Mozilla/5.0 (Windows; en-US)"
-       req.Timeout           <- !timeout * 1000
-       req.AllowAutoRedirect <- true
-       req.Method            <- "HEAD"
-       req.AddRange(start)
+       let req = prepareReq url (fun r -> r.Method <- "HEAD"; r.AddRange(start) )      
        use resp   = req.GetResponse() :?> HttpWebResponse
        let supported = resp.StatusCode = HttpStatusCode.PartialContent
        resp.Close()
        supported
-    with 
+    with
     | :? WebException -> if attempt < !retry then detectRanges url start (attempt + 1) else reraise()
 
-let rec fetchFile (url:Uri) (file:string) attempt (temp:Option<string>) = 
+let rec fetchFile (url:Uri) (file:string) attempt (temp:Option<string>) =
     let tmp, len = match temp with
                    | None   -> (Path.GetTempFileName(), 0L)
-                   | Some t -> (t, ((new FileInfo(t)).Length))                            
+                   | Some t -> (t, ((new FileInfo(t)).Length))
     try
        printfn "Downloading file \"%s\" (%d:%d)" url.AbsoluteUri attempt len
-       let req = (WebRequest.Create(url) :?> HttpWebRequest)
-       req.CachePolicy       <- new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore)
-       req.UserAgent         <- "Mozilla/5.0 (Windows; en-US)"
-       req.Timeout           <- !timeout * 1000
-       req.AllowAutoRedirect <- true
-       use out = if !ranges && len > 0L && (detectRanges url len 1) then               
-                    req.AddRange(len)
-                    new FileStream(tmp, FileMode.Append, FileAccess.Write, FileShare.None)
-                 else
-                    new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None)      
+       let with_ranges = !ranges && len > 0L && (detectRanges url len 1)
+       let req = prepareReq url (fun r -> if with_ranges then r.AddRange(len))
+       use out = if with_ranges then new FileStream(tmp, FileMode.Append, FileAccess.Write, FileShare.None)
+                 else                new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None)
        use resp   = req.GetResponse()
-       use stream = resp.GetResponseStream()      
+       use stream = resp.GetResponseStream()
        StreamUtils.Copy(stream, out, dataBuffer, (fun (sender:Object) (event:ProgressEventArgs) -> out.Flush()
                                                                                                    if !progress then printf "\r\t%s \t%d\r" event.Name event.Processed),
                         TimeSpan(0,0,1), null, "progress")
@@ -152,21 +150,18 @@ let rec fetchFile (url:Uri) (file:string) attempt (temp:Option<string>) =
        resp.Close()
        out.Close()
        processFile tmp file
-    with 
-    | :? WebException -> if attempt < !retry then 
+    with
+    | :? WebException -> if attempt < !retry 
+                         then
                             fetchFile url file (attempt + 1) (Some tmp)
-                         else 
+                         else
                             nukeFile tmp
-                            reraise()   
+                            reraise()
 
-let rec fetchStr (url:Uri) attempt = 
+let rec fetchStr (url:Uri) attempt =
     try
        printfn "Downloading index for \"%s\" (#%d) " url.AbsoluteUri attempt
-       let req = (WebRequest.Create(url) :?> HttpWebRequest)
-       req.CachePolicy       <- new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore)
-       req.UserAgent         <- "Mozilla/5.0 (Windows; en-US)"
-       req.Timeout           <- !timeout * 1000
-       req.AllowAutoRedirect <- true
+       let req = prepareReq url (fun r -> ())
        use resp   = req.GetResponse()
        let contentLen = resp.ContentLength
        use stream = resp.GetResponseStream()
@@ -176,11 +171,11 @@ let rec fetchStr (url:Uri) attempt =
        stream.Close()
        resp.Close()
        page
-    with 
+    with
     | :? WebException -> if attempt < !retry then fetchStr url (attempt + 1) else reraise()
 
 let rec getArchives dir =
-        seq { yield! Directory.EnumerateFiles(dir, "*.zip") |> Seq.map (fun (name) -> Path.GetFileName(name)) 
+        seq { yield! Directory.EnumerateFiles(dir, "*.zip") |> Seq.map (fun (name) -> Path.GetFileName(name))
               for d in Directory.EnumerateDirectories(dir) do
                  yield! getArchives d }
 
@@ -191,22 +186,25 @@ let getLinks (pattern:Regex) url =
    matches |> Seq.cast |> Seq.map matchToUrl
 
 [<EntryPoint>]
-let main args = 
+let main args =
    if Array.isEmpty args then
       CommandLine.ArgParser.Usage (usage, usageText)
       exit 0
    CommandLine.ArgParser.Parse (usage, usageText=usageText)
-   try 
+   Console.CancelKeyPress.Add( fun a -> printf "\r                                                                      \r" )
+
+   try
       let conf = (getConfig !config).libraries |> Array.find (fun r -> r.name = !library)
       printfn "\nProcessing library \"%s\"\n" conf.name
 
-      destsql := (Path.Combine(Environment.CurrentDirectory, String.Format("{0}_{1:yyyyMMdd_hhmmss}", !library, DateTime.Now)))
+      if (!destsql).Length = 0 then
+         destsql := (Path.Combine(Environment.CurrentDirectory, String.Format("{0}_{1:yyyyMMdd_hhmmss}", !library, DateTime.Now)))
 
       let disect s =
          let m = re_numbers.Match(s)
          (Convert.ToInt32(m.Groups.Item(1).Value), Convert.ToInt32(m.Groups.Item(2).Value))
-      let last_book = getArchives !dest |> Seq.fold (fun acc elem -> if acc < snd (disect elem) then snd (disect elem) else acc) 0 
-      let new_links = getLinks (Regex(conf.pattern, RegexOptions.Compiled ||| RegexOptions.IgnoreCase)) (new Uri(conf.url)) |> 
+      let last_book = getArchives !dest |> Seq.fold (fun acc elem -> if acc < snd (disect elem) then snd (disect elem) else acc) 0
+      let new_links = getLinks (Regex(conf.pattern, RegexOptions.Compiled ||| RegexOptions.IgnoreCase)) (new Uri(conf.url)) |>
                         Seq.choose (fun elem -> if last_book < fst (disect elem) then Some(elem) else None )
 
       // Downloading archives
@@ -225,7 +223,7 @@ let main args =
       printfn "Processed database (%d tables)\n" tabs
 
       exit len
-   with 
+   with
    | :? KeyNotFoundException as ex -> Console.Error.WriteLine("\nUnable to find configuration record for library: " + !library)
                                       if !verbose then Console.Error.WriteLine(ex.ToString())
                                       Console.Error.Flush()
@@ -237,4 +235,4 @@ let main args =
    | ex                            -> Console.Error.WriteLine("\nUnexpected error: " + ex.Message)
                                       if !verbose then Console.Error.WriteLine(ex.ToString())
                                       Console.Error.Flush()
-                                      exit -3                                        
+                                      exit -3
