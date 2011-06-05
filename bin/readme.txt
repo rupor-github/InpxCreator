@@ -30,50 +30,50 @@
 Для запуска наберите lib2inpx.exe в командном окне:
 
 Import file (INPX) preparation tool for MyHomeLib
-Version 5.0 (MYSQL 5.1.51)
+Version 5.1 (MYSQL 5.1.57)
 
 Usage: lib2inpx.exe [options] <path to SQL dump files>
 
 options:
   --help                Print help message
-  --ignore-dump-date    Ignore date in the dump files, use current UTC date
+  --ignore-dump-date    Ignore date in the dump files, use current UTC date 
                         instead
   --clean-when-done     Remove MYSQL database after processing
   --process arg         What to process - "fb2", "usr", "all" (default: fb2)
-  --strict arg          What to put in INPX as file type - "ext", "db",
+  --strict arg          What to put in INPX as file type - "ext", "db", 
                         "ignore" (default: ext). ext - use real file extension.
                         db - use file type from database. ignore - ignore files
                         with file extension not equal to file type
-  --no-import           Do not import dumps, just check dump time and use
+  --no-import           Do not import dumps, just check dump time and use 
                         existing database
   --db-name arg         Name of MYSQL database (default: librusec)
-  --archives arg        Path(s) to off-line archives. Multiple entries should
-                        be separated by ';'. Each path must be valid and must
+  --archives arg        Path(s) to off-line archives. Multiple entries should 
+                        be separated by ';'. Each path must be valid and must 
                         point to some archives, or processing would be aborted.
-                        (If not present - entire database in converted for
+                        (If not present - entire database in converted for 
                         online usage)
   --read-fb2 arg        When archived book is not present in the database - try
-                        to parse fb2 in archive to get information. "all" - do
-                        it for all absent books, "last" - only process books
+                        to parse fb2 in archive to get information. "all" - do 
+                        it for all absent books, "last" - only process books 
                         with ids larger than last database id (If not present -
                         no fb2 parsing)
-  --inpx arg            Full name of output file (default:
+  --inpx arg            Full name of output file (default: 
                         <db_name>_<db_dump_date>.inpx)
   --comment arg         File name of template (UTF-8) for INPX comment
-  --update arg          Starting with "<arg>.zip" produce "daily_update.zip"
+  --update arg          Starting with "<arg>.zip" produce "daily_update.zip" 
                         (Works only for "fb2")
-  --db-format arg       Database format, change date (YYYY-MM-DD). Supported:
-                        2010-02-06, 2010-03-17, 2010-04-11. (Default - old
+  --db-format arg       Database format, change date (YYYY-MM-DD). Supported: 
+                        2010-02-06, 2010-03-17, 2010-04-11. (Default - old 
                         librusec format before 2010-02-06)
   --clean-authors       Clean duplicate authors in libavtorname table
   --clean-aliases       Clean libavtoraliase table
   --follow-links        Do not ignore symbolic links
-  --inpx-format arg     INPX format, Supported: 1.x, 2.x, (Default - old
+  --inpx-format arg     INPX format, Supported: 1.x, 2.x, (Default - old 
                         MyHomeLib format 1.x)
-  --quick-fix           Enforce MyHomeLib database size limits, works with
-                        fix-config parameter. (default: MyHomeLib 1.6.2
+  --quick-fix           Enforce MyHomeLib database size limits, works with 
+                        fix-config parameter. (default: MyHomeLib 1.6.2 
                         constrains)
-  --fix-config arg      Allows to specify configuration file with MyHomeLib
+  --fix-config arg      Allows to specify configuration file with MyHomeLib 
                         database size constrains
 
 Предположим, что сегодняшние дампы Либрусека лежат в уже распакованном
