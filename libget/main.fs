@@ -191,7 +191,7 @@ let main args =
       CommandLine.ArgParser.Usage (usage, usageText)
       exit 0
    CommandLine.ArgParser.Parse (usage, usageText=usageText)
-   Console.CancelKeyPress.Add( fun a -> printf "\r                                                                      \r" )
+   Console.CancelKeyPress.Add( fun a -> if !progress then printf "\r                                                                      \r" )
 
    try
       let conf = (getConfig !config).libraries |> Array.find (fun r -> r.name = !library)
