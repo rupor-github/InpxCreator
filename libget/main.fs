@@ -59,13 +59,9 @@ let fromZip (s:ZipInputStream) : seq<ZipEntry> =
           let overall = ref 0
           let e = ref (s.GetNextEntry())
           while (!e <> null) do
-             if (!e).IsFile && re_fb2.IsMatch((!e).Name,0) 
-             then
-                overall := !overall + 1
-                yield !e
-             else
-                overall := !overall + 1
-                deleted := !deleted + 1
+             overall := !overall + 1
+             if (!e).IsFile && re_fb2.IsMatch((!e).Name,0) then yield !e
+                                                           else deleted := !deleted + 1
              e := s.GetNextEntry()
           printfn "\tDownloaded archive cleaning - %d entries out of %d deleted" !deleted !overall }
 
@@ -86,7 +82,7 @@ let processZip (tmp:string) (file:string) =
     try
        testZip tmp
        if !fb2only then cleanZip  tmp file
-       else             File.Move (tmp, file)
+       else             File.Move(tmp, file)
     with
     | _ -> nukeFile tmp;
            reraise()
@@ -112,7 +108,7 @@ let processFile tmp file =
                 nukeFile tmp
                 0
 
-let prepareReq (url:Uri) func = 
+let prepareReq (url:Uri) func =
     let req = (WebRequest.Create(url) :?> HttpWebRequest)
     req.CachePolicy       <- new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore)
     req.UserAgent         <- "Mozilla/5.0 (Windows; en-US)"
@@ -123,7 +119,7 @@ let prepareReq (url:Uri) func =
 
 let rec detectRanges (url:Uri) (start:int64) attempt =
     try
-       let req = prepareReq url (fun r -> r.Method <- "HEAD"; r.AddRange(start) )      
+       let req = prepareReq url (fun r -> r.Method <- "HEAD"; r.AddRange(start) )
        use resp   = req.GetResponse() :?> HttpWebResponse
        let supported = resp.StatusCode = HttpStatusCode.PartialContent
        resp.Close()
@@ -140,7 +136,7 @@ let rec fetchFile (url:Uri) (file:string) attempt (temp:Option<string>) =
        let with_ranges = !ranges && len > 0L && (detectRanges url len 1)
        let req = prepareReq url (fun r -> if with_ranges then r.AddRange(len))
        use out = if with_ranges then new FileStream(tmp, FileMode.Append, FileAccess.Write, FileShare.None)
-                 else                new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None)
+                                else new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None)
        use resp   = req.GetResponse()
        use stream = resp.GetResponseStream()
        StreamUtils.Copy(stream, out, dataBuffer, (fun (sender:Object) (event:ProgressEventArgs) -> out.Flush()
@@ -151,7 +147,7 @@ let rec fetchFile (url:Uri) (file:string) attempt (temp:Option<string>) =
        out.Close()
        processFile tmp file
     with
-    | :? WebException -> if attempt < !retry 
+    | :? WebException -> if attempt < !retry
                          then
                             fetchFile url file (attempt + 1) (Some tmp)
                          else

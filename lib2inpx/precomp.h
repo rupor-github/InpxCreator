@@ -22,6 +22,7 @@
 #include <io.h>
 #include <direct.h>
 #include <time.h>
+#include <limits.h>
 
 #ifdef WIN64
 #  include <mysql-5.1.57-winx64\include\mysql.h>

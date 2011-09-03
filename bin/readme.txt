@@ -1,7 +1,4 @@
-﻿Command line генератор списков для MyHomeLib версии 1.5.
-
-Я пока старался повторить оригинальный алгоритм из LibFileList, без каких либо
-извращений с SQL.
+﻿Command line генератор списков для MyHomeLib версии 1.5 и позже.
 
 Основные возможности (и отличия от уже имеющегося LibFileList):
 
@@ -30,7 +27,7 @@
 Для запуска наберите lib2inpx.exe в командном окне:
 
 Import file (INPX) preparation tool for MyHomeLib
-Version 5.1 (MYSQL 5.1.57)
+Version 5.2 (MYSQL 5.1.57)
 
 Usage: lib2inpx.exe [options] <path to SQL dump files>
 
@@ -75,6 +72,7 @@ options:
                         constrains)
   --fix-config arg      Allows to specify configuration file with MyHomeLib 
                         database size constrains
+  --verbose             More output... (default: off)
 
 Предположим, что сегодняшние дампы Либрусека лежат в уже распакованном
 виде в директории d:\librusec\sql (программа подберет все файлы с расширением

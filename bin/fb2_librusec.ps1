@@ -17,7 +17,7 @@ $site    = "http://lib.rus.ec"
 $retries = 10
 
 $mydir   = Get-ScriptDirectory
-$wdir    = Join-Path $mydir ($name + (get-date -format "_yyyyMMdd_hhmmss"))
+$wdir    = Join-Path $mydir ($name + (get-date -format "_yyyyMMdd_HHmmss"))
 $adir    = Join-Path $archive_path $name
 $glog    = Join-Path $mydir ($name + "_res" + (get-date -format "_yyyyMMdd") + ".log")
 

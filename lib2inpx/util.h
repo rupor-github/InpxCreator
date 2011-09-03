@@ -56,6 +56,7 @@ std::wstring utf8_to_ucs2( const char* ptr );
 std::string  ucs2_to_utf8( const wchar_t* ptr );
 std::string  utf8_to_ANSI( const char* ptr );
 std::string  utf8_to_OEM( const char* ptr );
+std::string  duplicate_quote( const char* pstr );
 
 void split( std::vector< std::string >& result, const char *str, const char *delim, bool combine_delimiters = true );
 

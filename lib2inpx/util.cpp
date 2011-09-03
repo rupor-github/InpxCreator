@@ -89,6 +89,19 @@ bool remove_crlf( string& str )
    return rc;
 }
 
+string duplicate_quote( const char* pstr )
+{
+   string buf;
+
+   while( *pstr != '\0' )
+   {
+      buf += *pstr;
+      if( *pstr++ == '\'' )
+         buf += '\'';
+   }
+   return buf; 
+}
+
 #endif // DO_NOT_INCLUDE_PARSER
 
 bool is_numeric( const string& str )

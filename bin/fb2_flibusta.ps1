@@ -17,7 +17,7 @@ $site    = "http://www.flibusta.net"
 $retries = 10
 
 $mydir   = Get-ScriptDirectory
-$wdir    = Join-Path $mydir ($name + (get-date -format "_yyyyMMdd_hhmmss"))
+$wdir    = Join-Path $mydir ($name + (get-date -format "_yyyyMMdd_HHmmss"))
 $adir    = Join-Path $archive_path $name
 $glog    = Join-Path $mydir ($name + "_res" + (get-date -format "_yyyyMMdd") + ".log")
 
@@ -60,6 +60,7 @@ if( $new_archives -eq 0 ) { Write-Output "Nothing to do..."; exit 1 }
 
 & $mydir/lib2inpx "--db-name=$name" `
                   "--process=fb2" `
+                  "--read-fb2=all" `
                   "--quick-fix" `
                   "--inpx-format=2.x" `
                   "--clean-aliases" `
