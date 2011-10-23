@@ -169,7 +169,12 @@ let rec fetchStr (url:Uri) attempt =
        resp.Close()
        page
     with
-    | :? WebException -> if attempt < !retry then fetchStr url (attempt + 1) else reraise()
+    | :? WebException -> if attempt < !retry
+                         then
+                            Threading.Thread.Sleep(!timeout * 500)
+                            fetchStr url (attempt + 1)
+                         else
+                            reraise()
 
 let rec getArchives dir =
         seq { yield! Directory.EnumerateFiles(dir, "*.zip") |> Seq.map (fun (name) -> Path.GetFileName(name))
