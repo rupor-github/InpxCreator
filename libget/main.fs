@@ -149,6 +149,7 @@ let rec fetchFile (url:Uri) (file:string) attempt (temp:Option<string>) =
     with
     | :? WebException -> if attempt < !retry
                          then
+                            Threading.Thread.Sleep(!timeout * 500)
                             fetchFile url file (attempt + 1) (Some tmp)
                          else
                             nukeFile tmp
