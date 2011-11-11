@@ -43,6 +43,13 @@ $before_dir = @(dir $adir)
 if( $LASTEXITCODE -lt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !"; exit 0 }
 if( $LASTEXITCODE -eq 0 ) { Write-Output "No new archives..."; exit 0 }
 
+# -----------------------------------------------------------------------------
+# Temporary leftovers
+# -----------------------------------------------------------------------------
+Remove-Item (Join-Path $adir "libavtoraliase.sql") | out-null
+Remove-Item (Join-Path $adir "libgenrelist.sql") | out-null
+# -----------------------------------------------------------------------------
+
 $after_dir = @(dir $adir)
 $diff_dir  = Compare-Object $before_dir $after_dir
 

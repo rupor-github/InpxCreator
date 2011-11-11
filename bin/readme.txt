@@ -27,7 +27,7 @@
 Для запуска наберите lib2inpx.exe в командном окне:
 
 Import file (INPX) preparation tool for MyHomeLib
-Version 5.2 (MYSQL 5.1.57)
+Version 5.3 (MYSQL 5.5.17)
 
 Usage: lib2inpx.exe [options] <path to SQL dump files>
 
@@ -60,10 +60,10 @@ options:
   --update arg          Starting with "<arg>.zip" produce "daily_update.zip" 
                         (Works only for "fb2")
   --db-format arg       Database format, change date (YYYY-MM-DD). Supported: 
-                        2010-02-06, 2010-03-17, 2010-04-11. (Default - old 
-                        librusec format before 2010-02-06)
-  --clean-authors       Clean duplicate authors in libavtorname table
-  --clean-aliases       Clean libavtoraliase table
+                        2010-02-06, 2010-03-17, 2010-04-11, 2011-11-06. 
+                        (Default - old librusec format before 2010-02-06)
+  --clean-authors       Clean duplicate authors (librusec)
+  --clean-aliases       Fix libavtoraliase table (flibusta)
   --follow-links        Do not ignore symbolic links
   --inpx-format arg     INPX format, Supported: 1.x, 2.x, (Default - old 
                         MyHomeLib format 1.x)

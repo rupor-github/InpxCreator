@@ -58,7 +58,8 @@ enum database_format
    eDefault = 0,
    e20100206,
    e20100317,
-   e20100411
+   e20100411,
+   e20111106
 };
 static database_format g_format = eDefault;
 
@@ -86,6 +87,7 @@ static char* options_pattern[] = { "%s",
                                    "--defaults-file=%s/mysql.ini",
                                    "--datadir=%s/data",
                                    "--language=%s/language",
+                                   "--skip-grant-tables",
                                    "--skip-innodb",
                                    "--key-buffer-size=64M",
                                    NULL };
@@ -366,31 +368,53 @@ void get_book_author( const mysql_connection& mysql, const string& book_id, stri
 
    string str;
 
-   str = (eDefault == g_format) ? "SELECT `AvtorId` FROM `libavtor` WHERE BookId=" :
-                                  "SELECT `aid` FROM `libavtor` WHERE bid=";
+   if     ( e20100206 == g_format ) { str = "SELECT `aid` FROM `libavtor` WHERE bid=";         }
+   else if( e20100317 == g_format ) { str = "SELECT `aid` FROM `libavtor` WHERE bid=";         }
+   else if( e20100411 == g_format ) { str = "SELECT `aid` FROM `libavtor` WHERE bid=";         }
+   else if( e20111106 == g_format ) { str = "SELECT `aid` FROM `libavtor` WHERE bid=";         }
+   else                             { str = "SELECT `AvtorId` FROM `libavtor` WHERE BookId=";  }
 
    str += book_id;
-   str += (e20100411 == g_format) ? " AND role=\"a\";" : ";";
+   str += (e20100411 == g_format) || ((e20111106 == g_format)) ? " AND role=\"a\";" : ";";
 
    mysql.query( str );
 
    mysql_results avtor_ids( mysql );
 
-   str = (eDefault == g_format) ? "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE AvtorId=" :
-                                  "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE aid=" ;
+   if     ( e20100206 == g_format ) { str = "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE aid=";      }
+   else if( e20100317 == g_format ) { str = "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE aid=";      }
+   else if( e20100411 == g_format ) { str = "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE aid=";      }
+   else if( e20111106 == g_format ) { str = "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtors WHERE aid="; }
+   else                             { str = "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE AvtorId=";  }
 
    while( record = avtor_ids.fetch_row() )
    {
       string good_author_id( record[ 0 ] );
 
-      mysql.query( string( "SELECT `GoodId`,`BadId` FROM libavtoraliase WHERE BadId=" ) + good_author_id + ";" );
+      if( e20111106 == g_format )
       {
-         mysql_results ids( mysql );
-
-         if( record = ids.fetch_row() )
+         mysql.query( string( "SELECT `main` FROM libavtors WHERE aid=" ) + good_author_id + ";" );
          {
-            if( 0 != strlen( record[ 0 ] ) )
-               good_author_id = record[ 0 ];
+            mysql_results ids( mysql );
+
+            if( record = ids.fetch_row() )
+            {
+               if( (0 != strlen( record[ 0 ] )) && (0 < atol( record[ 0 ] )) )
+                  good_author_id = record[ 0 ];
+            }
+         }
+      }
+      else
+      {
+         mysql.query( string( "SELECT `GoodId`,`BadId` FROM libavtoraliase WHERE BadId=" ) + good_author_id + ";" );
+         {
+            mysql_results ids( mysql );
+
+            if( record = ids.fetch_row() )
+            {
+               if( 0 != strlen( record[ 0 ] ) )
+                  good_author_id = record[ 0 ];
+            }
          }
       }
 
@@ -448,6 +472,7 @@ void get_book_genres( const mysql_connection& mysql, const string& book_id, stri
    if     ( e20100206 == g_format ) { str = "SELECT GenreCode FROM libgenrelist WHERE gid=";     }
    else if( e20100317 == g_format ) { str = "SELECT GenreCode FROM libgenrelist WHERE gid=";     }
    else if( e20100411 == g_format ) { str = "SELECT code FROM libgenrelist WHERE gid=";          }
+   else if( e20111106 == g_format ) { str = "SELECT code FROM libgenres WHERE gid=";             }
    else                             { str = "SELECT GenreCode FROM libgenrelist WHERE GenreId="; }
 
    while( record = genre_ids.fetch_row() )
@@ -483,6 +508,7 @@ void get_book_squence( const mysql_connection& mysql, const string& book_id, str
    if     ( e20100206 == g_format ) { str = "SELECT `sid`,`SeqNumb` FROM libseq WHERE bid=";      }
    else if( e20100317 == g_format ) { str = "SELECT `sid`,`sn` FROM libseq WHERE bid=";           }
    else if( e20100411 == g_format ) { str = "SELECT `sid`,`sn` FROM libseq WHERE bid=";           }
+   else if( e20111106 == g_format ) { str = "SELECT `sid`,`sn` FROM libseq WHERE bid=";           }
    else                             { str = "SELECT `SeqId`,`SeqNumb` FROM libseq WHERE BookId="; }
 
    mysql.query( str + book_id + ";" );
@@ -495,8 +521,12 @@ void get_book_squence( const mysql_connection& mysql, const string& book_id, str
 
       seq_numb = record[ 1 ];
 
-      str = (eDefault == g_format) ? "SELECT SeqName FROM libseqname WHERE SeqId=" :
-                                     "SELECT SeqName FROM libseqname WHERE sid=" ;
+      if     ( e20100206 == g_format ) { str = "SELECT SeqName FROM libseqname WHERE sid=";   }
+      else if( e20100317 == g_format ) { str = "SELECT SeqName FROM libseqname WHERE sid=";   }
+      else if( e20100411 == g_format ) { str = "SELECT SeqName FROM libseqname WHERE sid=";   }
+      else if( e20111106 == g_format ) { str = "SELECT SeqName FROM libseqs WHERE sid=";      }
+      else                             { str = "SELECT SeqName FROM libseqname WHERE SeqId="; }
+
 
       mysql.query( str + seq_id + ";" );
 
@@ -769,6 +799,7 @@ void process_local_archives( const mysql_connection& mysql, const zip& zz, const
                if     ( e20100206 == g_format ) { stmt = "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE bid=" + book_id + ";";       }
                else if( e20100317 == g_format ) { stmt = "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE bid=" + book_id + ";";       }
                else if( e20100411 == g_format ) { stmt = "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE bid=" + book_id + ";";       }
+               else if( e20111106 == g_format ) { stmt = "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE bid=" + book_id + ";";       }
                else                             { stmt = "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE BookId=" + book_id + ";"; }
             }
             else
@@ -779,7 +810,7 @@ void process_local_archives( const mysql_connection& mysql, const zip& zz, const
             if( (g_process == eAll) || ((g_process == eUSR)) )
             {
                name_to_bookid( uz.current(), book_id, ext );
-               if( is_numeric( book_id ) && (e20100411 == g_format) )
+               if( is_numeric( book_id ) && ((e20100411 == g_format) || (e20111106 == g_format)) )
                {
                   stmt = "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords` FROM libbook WHERE bid=" + book_id + ";";
                }
@@ -788,6 +819,7 @@ void process_local_archives( const mysql_connection& mysql, const zip& zz, const
                   if     ( e20100206 == g_format ) { stmt = "SELECT B.bid, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.KeyWords FROM libbook B, libfilename F WHERE B.bid = F.bid AND F.FileName = \"" + uz.current() + "\";";       }
                   else if( e20100317 == g_format ) { stmt = "SELECT B.bid, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.KeyWords FROM libbook B, libfilename F WHERE B.bid = F.bid AND F.FileName = \"" + uz.current() + "\";";       }
                   else if( e20100411 == g_format ) { stmt = "SELECT B.bid, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.KeyWords FROM libbook B, libfilename F WHERE B.bid = F.bid AND F.FileName = \"" + uz.current() + "\";";       }
+                  else if( e20111106 == g_format ) { stmt = "SELECT B.bid, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.KeyWords FROM libbook B, libfilename F WHERE B.bid = F.bid AND F.FileName = \"" + uz.current() + "\";";       }
                   else                             { stmt = "SELECT B.BookId, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.KeyWords FROM libbook B, libfilename F WHERE B.BookId = F.BookID AND F.FileName = \"" + uz.current() + "\";"; }
                }
             }
@@ -906,7 +938,7 @@ void process_database( const mysql_connection& mysql, const zip& zz )
 
    long last_filename_id = -1;
 
-   if( e20100411 == g_format )
+   if( (e20100411 == g_format) || (e20111106 == g_format) )
    {
       if( filenames_table_exist( mysql ) )
       {
@@ -931,7 +963,7 @@ void process_database( const mysql_connection& mysql, const zip& zz )
          file_name = record[ 0 ];
       else
       {
-         if( e20100411 == g_format )
+         if( (e20100411 == g_format) || (e20111106 == g_format) )
          {
             if( (last_filename_id < 0) || (last_filename_id < atol( record[ 0 ] )) )
             {
@@ -1002,9 +1034,9 @@ int main( int argc, char *argv[] )
          ( "inpx",        po::value< string >(), "Full name of output file (default: <db_name>_<db_dump_date>.inpx)" )
          ( "comment",     po::value< string >(), "File name of template (UTF-8) for INPX comment" )
          ( "update",      po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")" )
-         ( "db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11. (Default - old librusec format before 2010-02-06)" )
-         ( "clean-authors",                      "Clean duplicate authors in libavtorname table" )
-         ( "clean-aliases",                      "Clean libavtoraliase table" )
+         ( "db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2011-11-06. (Default - old librusec format before 2010-02-06)" )
+         ( "clean-authors",                      "Clean duplicate authors (librusec)" )
+         ( "clean-aliases",                      "Fix libavtoraliase table (flibusta)" )
          ( "follow-links",                       "Do not ignore symbolic links" )
          ( "inpx-format", po::value< string >(), "INPX format, Supported: 1.x, 2.x, (Default - old MyHomeLib format 1.x)" )
          ( "quick-fix",                          "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)" )
@@ -1031,7 +1063,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 5.2 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 5.3 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1099,7 +1131,11 @@ int main( int argc, char *argv[] )
          {
             g_format = e20100411;
          }
-         else
+         else if( 0 == _stricmp( opt.c_str(), "2011-11-06" ) )
+         {
+            g_format = e20111106;
+         }
+          else
          {
             cout << endl << "Warning: unknown database format, will use default!" << endl;
             g_format = eDefault;
@@ -1148,7 +1184,8 @@ int main( int argc, char *argv[] )
          g_clean_authors = true;
 
       if( vm.count( "clean-aliases" ) )
-         g_clean_aliases = true;
+         if( e20111106 != g_format )
+            g_clean_aliases = true;
 
       if( vm.count( "follow-links" ) )
          g_follow_links = true;
@@ -1296,6 +1333,8 @@ int main( int argc, char *argv[] )
       }
 
       {
+         string table_name = (e20111106 == g_format) ? "libavtors" : "libavtorname";
+
          mysql_connection mysql( module_path, g_db_name.c_str() );
 
          if( ! g_no_import )
@@ -1317,7 +1356,7 @@ int main( int argc, char *argv[] )
             string   buf, line;
             ifstream in( (path + *it).c_str() );
             regex    sl_comment( "^(--|#).*" );
-            bool     authors = g_clean_authors ? (string::npos != it->find( "libavtorname" ))   : false;
+            bool     authors = g_clean_authors ? (string::npos != it->find( table_name ))       : false;
             bool     aliases = g_clean_aliases ? (string::npos != it->find( "libavtoraliase" )) : false;
 
             if( !in )
@@ -1377,7 +1416,8 @@ int main( int argc, char *argv[] )
          {
             MYSQL_ROW record;
 
-            mysql.query( "SELECT Firstname, Middlename, Lastname, Nickname FROM libavtorname GROUP BY Firstname, Middlename, Lastname, Nickname HAVING COUNT(*) > 1" );
+            mysql.query( tmp_str( "SELECT Firstname, Middlename, Lastname, Nickname FROM %s GROUP BY Firstname, Middlename, Lastname, Nickname HAVING COUNT(*) > 1",
+                                  table_name.c_str() ) );
             mysql_results dupes( mysql );
 
             cout << endl << "Processing duplicate authors" << endl;
@@ -1388,7 +1428,8 @@ int main( int argc, char *argv[] )
                string    first;
                bool      not_first = false;
 
-               mysql.query( tmp_str( "SELECT aid FROM libavtorname WHERE Firstname='%s' AND Middlename='%s' AND Lastname='%s' AND Nickname='%s' ORDER by aid;",
+               mysql.query( tmp_str( "SELECT aid FROM %s WHERE Firstname='%s' AND Middlename='%s' AND Lastname='%s' AND Nickname='%s' ORDER by aid;",
+                                       table_name.c_str(),
                                        duplicate_quote( record[ 0 ] ).c_str(),
                                        duplicate_quote( record[ 1 ] ).c_str(),
                                        duplicate_quote( record[ 2 ] ).c_str(),
@@ -1421,7 +1462,7 @@ int main( int argc, char *argv[] )
                                                           << utf8_to_OEM( record[ 1 ] ) << endl;
                         if( 0 < count )
                            mysql.query( tmp_str( "UPDATE libavtor SET aid=%s WHERE aid=%s;", first.c_str(), record1[ 0 ] ), false );
-                        mysql.query( tmp_str( "DELETE FROM libavtorname WHERE aid=%s;", record1[ 0 ] ) );
+                        mysql.query( tmp_str( "DELETE FROM %s WHERE aid=%s;", table_name.c_str(), record1[ 0 ] ) );
                      }
                      else
                      {
@@ -1434,7 +1475,7 @@ int main( int argc, char *argv[] )
                                                              << utf8_to_OEM( record[ 0 ] ) << "-"
                                                              << utf8_to_OEM( record[ 1 ] ) << endl;
 
-                           mysql.query( tmp_str( "DELETE FROM libavtorname WHERE aid=%s;", record1[ 0 ] ) );
+                           mysql.query( tmp_str( "DELETE FROM %s WHERE aid=%s;", table_name.c_str(), record1[ 0 ] ) );
                            first.clear();
                         }
                      }

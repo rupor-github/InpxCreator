@@ -25,9 +25,9 @@
 #include <limits.h>
 
 #ifdef WIN64
-#  include <mysql-5.1.57-winx64\include\mysql.h>
+#  include <mysql-5.5.17-winx64\include\mysql.h>
 #else
-#  include <mysql-5.1.57-win32\include\mysql.h>
+#  include <mysql-5.5.17-win32\include\mysql.h>
 #endif
 
 #include <algorithm>
