@@ -14,7 +14,7 @@ function Get-ScriptDirectory
 # $proxy   = "http://host:port"
 $name    = "librusec"
 $site    = "http://lib.rus.ec"
-$retries = 10
+$retries = 20
 $timeout = 60
 
 $mydir   = Get-ScriptDirectory
@@ -41,14 +41,15 @@ $before_dir = @(dir $adir)
 & $mydir/libget --library $name --fb2only --retry $retries --timeout $timeout --continue --to $adir --tosql $wdir --config $mydir/libget.conf 2>&1 | Tee-Object -FilePath $tmp
 
 if( $LASTEXITCODE -lt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !"; exit 0 }
-if( $LASTEXITCODE -eq 0 ) { Write-Output "No new archives..."; exit 0 }
 
 # -----------------------------------------------------------------------------
 # Temporary leftovers
 # -----------------------------------------------------------------------------
-Remove-Item (Join-Path $adir "libavtoraliase.sql") | out-null
-Remove-Item (Join-Path $adir "libgenrelist.sql") | out-null
+Remove-Item (Join-Path $wdir "libavtoraliase.sql") | out-null
+Remove-Item (Join-Path $wdir "libgenrelist.sql") | out-null
 # -----------------------------------------------------------------------------
+
+if( $LASTEXITCODE -eq 0 ) { Write-Output "No new archives..."; exit 0 }
 
 $after_dir = @(dir $adir)
 $diff_dir  = Compare-Object $before_dir $after_dir
@@ -69,8 +70,9 @@ if( $new_archives -eq 0 ) { Write-Output "Nothing to do..."; exit 1 }
 & $mydir/lib2inpx "--db-name=$name" `
                   "--process=fb2" `
                   "--read-fb2=all" `
+                  "--prefer-fb2=merge" `
                   "--quick-fix" `
-                  "--db-format=2010-04-11" `
+                  "--db-format=2011-11-06" `
                   "--clean-authors" `
                   "--inpx-format=2.x" `
                   "--clean-when-done" `

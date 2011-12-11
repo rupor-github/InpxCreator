@@ -59,6 +59,7 @@ std::string  utf8_to_OEM( const char* ptr );
 std::string  duplicate_quote( const char* pstr );
 
 void split( std::vector< std::string >& result, const char *str, const char *delim, bool combine_delimiters = true );
+void join( std::string& result, const std::vector< std::string >& src, const char *delim );
 
 class tmp_str : public std::string
 {

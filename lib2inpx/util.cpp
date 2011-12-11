@@ -56,14 +56,53 @@ void initialize_limits( const string& config )
    }
 }
 
+wstring trim_right( const wchar_t *str )
+{
+   size_t len = wcslen( str ) + 1;
+   boost::scoped_array< wchar_t > buffer( new wchar_t[ len ] );
+
+   wcscpy_s( buffer.get(), len, str );
+
+   wchar_t *ptr      = buffer.get();
+   wchar_t *ptr_last = NULL;
+
+   while( *ptr != L'\0' )
+   {
+      if( iswspace( *ptr ) )
+      {
+         if( ptr_last == NULL )
+         {
+            ptr_last = ptr;
+         }
+      }
+      else
+      {
+         ptr_last = NULL;
+      }
+      ptr = CharNextW( ptr );
+   }
+
+   if( ptr_last != NULL )
+   {
+      // truncate at trailing space start
+
+      *ptr_last = L'\0';
+   }
+   return wstring( buffer.get() );
+}
+
 string fix_data( const char* pstr, size_t max_len )
 {
    if( g_fix )
    {
       wstring wstr = utf8_to_ucs2( pstr );
 
+      wstr = trim_right( wstr.c_str() );
+
       if( wstr.size() >= max_len )
          wstr = wstr.substr( 0, max_len - 1 );
+
+      wstr = trim_right( wstr.c_str() );
 
       return ucs2_to_utf8( wstr.c_str() );
    }
@@ -99,7 +138,7 @@ string duplicate_quote( const char* pstr )
       if( *pstr++ == '\'' )
          buf += '\'';
    }
-   return buf; 
+   return buf;
 }
 
 #endif // DO_NOT_INCLUDE_PARSER
@@ -220,6 +259,29 @@ string utf8_to_OEM( const char* ptr )
    buf2.get()[ len ] = L'\0';
 
    return string( buf2.get() );
+}
+
+void join( string& result, const vector< string >& src, const char *delim )
+{
+   result.erase();
+
+   if( (NULL != delim) && ('\0' != *delim) )
+   {
+      bool first_time = true;
+
+      for( vector< string >::const_iterator it = src.begin(); it != src.end(); ++it )
+      {
+         if( ! first_time )
+         {
+            result += delim;
+         }
+         else
+         {
+            first_time = false;
+         }
+         result += (*it);
+      }
+   }
 }
 
 void split( vector< string >& result, const char *str, const char *delim, bool combine_delimiters )

@@ -43,7 +43,14 @@ enum fb2_parsing
    eReadLast,
    eReadAll
 };
-static fb2_parsing   g_read_fb2 = eReadNone;
+static fb2_parsing g_read_fb2 = eReadNone;
+
+enum fb2_preference
+{
+   eIgnoreFB2 = 0,
+   eMergeFB2
+};
+static fb2_preference g_fb2_preference = eIgnoreFB2;
 
 enum processing_type
 {
@@ -540,7 +547,7 @@ void get_book_squence( const mysql_connection& mysql, const string& book_id, str
    remove_crlf( sequence );
 }
 
-void process_book( const mysql_connection& mysql, MYSQL_ROW record, const string& file_name, const string& ext, string& inp )
+void process_book( const mysql_connection& mysql, MYSQL_ROW record, const string& file_name, const string& ext, const string& seq_name, const string& seq_num, string& inp )
 {
    inp.erase();
 
@@ -584,9 +591,9 @@ void process_book( const mysql_connection& mysql, MYSQL_ROW record, const string
    inp += sep;
    inp += book_title;
    inp += sep;
-   inp += book_sequence;
+   inp += (seq_name.size() > 0) ? seq_name : book_sequence;
    inp += sep;
-   inp += book_sequence_num;
+   inp += (seq_name.size() > 0) ? seq_num  : book_sequence_num;
    inp += sep;
    inp += ((eIgnore == g_strict) && (0 != _stricmp( ext.c_str(), book_type.c_str() ))) ? "" : book_file;
    inp += sep;
@@ -609,25 +616,18 @@ void process_book( const mysql_connection& mysql, MYSQL_ROW record, const string
    inp += "\r\n";
 }
 
-bool process_from_fb2( const unzip& uz, const string& book_id, string& inp, string& err )
+bool read_fb2( const unzip& uz, const string& book_id, fb2_parser& fb, unz_file_info64& fi, string& err )
 {
    bool rc = false;
-
-   DOUT(  printf( "   Processing %s\n", book_id.c_str() ); );
 
    const int buffer_size = 4096;
    boost::scoped_array< char > buffer( new char[ buffer_size ] );
 
-   err.erase();
-   inp.erase();
-
    try
    {
-      unzip_reader    ur( uz );
-      fb2_parser      fb;
-      unz_file_info64 fi;
+      unzip_reader ur( uz );
 
-      uz.current ( fi );
+      uz.current( fi );
 
       int  len                 = 0;
       bool continue_processing = true;
@@ -638,45 +638,71 @@ bool process_from_fb2( const unzip& uz, const string& book_id, string& inp, stri
       if( continue_processing )
          fb( buffer.get(), 0, true );
 
-      // AUTHOR;GENRE;TITLE;SERIES;SERNO;FILE;SIZE;LIBID;DEL;EXT;DATE;LANG;LIBRATE;KEYWORDS;
-
-      string authors, genres;
-      for( vector< string >::const_iterator it = fb.m_authors.begin(); it != fb.m_authors.end(); ++it )
-         authors += (*it) + ":";
-      for( vector< string >::const_iterator it = fb.m_genres.begin(); it != fb.m_genres.end(); ++it )
-         genres += (*it) + ":";
-
-      inp  = authors;
-      inp += sep;
-      inp += genres;
-      inp += sep;
-      inp += fb.m_title;
-      inp += sep;
-      inp += fb.m_seq_name;
-      inp += sep;
-      inp += fb.m_seq;
-      inp += sep;
-      inp += book_id;
-      inp += sep;
-      inp += tmp_str( "%d", fi.uncompressed_size );
-      inp += sep;
-      inp += book_id;
-      inp += sep;
-//      inp += book_deleted;
-      inp += sep;
-      inp += "fb2";
-      inp += sep;
-      inp += to_iso_extended_string( date( ((fi.dosDate >> 25) & 0x7F) + 1980, ((fi.dosDate >> 21) & 0x0F), ((fi.dosDate >> 16) & 0x1F) ) ) ;
-      inp += sep;
-      inp += fb.m_language;
-      inp += sep;
-//      inp += book_rate;
-      inp += sep;
-      inp += fb.m_keywords;
-      inp += sep;
-      inp += "\r\n";
-
       rc = true;
+   }
+   catch( exception& e )
+   {
+      err = e.what();
+   }
+   return rc;
+}
+
+bool process_from_fb2( const unzip& uz, const string& book_id, string& inp, string& err )
+{
+   bool rc = false;
+
+   DOUT(  printf( "   Processing %s\n", book_id.c_str() ); );
+
+   err.erase();
+   inp.erase();
+
+   try
+   {
+      fb2_parser      fb;
+      unz_file_info64 fi;
+
+      if( read_fb2( uz, book_id, fb, fi, err ) )
+      {
+         // AUTHOR;GENRE;TITLE;SERIES;SERNO;FILE;SIZE;LIBID;DEL;EXT;DATE;LANG;LIBRATE;KEYWORDS;
+
+         string authors, genres;
+         for( vector< string >::const_iterator it = fb.m_authors.begin(); it != fb.m_authors.end(); ++it )
+            authors += (*it) + ":";
+         for( vector< string >::const_iterator it = fb.m_genres.begin(); it != fb.m_genres.end(); ++it )
+            genres += (*it) + ":";
+
+         inp  = authors;
+         inp += sep;
+         inp += genres;
+         inp += sep;
+         inp += fb.m_title;
+         inp += sep;
+         inp += fb.m_seq_name;
+         inp += sep;
+         inp += fb.m_seq;
+         inp += sep;
+         inp += book_id;
+         inp += sep;
+         inp += tmp_str( "%d", fi.uncompressed_size );
+         inp += sep;
+         inp += book_id;
+         inp += sep;
+//          inp += book_deleted;
+         inp += sep;
+         inp += "fb2";
+         inp += sep;
+         inp += to_iso_extended_string( date( ((fi.dosDate >> 25) & 0x7F) + 1980, ((fi.dosDate >> 21) & 0x0F), ((fi.dosDate >> 16) & 0x1F) ) ) ;
+         inp += sep;
+         inp += fb.m_language;
+         inp += sep;
+//          inp += book_rate;
+         inp += sep;
+         inp += fb.m_keywords;
+         inp += sep;
+         inp += "\r\n";
+
+         rc = true;
+      }
    }
    catch( exception& e )
    {
@@ -829,6 +855,7 @@ void process_local_archives( const mysql_connection& mysql, const zip& zz, const
 
          if( ! book_id.empty() )
          {
+            string    err;
             MYSQL_ROW record;
 
             mysql.query( stmt );
@@ -837,12 +864,24 @@ void process_local_archives( const mysql_connection& mysql, const zip& zz, const
 
             if( record = book.fetch_row() )
             {
-               process_book( mysql, record, book_id, ext, inp );
+               string seq;
+               string seq_num;
+
+               if( eIgnoreFB2 != g_fb2_preference )
+               {
+                  fb2_parser      fb;
+                  unz_file_info64 fi;
+
+                  if( read_fb2( uz, book_id, fb, fi, err ) )
+                  {
+                     seq     = fb.m_seq_name;
+                     seq_num = fb.m_seq;
+                  }
+               }
+               process_book( mysql, record, book_id, ext, seq, seq_num, inp );
             }
             else
             {
-               string err;
-
                if( fb2 && ((eReadAll == g_read_fb2) || ((eReadLast == g_read_fb2) && is_after_last(book_id))))
                {
                   if( ! process_from_fb2( uz, book_id, inp, err ) )
@@ -977,7 +1016,7 @@ void process_database( const mysql_connection& mysql, const zip& zz )
             bookid_to_name( mysql, record[ 0 ], file_name, ext );
       }
 
-      process_book( mysql, record, file_name, ext, inp );
+      process_book( mysql, record, file_name, ext, "", "", inp );
 
       if( 0 != inp.size() )
       {
@@ -1031,6 +1070,7 @@ int main( int argc, char *argv[] )
          ( "db-name",     po::value< string >(), "Name of MYSQL database (default: librusec)" )
          ( "archives",    po::value< string >(), "Path(s) to off-line archives. Multiple entries should be separated by ';'. Each path must be valid and must point to some archives, or processing would be aborted. (If not present - entire database in converted for online usage)" )
          ( "read-fb2",    po::value< string >(), "When archived book is not present in the database - try to parse fb2 in archive to get information. \"all\" - do it for all absent books, \"last\" - only process books with ids larger than last database id (If not present - no fb2 parsing)" )
+         ( "prefer-fb2",  po::value< string >(), "Try to parse fb2 in archive to get information (default: ignore). \"ignore\" - ignore fb2 information, \"merge\" - always prefer book sequence info from fb2" )
          ( "inpx",        po::value< string >(), "Full name of output file (default: <db_name>_<db_dump_date>.inpx)" )
          ( "comment",     po::value< string >(), "File name of template (UTF-8) for INPX comment" )
          ( "update",      po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")" )
@@ -1063,7 +1103,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 5.3 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 5.4 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1097,6 +1137,20 @@ int main( int argc, char *argv[] )
          {
             cout << endl << "Warning: unknown read-fb2 action, assuming none!" << endl;
             g_read_fb2 = eReadNone;
+         }
+      }
+
+      if( vm.count( "prefer-fb2" ) )
+      {
+         string opt = vm[ "prefer-fb2" ].as< string >();
+         if( 0 == _stricmp( opt.c_str(), "ignore" ) )
+            g_fb2_preference = eIgnoreFB2;
+         else if( 0 == _stricmp( opt.c_str(), "merge" ) )
+            g_fb2_preference = eMergeFB2;
+         else
+         {
+            cout << endl << "Warning: unknown prefer-fb2 action, assuming ignore!" << endl;
+            g_fb2_preference = eIgnoreFB2;
          }
       }
 
