@@ -1122,7 +1122,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 5.41 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 5.5 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1451,7 +1451,8 @@ int main( int argc, char *argv[] )
                      pos = buf.rfind( ';' );
                      if( pos == string::npos )
                      {
-                        if( aliases && (0 == buf.find( "`AliaseId` int(11) NOT NULL auto_increment," )) )
+                        if( aliases && ((0 == buf.find( "`AliaseId` int(11) NOT NULL auto_increment," )) ||
+                                        (0 == buf.find( "`AliaseId` int(11) NOT NULL AUTO_INCREMENT," ))) )
                         {
                            line += buf;
                            line += "`dummyId` int(11) NOT NULL default '0',";
