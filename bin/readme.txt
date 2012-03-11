@@ -27,7 +27,7 @@
 Для запуска наберите lib2inpx.exe в командном окне:
 
 Import file (INPX) preparation tool for MyHomeLib
-Version 5.4 (MYSQL 5.5.17)
+Version 5.51 (MYSQL 5.5.17)
 
 Usage: lib2inpx.exe [options] <path to SQL dump files>
 
@@ -56,7 +56,13 @@ options:
                         no fb2 parsing)
   --prefer-fb2 arg      Try to parse fb2 in archive to get information 
                         (default: ignore). "ignore" - ignore fb2 information, 
-                        "merge" - always prefer book sequence info from fb2
+                        "merge" - always prefer book sequence info from fb2, 
+                        "replace" - always use book sequence info from fb2
+  --sequence arg        How to process sequence types from database (default: 
+                        author). "author" - always select author's book 
+                        sequence, "publisher" - always select publisher's book 
+                        sequence, "ignore" - don't do any processing. Only 
+                        relevant for librusec database format 2011-11-06
   --inpx arg            Full name of output file (default: 
                         <db_name>_<db_dump_date>.inpx)
   --comment arg         File name of template (UTF-8) for INPX comment
@@ -431,9 +437,13 @@ Processing - "fb2-173909-180344.zip"   - done in 00:00:03 (4049:561:1 records)
 Если указать "--read-fb2=all", то для всех FB2 книг, отсутствующих в базе будет
 сделана попытка прочесть информацию из FB2.
 
+Ключ "--sequence" позволяет решить, какие типы серий из базы Либрусека предпочесть:
+авторские, издательские или не обращать на тип внимания вообще. Этот ключ работает 
+только с новыми базами Либрусека (--db-format=2011-11-06)
+
 При указании "--prefer-fb2=merge" программа будет читать FB2 из архива всегда и 
 пытаться подставить серию из FB2 даже если книга имеется в базе. Этот режим 
-работает существенно медленнее но для текущего librusec дает лучшие результаты!
+работает существенно медленнее.
 
 Обратите пожалуйста внимание на то, что некоторые архивы Либрусека в настоящий момент
 находятся в странном состоянии. Не FB2 книги внутри них могут находиться в

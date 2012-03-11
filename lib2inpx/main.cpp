@@ -78,6 +78,14 @@ enum inpx_format
 };
 static inpx_format g_inpx_format = e1X;
 
+enum series_type
+{
+   eIgnoreST = 0,
+   eAuthorST,
+   ePublisherST
+};
+static series_type g_series_type = eAuthorST;
+
 static long   g_last_fb2 = 0;
 static string g_update;
 static string g_db_name  = "librusec";
@@ -535,8 +543,15 @@ void get_book_squence( const mysql_connection& mysql, const string& book_id, str
       else if( e20111106 == g_format ) { str = "SELECT SeqName FROM libseqs WHERE sid=";      }
       else                             { str = "SELECT SeqName FROM libseqname WHERE SeqId="; }
 
+      str = str + seq_id;
 
-      mysql.query( str + seq_id + ";" );
+      if( e20111106 == g_format )
+      {
+         if( g_series_type == eAuthorST )      str += " AND type='a'";
+         else if( g_series_type == ePublisherST ) str += " AND type='p'";
+      }
+
+      mysql.query( str + ";" );
 
       mysql_results seq_name( mysql );
 
@@ -1090,6 +1105,7 @@ int main( int argc, char *argv[] )
          ( "archives",    po::value< string >(), "Path(s) to off-line archives. Multiple entries should be separated by ';'. Each path must be valid and must point to some archives, or processing would be aborted. (If not present - entire database in converted for online usage)" )
          ( "read-fb2",    po::value< string >(), "When archived book is not present in the database - try to parse fb2 in archive to get information. \"all\" - do it for all absent books, \"last\" - only process books with ids larger than last database id (If not present - no fb2 parsing)" )
          ( "prefer-fb2",  po::value< string >(), "Try to parse fb2 in archive to get information (default: ignore). \"ignore\" - ignore fb2 information, \"merge\" - always prefer book sequence info from fb2, \"replace\" - always use book sequence info from fb2" )
+         ( "sequence",    po::value< string >(), "How to process sequence types from database (default: author). \"author\" - always select author's book sequence, \"publisher\" - always select publisher's book sequence, \"ignore\" - don't do any processing. Only relevant for librusec database format 2011-11-06" )
          ( "inpx",        po::value< string >(), "Full name of output file (default: <db_name>_<db_dump_date>.inpx)" )
          ( "comment",     po::value< string >(), "File name of template (UTF-8) for INPX comment" )
          ( "update",      po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")" )
@@ -1122,7 +1138,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 5.5 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 5.51 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1172,6 +1188,22 @@ int main( int argc, char *argv[] )
          {
             cout << endl << "Warning: unknown prefer-fb2 action, assuming ignore!" << endl;
             g_fb2_preference = eIgnoreFB2;
+         }
+      }
+
+      if( vm.count( "sequence" ) )
+      {
+         string opt = vm[ "sequence" ].as< string >();
+         if( 0 == _stricmp( opt.c_str(), "author" ) )
+            g_series_type = eAuthorST;
+         else if( 0 == _stricmp( opt.c_str(), "publisher" ) )
+            g_series_type = ePublisherST;
+         else if( 0 == _stricmp( opt.c_str(), "ignore" ) )
+            g_series_type = eIgnoreST;
+         else
+         {
+            cout << endl << "Warning: unknown sequence type, assuming author's sequence!" << endl;
+            g_series_type = eAuthorST;
          }
       }
 

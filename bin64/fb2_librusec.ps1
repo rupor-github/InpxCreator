@@ -45,8 +45,8 @@ if( $LASTEXITCODE -lt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !"; exit 0
 # -----------------------------------------------------------------------------
 # Temporary leftovers
 # -----------------------------------------------------------------------------
-Remove-Item (Join-Path $wdir "libavtoraliase.sql") | out-null
-Remove-Item (Join-Path $wdir "libgenrelist.sql") | out-null
+# Remove-Item (Join-Path $wdir "libavtoraliase.sql") | out-null
+# Remove-Item (Join-Path $wdir "libgenrelist.sql") | out-null
 # -----------------------------------------------------------------------------
 
 if( $LASTEXITCODE -eq 0 ) { Write-Output "No new archives..."; exit 0 }
@@ -70,7 +70,6 @@ if( $new_archives -eq 0 ) { Write-Output "Nothing to do..."; exit 1 }
 & $mydir/lib2inpx "--db-name=$name" `
                   "--process=fb2" `
                   "--read-fb2=all" `
-                  "--prefer-fb2=merge" `
                   "--quick-fix" `
                   "--db-format=2011-11-06" `
                   "--clean-authors" `
