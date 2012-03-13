@@ -531,7 +531,7 @@ void get_book_squence( const mysql_connection& mysql, const string& book_id, str
 
    mysql_results seq( mysql );
 
-   if( record = seq.fetch_row() )
+   while( record = seq.fetch_row() )
    {
       string seq_id( record[ 0] );
 
@@ -558,6 +558,7 @@ void get_book_squence( const mysql_connection& mysql, const string& book_id, str
       if( record = seq_name.fetch_row() )
       {
          sequence += fix_data( record[ 0 ], g_limits.S_Title );
+         break;
       }
    }
    remove_crlf( sequence );
@@ -1138,7 +1139,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 5.51 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 5.52 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
