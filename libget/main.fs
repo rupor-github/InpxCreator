@@ -114,6 +114,7 @@ let prepareReq (url:Uri) func =
     req.UserAgent         <- "Mozilla/5.0 (Windows; en-US)"
     req.Timeout           <- !timeout * 1000
     req.AllowAutoRedirect <- true
+    req.Referer           <- url.Host
     func req
     req
 

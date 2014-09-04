@@ -1,0 +1,11 @@
+{
+	"ImportPath": "libget2",
+	"GoVersion": "go1.3.1",
+	"Deps": [
+		{
+			"ImportPath": "code.google.com/p/go.net/proxy",
+			"Comment": "null-144",
+			"Rev": "ad01a6fcc8a19d3a4478c836895ffe883bd2ceab"
+		}
+	]
+}

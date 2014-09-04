@@ -38,7 +38,7 @@ Write-Output "Downloading $name ..."
 $new_archives = 0
 $before_dir = @(dir $adir)
 
-& $mydir/libget --library $name --fb2only --retry $retries --timeout $timeout --continue --to $adir --tosql $wdir --config $mydir/libget.conf 2>&1 | Tee-Object -FilePath $tmp
+& $mydir/libget2 --library $name --retry $retries --timeout $timeout --continue --to $adir --tosql $wdir --config $mydir/libget2.conf 2>&1 | Tee-Object -FilePath $tmp
 
 if( $LASTEXITCODE -lt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !"; exit 0 }
 

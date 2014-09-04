@@ -42,9 +42,9 @@
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 
-#include <zlib-1.2.5\zlib.h>
-#include <zlib-1.2.5\contrib\minizip\unzip.h>
-#include <zlib-1.2.5\contrib\minizip\zip.h>
-#include <zlib-1.2.5\contrib\minizip\iowin32.h>
+#include <zlib-1.2.6\zlib.h>
+#include <zlib-1.2.6\contrib\minizip\unzip.h>
+#include <zlib-1.2.6\contrib\minizip\zip.h>
+#include <zlib-1.2.6\contrib\minizip\iowin32.h>
 
 #endif // __IMPORT_PRECOMP_H__

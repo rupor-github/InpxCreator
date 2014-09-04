@@ -112,7 +112,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\zlib-1.2.5;..\..\zlib-1.2.5\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\zlib-1.2.6;..\..\zlib-1.2.6\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>
       </ExceptionHandling>
@@ -138,7 +138,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>..\..\zlib-1.2.5;..\..\zlib-1.2.5\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\zlib-1.2.6;..\..\zlib-1.2.6\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;ASMV;ASMINF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>
@@ -158,7 +158,7 @@
     </ResourceCompile>
     <Lib>
       <AdditionalOptions>/MACHINE:X86 /NODEFAULTLIB %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>..\..\zlib-1.2.5\contrib\masmx86\match686.obj;..\..\zlib-1.2.5\contrib\masmx86\inffas32.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\zlib-1.2.6\contrib\masmx86\match686.obj;..\..\zlib-1.2.6\contrib\masmx86\inffas32.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)zlibstat.lib</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
@@ -166,7 +166,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWithoutAsm|Win32'">
     <ClCompile>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>..\..\zlib-1.2.5;..\..\zlib-1.2.5\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\zlib-1.2.6;..\..\zlib-1.2.6\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>
@@ -196,7 +196,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\zlib-1.2.5;..\..\zlib-1.2.5\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\zlib-1.2.6;..\..\zlib-1.2.6\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>
       </ExceptionHandling>
@@ -225,7 +225,7 @@
     </Midl>
     <ClCompile>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>..\..\zlib-1.2.5;..\..\zlib-1.2.5\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\zlib-1.2.6;..\..\zlib-1.2.6\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;ASMV;ASMINF;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>
@@ -245,7 +245,7 @@
     </ResourceCompile>
     <Lib>
       <AdditionalOptions>/MACHINE:AMD64 /NODEFAULTLIB %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>..\..\zlib-1.2.5\contrib\masmx64\gvmat64.obj;..\..\zlib-1.2.5\contrib\masmx64\inffasx64.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\zlib-1.2.6\contrib\masmx64\gvmat64.obj;..\..\zlib-1.2.6\contrib\masmx64\inffasx64.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)zlibstat.lib</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
@@ -256,7 +256,7 @@
     </Midl>
     <ClCompile>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>..\..\zlib-1.2.5;..\..\zlib-1.2.5\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\zlib-1.2.6;..\..\zlib-1.2.6\contrib\masmx86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>
@@ -281,30 +281,30 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\zlib-1.2.5\adler32.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\compress.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\contrib\minizip\iowin32.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\crc32.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\deflate.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\gzclose.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\gzlib.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\gzread.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\gzwrite.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\infback.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\contrib\masmx64\inffas8664.c">
+    <ClCompile Include="..\..\zlib-1.2.6\adler32.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\compress.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\contrib\minizip\iowin32.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\crc32.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\deflate.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\gzclose.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\gzlib.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\gzread.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\gzwrite.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\infback.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\contrib\masmx64\inffas8664.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseWithoutAsm|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\..\zlib-1.2.5\inffast.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\inflate.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\inftrees.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\contrib\minizip\ioapi.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\trees.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\uncompr.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\contrib\minizip\unzip.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\contrib\minizip\zip.c" />
-    <ClCompile Include="..\..\zlib-1.2.5\zutil.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\inffast.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\inflate.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\inftrees.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\contrib\minizip\ioapi.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\trees.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\uncompr.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\contrib\minizip\unzip.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\contrib\minizip\zip.c" />
+    <ClCompile Include="..\..\zlib-1.2.6\zutil.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
