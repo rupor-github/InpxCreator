@@ -7,11 +7,13 @@ function Get-ScriptDirectory
    Split-Path $Invocation.MyCommand.Path
 }
 
+# no line wrapping please!
+$host.UI.RawUI.BufferSize = new-object System.Management.Automation.Host.Size(512,50)
+
 # -----------------------------------------------------------------------------
 # Following variables could be changed
 # -----------------------------------------------------------------------------
 
-# $proxy   = "http://host:port"
 $name    = "flibusta"
 $site    = "http://www.flibusta.net"
 $retries = 10
@@ -26,19 +28,15 @@ $glog    = Join-Path $mydir ($name + "_res" + (get-date -format "_yyyyMMdd") + "
 # Main body
 # -----------------------------------------------------------------------------
 
-$tmp = [System.IO.Path]::GetTempFileName()
-
 if( $glog ) { Start-Transcript $glog }
 Trap { if( $glog ) { Stop-Transcript }; break }
-
-if( $proxy ) { $env:http_proxy=$proxy }
 
 Write-Output "Downloading $name ..."
 
 $new_archives = 0
 $before_dir = @(dir $adir)
 
-& $mydir/libget2 --library $name --retry $retries --timeout $timeout --continue --to $adir --tosql $wdir --config $mydir/libget2.conf 2>&1 | Tee-Object -FilePath $tmp
+& $mydir/libget2 --library $name --retry $retries --timeout $timeout --continue --to $adir --tosql $wdir --config $mydir/libget2.conf 2>&1 | Write-Host
 
 if( $LASTEXITCODE -gt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !"; exit 0 }
 if( $LASTEXITCODE -eq 0 ) { Write-Output "No new archives..."; exit 0 }
@@ -68,9 +66,7 @@ if( $new_archives -eq 0 ) { Write-Output "Nothing to do..."; exit 1 }
                   "--clean-when-done" `
                   "--follow-links" `
                   "--archives=$adir" `
-                  "$wdir" 2>&1 | Tee-Object -FilePath $tmp
+                  "$wdir" 2>&1 | Write-Host
 
 if( ! $? ) { Write-Error "Unable to build INPX!"; exit $LASTEXITCODE }
 if( $glog ) { Stop-Transcript }
-
-Remove-Item $tmp | out-null
