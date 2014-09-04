@@ -1,12 +1,12 @@
 package main
 
 import (
-	"libget2/Godeps/_workspace/src/code.google.com/p/go.net/proxy"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"libget2/Godeps/_workspace/src/code.google.com/p/go.net/proxy"
 	"log"
 	"net"
 	"net/http"
@@ -399,8 +399,9 @@ func main() {
 	if err = getFiles(links, lib.URL, dest); err != nil {
 		log.Fatal(err)
 	}
-	if len(links) > 0 {
-		fmt.Printf("\nProcessed %d new archive(s)\n", len(links))
+	newArchives := len(links)
+	if newArchives > 0 {
+		fmt.Printf("\nProcessed %d new archive(s)\n", newArchives)
 	} else {
 		fmt.Println()
 	}
@@ -424,5 +425,5 @@ func main() {
 		fmt.Println()
 	}
 	fmt.Println("\nDone...")
-	os.Exit(0)
+	os.Exit(-newArchives)
 }
