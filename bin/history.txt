@@ -1,4 +1,9 @@
-﻿5.52 (2012-03-11 16:30 EST)
+﻿5.52 (2014-09-05 20:30 EST)
+
+   Заменена libget.exe на libget2.exe - больше не нужен .NET и в conf файле поддерживаются SOCKS5 proxy с
+   authentication и без для закачки через Tor или VPN
+
+5.52 (2012-03-11 16:30 EST)
 
    Починен --sequence 
 

@@ -540,31 +540,27 @@ options:
 Имеется и очень простая утилита для загрузки новых библиотечных архивов и баз данных (синхронизация)
 
 Tool to download library updates
-Version 1.6
+Version 2.0
 
-Usage: libget.exe [options]
+Usage: D:\Books_e\lib2inpx\libget2.exe [options]
 
-	--library <string>: (flibusta) name of the library profile
-	--retry <int>: (3) number of re-tries
-	--timeout <int>: (20) communication timeout in seconds
-	--continue: (false) continue getting a partially-downloaded file
-	--progress: (false) show progress during download
-	--nosql: (false) do not download database
-	--fb2only: (false) clean non-FB2 entries from downloaded archives
-	--to <string>: (current directory) archives destination directory
-	--tosql <string>: (current directory) database destination directory
-	--config <string>: (libget.conf) configuration file
-	--verbose: (false) print complete error information
-	--help: display this list of options
+  -config="D:\\Books_e\\lib2inpx\\libget2.conf": configuration file
+  -continue=false: continue getting a partially-downloaded file
+  -library="flibusta": name of the library profile
+  -nosql=false: do not download database
+  -retry=3: number of re-tries
+  -timeout=20: communication timeout in seconds
+  -to="D:\\Books_e\\lib2inpx": destination directory for archives
+  -tosql="": destination directory for database files
+  -verbose=false: print detailed information
 
 Она разбирает имена файлов в директории, указанной параметром --to, находит из
 них ID последней книги и пытается загрузить из указанной библиотеки архивы, содержащие книги с
 большими ID. Все решения принимаются исключительно на основании анализа имен файлов.
-После загрузки архивов их integrity проверяется и если указан --fb2only из архива
-удаляются все файлы с именами, отличными от <book_id>.fb2
-Так же могут быть загружены в директорию --tosql и распакованы SQL таблички библиотеки.
-Kонфигурация для программы лежит в файле libget.conf (JSON).
-Эта программа написана на .NET - соответственно требуется наличие .NET 4.0 (client profile).
+После загрузки архивов проверяется их integrity. Так же могут быть загружены в директорию --tosql 
+и распакованы SQL таблички библиотеки. Kонфигурация для программы лежит в файле libget.conf (JSON),
+где можно теперь указать и proxy (поддерживается SOCK5 с authentication и без, что позволяет
+качать файлы через Tor или VPN).
 
 В предлагаемый дистрибутив в качестве примера входят 2 PowerShell скрипта: fb2_librusec.ps1
 и fb2_flibusta.ps1, которыe принимают единственный параметр – путь к локальным архивам:
