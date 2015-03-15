@@ -78,30 +78,30 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\boost\boost_1_44_0;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\boost\boost_1_44_0\stage\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>..\..\boost\boost_1_44_0;$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\boost\boost_1_44_0\stage\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(ProjectName)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\boost\boost_1_44_0;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\boost\boost_1_44_0\stage64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>..\..\boost\boost_1_44_0;$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\boost\boost_1_44_0\stage64\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(ProjectName)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\boost\boost_1_44_0;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\boost\boost_1_44_0\stage\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>..\..\boost\boost_1_44_0;$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\boost\boost_1_44_0\stage\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(ProjectName)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(ProjectName)\$(Configuration)\</IntDir>
     <CustomBuildAfterTargets>FinalizeBuildStatus</CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\boost\boost_1_44_0;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\boost\boost_1_44_0\stage64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>..\..\boost\boost_1_44_0;$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\boost\boost_1_44_0\stage64\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Platform)\$(ProjectName)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(ProjectName)\$(Configuration)\</IntDir>
     <CustomBuildAfterTargets>FinalizeBuildStatus</CustomBuildAfterTargets>
