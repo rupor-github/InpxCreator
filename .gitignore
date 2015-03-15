@@ -202,3 +202,5 @@ mysql-5.5.17-winx64/**
 !mysql-5.5.17-winx64/readme.txt
 boost/boost_1_44_0/**
 !boost/boost_1_44_0/readme.txt
+zlib-?.?.?/contrib/masmx64/*.lst
+zlib-?.?.?/contrib/masmx86/*.lst

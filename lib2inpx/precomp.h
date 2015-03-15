@@ -56,6 +56,7 @@
 #include <boost/property_tree/info_parser.hpp>
 
 #include <zlib-1.2.6\zlib.h>
+// minizip checks wrong define (_ZLIB_H). We need to force include directory!
 #include <zlib-1.2.6\contrib\minizip\unzip.h>
 #include <zlib-1.2.6\contrib\minizip\zip.h>
 #include <zlib-1.2.6\contrib\minizip\iowin32.h>
