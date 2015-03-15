@@ -196,6 +196,9 @@ FakesAssemblies/
 
 # Our staff
 
+[Bb]in
+[Bb]in64
+
 mysql-5.5.17-win32/**
 !mysql-5.5.17-win32/readme.txt
 mysql-5.5.17-winx64/**
@@ -205,5 +208,3 @@ boost/boost_1_44_0/**
 zlib-?.?.?/contrib/masmx64/*.lst
 zlib-?.?.?/contrib/masmx86/*.lst
 
-[Bb]in/*.exe
-[Bb]in64/*.exe
