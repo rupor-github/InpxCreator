@@ -19,7 +19,6 @@ x64/
 x86/
 build/
 bld/
-[Bb]in/
 [Oo]bj/
 
 # Visual Studo 2015 cache/options directory
@@ -196,6 +195,7 @@ FakesAssemblies/
 *.opt
 
 # Our staff
+
 mysql-5.5.17-win32/**
 !mysql-5.5.17-win32/readme.txt
 mysql-5.5.17-winx64/**
@@ -204,3 +204,6 @@ boost/boost_1_44_0/**
 !boost/boost_1_44_0/readme.txt
 zlib-?.?.?/contrib/masmx64/*.lst
 zlib-?.?.?/contrib/masmx86/*.lst
+
+[Bb]in/*.exe
+[Bb]in64/*.exe

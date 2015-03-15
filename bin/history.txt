@@ -1,4 +1,8 @@
-﻿5.52 (2014-09-05 20:30 EST)
+﻿6.00 (2015-03-15 14:00 EST)
+   
+   Default inpx format from now on is 2.x - for up to date MyHomeLib
+
+5.52 (2014-09-05 20:30 EST)
 
    Заменена libget.exe на libget2.exe - больше не нужен .NET и в conf файле поддерживаются SOCKS5 proxy с
    authentication и без для закачки через Tor или VPN

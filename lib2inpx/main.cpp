@@ -76,7 +76,7 @@ enum inpx_format
    e1X = 0,
    e2X
 };
-static inpx_format g_inpx_format = e1X;
+static inpx_format g_inpx_format = e2X;
 
 enum series_type
 {
@@ -1114,7 +1114,7 @@ int main( int argc, char *argv[] )
          ( "clean-authors",                      "Clean duplicate authors (librusec)" )
          ( "clean-aliases",                      "Fix libavtoraliase table (flibusta)" )
          ( "follow-links",                       "Do not ignore symbolic links" )
-         ( "inpx-format", po::value< string >(), "INPX format, Supported: 1.x, 2.x, (Default - old MyHomeLib format 1.x)" )
+         ( "inpx-format", po::value< string >(), "INPX format, Supported: 1.x, 2.x, (Default - new MyHomeLib format 2.x)" )
          ( "quick-fix",                          "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)" )
          ( "fix-config",  po::value< string >(), "Allows to specify configuration file with MyHomeLib database size constrains" )
          ( "verbose",                            "More output... (default: off)" )
@@ -1139,7 +1139,7 @@ int main( int argc, char *argv[] )
       {
          cout << endl;
          cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-         cout << "Version 5.52 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+         cout << "Version 6.00 (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
          cout << endl;
          cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
          cout << options << endl;
@@ -1264,7 +1264,7 @@ int main( int argc, char *argv[] )
          else
          {
             cout << endl << "Warning: unknown INPX format, will use default!" << endl;
-            g_inpx_format = e1X;
+            g_inpx_format = e2X;
          }
       }
 
