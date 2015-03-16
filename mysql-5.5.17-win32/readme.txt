@@ -1,1 +1,0 @@
-Unpack mysql-5.5.17-win32.zip here
