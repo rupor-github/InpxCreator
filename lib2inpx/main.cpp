@@ -1672,6 +1672,9 @@ int main( int argc, char *argv[] )
       {
          string db_dir( module_path ); db_dir += "/data/"; db_dir += db_name; db_dir += "/";
          clean_directory( db_dir.c_str() );
+         string cnf_file( module_path ); cnf_file += "/data/auto.cnf";
+         if( 0 != _unlink( cnf_file.c_str() ) )
+            throw runtime_error( tmp_str( "Unable to delete file \"%s\"", cnf_file.c_str() ) );
       }
 
       rc = 0;

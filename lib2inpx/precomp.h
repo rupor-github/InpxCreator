@@ -25,9 +25,9 @@
 #include <limits.h>
 
 #ifdef WIN64
-#  include <mysql-5.5.17-winx64\include\mysql.h>
+#  include <mysql-5.6.23-winx64\include\mysql.h>
 #else
-#  include <mysql-5.5.17-win32\include\mysql.h>
+#  include <mysql-5.6.23-win32\include\mysql.h>
 #endif
 
 #include <algorithm>
@@ -55,11 +55,10 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
 
-#include <zlib-1.2.6\zlib.h>
-// minizip checks wrong define (_ZLIB_H). We need to force include directory!
-#include <zlib-1.2.6\contrib\minizip\unzip.h>
-#include <zlib-1.2.6\contrib\minizip\zip.h>
-#include <zlib-1.2.6\contrib\minizip\iowin32.h>
+#include <zlib-1.2.8\zlib.h>
+#include <zlib-1.2.8\contrib\minizip\unzip.h>
+#include <zlib-1.2.8\contrib\minizip\zip.h>
+#include <zlib-1.2.8\contrib\minizip\iowin32.h>
 
 #include <expat-2.0.1\expat.h>
 

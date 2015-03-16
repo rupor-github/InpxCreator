@@ -196,15 +196,18 @@ FakesAssemblies/
 
 # Our staff
 
+lib2inpx-win32.rar
+lib2inpx-win64.rar
+
 [Bb]in
 [Bb]in64
 
-mysql-5.5.17-win32/**
-!mysql-5.5.17-win32/readme.txt
-mysql-5.5.17-winx64/**
-!mysql-5.5.17-winx64/readme.txt
-boost/boost_1_44_0/**
-!boost/boost_1_44_0/readme.txt
+mysql-?.?.??-win32/**
+!mysql-?.?.??-win32/readme.txt
+mysql-?.?.??-winx64/**
+!mysql-?.?.??-winx64/readme.txt
+boost/boost_?_??_?/**
+!boost/boost_?_??_?/readme.txt
 zlib-?.?.?/contrib/masmx64/*.lst
 zlib-?.?.?/contrib/masmx86/*.lst
 

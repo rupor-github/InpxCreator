@@ -1,6 +1,8 @@
 ﻿6.00 (2015-03-15 14:00 EST)
    
-   Default inpx format from now on is 2.x - for up to date MyHomeLib
+   По умолчанию inpx format теперь 2.x - для свежей MyHomeLib
+   Проект переведен на VS 2012 (Update 4)
+   Переключаемся на MySQL 5.6.23 и zlib 1.2.8
 
 5.52 (2014-09-05 20:30 EST)
 

@@ -61,7 +61,6 @@ if( $new_archives -eq 0 ) { Write-Output "Nothing to do..."; exit 1 }
                   "--process=fb2" `
                   "--read-fb2=all" `
                   "--quick-fix" `
-                  "--inpx-format=2.x" `
                   "--clean-aliases" `
                   "--clean-when-done" `
                   "--follow-links" `
