@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"libget2/Godeps/_workspace/src/code.google.com/p/go.net/proxy"
+	"golang.org/x/net/proxy"
 	"log"
 	"net"
 	"net/http"

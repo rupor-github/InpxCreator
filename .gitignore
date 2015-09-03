@@ -198,12 +198,16 @@ FakesAssemblies/
 
 lib2inpx-win32.rar
 lib2inpx-win64.rar
+lib2inpx-win32.7z
+lib2inpx-win64.7z
 
 [Bb]in
 [Bb]in64
 
+mysql-?.?.??-win32.zip
 mysql-?.?.??-win32/**
 !mysql-?.?.??-win32/readme.txt
+mysql-?.?.??-winx64.zip
 mysql-?.?.??-winx64/**
 !mysql-?.?.??-winx64/readme.txt
 boost/boost_?_??_?/**
@@ -211,3 +215,9 @@ boost/boost_?_??_?/**
 zlib-?.?.?/contrib/masmx64/*.lst
 zlib-?.?.?/contrib/masmx86/*.lst
 
+[Dd]ebug32/
+[Dd]ebug64/
+[Rr]elease32/
+[Rr]elease64/
+
+/pkg
