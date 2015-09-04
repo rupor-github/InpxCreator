@@ -1,0 +1,6 @@
+package main
+
+func getVersion() string {
+	return "@PRJ_VERSION_MAJOR@.@PRJ_VERSION_MINOR@"
+}
+
