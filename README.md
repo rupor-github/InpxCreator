@@ -7,8 +7,8 @@ This is a simple set of tools to help you with keeping local MyHomeLib books col
 Project was originally hosted in subversion on [Assembla](https://www.assembla.com/code/myhomelib/subversion/nodes/1178/Utils/InpxCreator) 
 as part of MyHomeLib but due to various moves some of the history was lost, so I decided to detach it.
 
-Pleasew, note, that included programs (currently) are not prepared to deal with any validation of archives and I only deal with dump 
-modifications if absolutly necessary. So do not expect silly things like checksums calculation and comparisons for items inside archives and such.
+Included programs (currently) are not prepared to deal with any validation of archives and I deal with SQL dump modifications 
+only when absolutly necessary. So do not expect silly things like checksums calculation and comparisons for items inside archives and such.
 
 Enjoy!
 
