@@ -3,44 +3,34 @@
 # Standard preambule
 plain() {
   local mesg=$1; shift
-  printf "${BOLD}    ${mesg}${ALL_OFF}\n" "$@" >&2
+  printf "    ${mesg}\n" "$@" >&2
 }
 
 print_warning() {
   local mesg=$1; shift
-  printf "${YELLOW}=> WARNING:${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
+  printf "${YELLOW}=> WARNING: ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
 print_msg1() {
   local mesg=$1; shift
-  printf "${GREEN}==> ${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
+  printf "${GREEN}==> ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
 print_msg2() {
   local mesg=$1; shift
-  printf "${BLUE}  ->${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
+  printf "${BLUE}  -> ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
 print_error() {
   local mesg=$1; shift
-  printf "${RED}==> ERROR:${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
+  printf "${RED}==> ERROR: ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
-if /usr/bin/tput setaf 0 &>/dev/null; then
-  ALL_OFF="$(/usr/bin/tput sgr0)"
-  BOLD="$(/usr/bin/tput bold)"
-  BLUE="${BOLD}$(/usr/bin/tput setaf 4)"
-  GREEN="${BOLD}$(/usr/bin/tput setaf 2)"
-  RED="${BOLD}$(/usr/bin/tput setaf 1)"
-  YELLOW="${BOLD}$(/usr/bin/tput setaf 3)"
-else
-  ALL_OFF="\e[1;0m"
-  BOLD="\e[1;1m"
-  BLUE="${BOLD}\e[1;34m"
-  GREEN="${BOLD}\e[1;32m"
-  RED="${BOLD}\e[1;31m"
-  YELLOW="${BOLD}\e[1;33m"
-fi
+ALL_OFF='[00m'
+BLUE='[38;5;04m'
+GREEN='[38;5;02m'
+RED='[38;5;01m'
+YELLOW='[38;5;03m'
 
 readonly ALL_OFF BOLD BLUE GREEN RED YELLOW
 MINGW_INSTALLS="${MINGW_INSTALLS:-mingw64 mingw32}"

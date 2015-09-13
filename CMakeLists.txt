@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 project(InpxCreator)
 # Project version number
 set(PRJ_VERSION_MAJOR 6)
-set(PRJ_VERSION_MINOR 1)
+set(PRJ_VERSION_MINOR 2)
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -61,7 +61,7 @@ configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libg
 include_directories("${PROJECT_BINARY_DIR}")
 
 find_package(Git REQUIRED)
-find_package(Go 1.4 REQUIRED)
+find_package(Go 1.5 REQUIRED)
 file(GLOB SRCS_LIBGET2 RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libget2/*.go)
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libget2.exe
 	DEPENDS ${SRCS_LIBGET2} "${GO_PATH}/src/libget2/version.go"
