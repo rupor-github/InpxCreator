@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 project(InpxCreator)
 # Project version number
 set(PRJ_VERSION_MAJOR 6)
-set(PRJ_VERSION_MINOR 2)
+set(PRJ_VERSION_MINOR 3)
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -36,6 +36,10 @@ find_package(Boost 1.57.0 REQUIRED COMPONENTS "date_time" "program_options")
 find_package(MySQL REQUIRED)
 find_package(ZLib REQUIRED)
 find_package(Expat REQUIRED)
+find_package(Git REQUIRED)
+
+# Prepare history file
+execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} log --pretty=format:'%an - %ai: (%D) %s%+b' OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
 
 set(SRCS_MINIZIP minizip/ioapi.c minizip/iowin32.c minizip/unzip.c minizip/zip.c)
 add_library(minizip ${SRCS_MINIZIP})
@@ -49,6 +53,9 @@ add_executable(libsplit ${SRCS_LIBSPLIT})
 target_compile_definitions(libsplit PUBLIC DO_NOT_INCLUDE_PARSER)
 target_link_libraries(libsplit minizip ${Boost_LIBRARIES} ${ZLIB_LIBRARIES})
 
+FILE(GLOB files "misc/*")
+install(FILES ${files} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
+install(FILES ${PROJECT_BINARY_DIR}/history.txt DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 install(PROGRAMS ${MYSQL_LIB_DIR}/libmysqld.dll DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 install(PROGRAMS ${WINPTHREAD_DLL_DIR}/libwinpthread-1.dll DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${DEST_DIR}/language CONFIGURATIONS Release)
@@ -60,7 +67,6 @@ set(GO_PATH "${CMAKE_BINARY_DIR}/go")
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libget2/version.go")
 include_directories("${PROJECT_BINARY_DIR}")
 
-find_package(Git REQUIRED)
 find_package(Go 1.5 REQUIRED)
 file(GLOB SRCS_LIBGET2 RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libget2/*.go)
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libget2.exe
