@@ -21,9 +21,11 @@ for _mingw in ${MINGW_INSTALLS}; do
 	case ${_mingw} in
 		mingw32)
 			arch=win32
+			_msystem=MINGW32
 		;;
 		mingw64)
 			arch=winx64
+			_msystem=MINGW64
 		;;
 		*)
 			echo "Unsupported environment!"
@@ -42,6 +44,9 @@ for _mingw in ${MINGW_INSTALLS}; do
 	7z x mysql-${ver_major}.${ver_minor}-${arch}.zip \*/include \*/lib/libmysqld.dll \*/share/english/errmsg.sys
 
 	(
+		export MSYSTEM=${_msystem}
+		export PATH=/${_mingw}/bin:$(echo $PATH | tr ':' '\n' | awk '$0 != "/opt/bin"' | paste -sd:)
+
 		cd mysql-${ver_major}.${ver_minor}-${arch}
 		cd lib
 		for dll in *.dll; do 
