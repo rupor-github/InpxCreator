@@ -39,7 +39,7 @@ find_package(Expat REQUIRED)
 find_package(Git REQUIRED)
 
 # Prepare history file
-execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} log --pretty=format:'%an - %ai: (%D) %s%+b' OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
+execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} log --pretty=format:'%an - %ai: %d %s%+b' OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
 
 set(SRCS_MINIZIP minizip/ioapi.c minizip/iowin32.c minizip/unzip.c minizip/zip.c)
 add_library(minizip ${SRCS_MINIZIP})
