@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 project(InpxCreator)
 # Project version number
 set(PRJ_VERSION_MAJOR 6)
-set(PRJ_VERSION_MINOR 3)
+set(PRJ_VERSION_MINOR 4)
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -32,14 +32,14 @@ if(NOT MVCS)
 endif()
 
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.57.0 REQUIRED COMPONENTS "date_time" "program_options")
+find_package(Boost 1.60.0 REQUIRED COMPONENTS "date_time" "program_options")
 find_package(MySQL REQUIRED)
 find_package(ZLib REQUIRED)
 find_package(Expat REQUIRED)
 find_package(Git REQUIRED)
 
 # Prepare history file
-execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} log --pretty=format:'%an - %ai: %d %s%+b' OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
+execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} changelog --all --stdout OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
 
 set(SRCS_MINIZIP minizip/ioapi.c minizip/iowin32.c minizip/unzip.c minizip/zip.c)
 add_library(minizip ${SRCS_MINIZIP})
@@ -67,7 +67,7 @@ set(GO_PATH "${CMAKE_BINARY_DIR}/go")
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libget2/version.go")
 include_directories("${PROJECT_BINARY_DIR}")
 
-find_package(Go 1.5 REQUIRED)
+find_package(Go 1.6 REQUIRED)
 file(GLOB SRCS_LIBGET2 RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libget2/*.go)
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libget2.exe
 	DEPENDS ${SRCS_LIBGET2} "${GO_PATH}/src/libget2/version.go"
@@ -75,7 +75,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libget2.exe
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libget2/ ${GO_PATH}/src/libget2
 	# vendoring packages (COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} ${GO_EXECUTABLE} get golang.org/x/net/proxy)
 	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://go.googlesource.com/net go/src/golang.org/x/net
-	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir ${GO_PATH}/src/golang.org/x/net/.git --work-tree ${GO_PATH}/src/golang.org/x/net checkout --detach db8e4de5b2d6653f66aea53094624468caad15d2
+	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir ${GO_PATH}/src/golang.org/x/net/.git --work-tree ${GO_PATH}/src/golang.org/x/net checkout --detach 30be488e9140ebb7fac3b2995ac5a4b4d5e715ed
 	# Building
 	COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} ${GO_EXECUTABLE} build libget2
 	COMMENT "Building GO program")
