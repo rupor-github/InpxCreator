@@ -39,7 +39,7 @@ find_package(Expat REQUIRED)
 find_package(Git REQUIRED)
 
 # Prepare history file
-execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} changelog --all --stdout OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
+execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} changelog --final-tag ${PRJ_VERSION_MAJOR}.${PRJ_VERSION_MINOR} --stdout OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
 
 set(SRCS_MINIZIP minizip/ioapi.c minizip/iowin32.c minizip/unzip.c minizip/zip.c)
 add_library(minizip ${SRCS_MINIZIP})
@@ -64,6 +64,7 @@ install(TARGETS libsplit DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
 # Proper go build structure will be here
 set(GO_PATH "${CMAKE_BINARY_DIR}/go")
+
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libget2/version.go")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -72,10 +73,9 @@ file(GLOB SRCS_LIBGET2 RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libg
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libget2.exe
 	DEPENDS ${SRCS_LIBGET2} "${GO_PATH}/src/libget2/version.go"
 	# setting up source tree
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libget2/ ${GO_PATH}/src/libget2
-	# vendoring packages (COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} ${GO_EXECUTABLE} get golang.org/x/net/proxy)
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libget2/ go/src/libget2
 	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://go.googlesource.com/net go/src/golang.org/x/net
-	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir ${GO_PATH}/src/golang.org/x/net/.git --work-tree ${GO_PATH}/src/golang.org/x/net checkout --detach 30be488e9140ebb7fac3b2995ac5a4b4d5e715ed
+	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/golang.org/x/net/.git --work-tree go/src/golang.org/x/net checkout --detach 30be488e9140ebb7fac3b2995ac5a4b4d5e715ed
 	# Building
 	COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} ${GO_EXECUTABLE} build libget2
 	COMMENT "Building GO program")
