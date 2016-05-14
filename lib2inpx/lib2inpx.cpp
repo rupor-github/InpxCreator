@@ -133,7 +133,7 @@ static const char* options_pattern[] = {"%s",
                                         "--skip-grant-tables",
                                         "--skip-innodb",
                                         "--key-buffer-size=64M",
-										"--log_syslog=0",
+                                        "--log_syslog=0",
                                         NULL};
 
 class mysql_connection : boost::noncopyable {
@@ -1746,14 +1746,23 @@ int main(int argc, char* argv[])
 			db_dir += db_name;
 			db_dir += "/";
 			clean_directory(db_dir.c_str());
-			string cnf_file(module_path);
-			cnf_file += "/data/auto.cnf";
-			if (0 != _unlink(cnf_file.c_str())) {
-				throw runtime_error(tmp_str("Unable to delete file \"%s\"", cnf_file.c_str()));
+
+			string file_to_del = string(module_path) + "/data/auto.cnf";
+			if (0 != _unlink(file_to_del.c_str())) {
+				throw runtime_error(tmp_str("Unable to delete file \"%s\"", file_to_del.c_str()));
 			}
+			file_to_del = string(module_path) + "/data/ib_buffer_pool";
+			_unlink(file_to_del.c_str());
+			file_to_del = string(module_path) + "/data/ib_logfile0";
+			_unlink(file_to_del.c_str());
+			file_to_del = string(module_path) + "/data/ib_logfile1";
+			_unlink(file_to_del.c_str());
+			file_to_del = string(module_path) + "/data/ibdata1";
+			_unlink(file_to_del.c_str());
 		}
 
 		rc = 0;
+
 	} catch (exception& e) {
 		cerr << endl << endl << "***ERROR: " << e.what() << endl;
 	}
