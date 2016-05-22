@@ -55,10 +55,10 @@ namespace po = boost::program_options;
 
 __int64 get_file_size(const string& name)
 {
-	__int64 res = 0;
+	__int64                   res = 0;
 	WIN32_FILE_ATTRIBUTE_DATA data;
 
-	if(GetFileAttributesEx(name.c_str(), GetFileExInfoStandard, &data)) {
+	if (GetFileAttributesEx(name.c_str(), GetFileExInfoStandard, &data)) {
 		res = ((__int64)(data.nFileSizeHigh)) * (0x100000000LL) + (__int64)(data.nFileSizeLow);
 	} else {
 		throw runtime_error(tmp_str("Unable to obtain file length \"%s\"", name.c_str()));
@@ -69,30 +69,31 @@ __int64 get_file_size(const string& name)
 
 int main(int argc, char* argv[])
 {
-	int               rc = 1;
+	int rc = 1;
 
-	string            from, to, spec;
+	string from, to, spec;
 
-	long              rsize;
+	long rsize;
 
-	_finddata_t       fd;
-	vector< long >    files;
+	_finddata_t  fd;
+	vector<long> files;
 
-	const char*       file_name;
-	char              module_path[ MAX_PATH + 1 ];
+	const char* file_name;
+	char        module_path[MAX_PATH + 1];
 
-	__int64           archive_size;
+	__int64 archive_size;
 
-	long              total_count = 0;
-	timer             td;
+	long  total_count = 0;
+	timer td;
 
-	bool              f_binary = true;
+	bool f_binary = true;
 
 	try {
 		::GetModuleFileName(NULL, module_path, sizeof module_path);
 
 		file_name = separate_file_name(module_path);
 
+		// clang-format off
 		po::options_description options("options");
 		options.add_options()
 		("help",                                                 "Print help message")
@@ -101,13 +102,14 @@ int main(int argc, char* argv[])
 		("size",   po::value<long>(&rsize)->default_value(2000), "Individual archive size in MB, if greater than 2GB - Zip64 archive will be created")
 		("text",                                                 "Open books in text mode")
 		;
+		// clang-format on
 
 		po::variables_map vm;
 
 		po::store(po::parse_command_line(argc, argv, options), vm);
 		po::notify(vm);
 
-		if(vm.count("help") || ! vm.count("from") || ! vm.count("to")) {
+		if (vm.count("help") || !vm.count("from") || !vm.count("to")) {
 			cout << endl;
 			cout << "Tool to prepare library archives" << endl;
 			cout << "Version " << PRJ_VERSION_MAJOR << "." << PRJ_VERSION_MINOR << endl;
@@ -126,42 +128,42 @@ int main(int argc, char* argv[])
 
 		archive_size = (__int64)1024 * 1024 * rsize;
 
-		if(vm.count("from")) {
-			from = vm[ "from" ].as< string >();
+		if (vm.count("from")) {
+			from = vm["from"].as<string>();
 		}
 
-		if(vm.count("to")) {
-			to = vm[ "to" ].as< string >();
+		if (vm.count("to")) {
+			to = vm["to"].as<string>();
 		}
 
-		if(! from.empty()) {
-			if(0 != _access(from.c_str(), 4)) {
+		if (!from.empty()) {
+			if (0 != _access(from.c_str(), 4)) {
 				throw runtime_error(tmp_str("Wrong path to books \"%s\"", from.c_str()));
 			}
 
 			normalize_path(from);
 		}
 
-		if(! to.empty()) {
-			if(0 != _access(to.c_str(), 6)) {
+		if (!to.empty()) {
+			if (0 != _access(to.c_str(), 6)) {
 				throw runtime_error(tmp_str("Wrong path to archives \"%s\"", to.c_str()));
 			}
 
 			normalize_path(to);
 		}
 
-		if(vm.count("text")) {
+		if (vm.count("text")) {
 			f_binary = false;
 		}
 
 		cout << endl << "Processing books...";
 
-		spec  = from;
+		spec = from;
 		spec += "*.fb2";
 
 		auto_ffn books_dir(_findfirst(spec.c_str(), &fd));
 
-		if(! books_dir) {
+		if (!books_dir) {
 			throw runtime_error(tmp_str("Unable to process books path (%d) \"%s\"", errno, spec.c_str()));
 		}
 
@@ -170,12 +172,12 @@ int main(int argc, char* argv[])
 
 			name.erase(name.end() - 4, name.end());
 
-			if(is_numeric(name)) {
+			if (is_numeric(name)) {
 				files.push_back(atol(name.c_str()));
 			}
-		} while(0 == _findnext(books_dir, &fd));
+		} while (0 == _findnext(books_dir, &fd));
 
-		if(files.empty()) {
+		if (files.empty()) {
 			throw runtime_error("No books found!");
 		}
 
@@ -185,37 +187,37 @@ int main(int argc, char* argv[])
 
 		string temp_name = to + "temp.zip";
 
-		vector< long >::const_iterator it = files.begin();
-		string now = to_iso_extended_string(second_clock::universal_time());
+		vector<long>::const_iterator it  = files.begin();
+		string                       now = to_iso_extended_string(second_clock::universal_time());
 
-		while(it != files.end()) {
+		while (it != files.end()) {
 			__int64 current_size = archive_size;
-			long  count = 0;
-			timer ftd;
-			bool  new_zip = true;
+			long    count        = 0;
+			timer   ftd;
+			bool    new_zip = true;
 
 			long book_start = *it;
 			long book_end   = 0;
 
-			while((current_size > 0) && (it != files.end())) {
+			while ((current_size > 0) && (it != files.end())) {
 				zip zz(temp_name, now, new_zip);
 
 				new_zip = false;
 
-				for(; it != files.end(); ++it) {
+				for (; it != files.end(); ++it) {
 					tmp_str      book_name("%d.fb2", *it);
 					ifstream     in(from + book_name, f_binary ? ios_base::in | ios_base::binary : ios_base::in);
 					stringstream ss;
 
 					book_end = *it;
 
-					if(!in) {
+					if (!in) {
 						throw runtime_error(tmp_str("Cannot open book file \"%s\"", book_name.c_str()));
 					}
 
 					ss << in.rdbuf();
 
-					if(!in && !in.eof()) {
+					if (!in && !in.eof()) {
 						throw runtime_error(tmp_str("Problem reading book file \"%s\"", book_name.c_str()));
 					}
 
@@ -224,9 +226,9 @@ int main(int argc, char* argv[])
 
 					count++;
 
-					current_size -= ss.str().size() ;
+					current_size -= ss.str().size();
 
-					if(current_size <= 0) {
+					if (current_size <= 0) {
 						++it;
 						break;
 					}
@@ -237,14 +239,13 @@ int main(int argc, char* argv[])
 				current_size = archive_size - get_file_size(temp_name);
 			}
 
-			if(0 != rename(temp_name.c_str(), tmp_str("%sfb2-%06d-%06d.zip", to.c_str(), book_start, book_end))) {
+			if (0 != rename(temp_name.c_str(), tmp_str("%sfb2-%06d-%06d.zip", to.c_str(), book_start, book_end))) {
 				throw runtime_error(tmp_str("Unable to rename temp.zip to \"fb2-%06d-%06d.zip\"", book_start, book_end));
 			}
 
-			cout << endl << "Processed: " << setw(8) << count << " books. Range: "
-				 << setw(8) << book_start << " - "
-				 << setw(8) << book_end   << ". Done in - "
-				 << ftd.passed();
+			cout << endl
+			     << "Processed: " << setw(8) << count << " books. Range: " << setw(8) << book_start << " - " << setw(8) << book_end
+			     << ". Done in - " << ftd.passed();
 
 			new_zip = true;
 
@@ -254,7 +255,7 @@ int main(int argc, char* argv[])
 		cout << endl << endl << "Processing of " << total_count << " books completed in " << td.passed() << endl;
 
 		rc = 0;
-	} catch(exception& e) {
+	} catch (exception& e) {
 		cerr << endl << endl << "***ERROR: " << e.what() << endl;
 	}
 

@@ -91,7 +91,7 @@ static series_type g_series_type = eAuthorST;
 
 static long   g_last_fb2 = 0;
 static string g_update;
-static string g_db_name = "librusec";
+static string g_db_name = "flibusta";
 
 static bool g_clean_authors = false;
 static bool g_clean_aliases = false;
@@ -131,8 +131,9 @@ static const char* options_pattern[] = {"%s",
                                         "--datadir=%s/data",
                                         "--language=%s/language",
                                         "--skip-grant-tables",
-                                        "--skip-innodb",
-                                        "--key-buffer-size=64M",
+                                        "--innodb_data_home_dir=%s/data/dbtmp_%s",
+                                        "--innodb_log_group_home_dir=%s/data/dbtmp_%s",
+                                        "--innodb_tmpdir=%s/data/dbtmp_%s",
                                         "--log_syslog=0",
                                         NULL};
 
@@ -142,7 +143,7 @@ class mysql_connection : boost::noncopyable {
 	char* m_options[num_options];
 
   public:
-	mysql_connection(const char* module_path, const char* name) : m_mysql(NULL)
+	mysql_connection(const char* module_path, const char* name, const char* dbname) : m_mysql(NULL)
 	{
 		if (0 == m_initialized) {
 			for (int ni = 0; ni < num_options; ++ni) {
@@ -156,7 +157,7 @@ class mysql_connection : boost::noncopyable {
 				if (0 == ni) {
 					sprintf(mem, pattern, name);
 				} else {
-					sprintf(mem, pattern, module_path);
+					sprintf(mem, pattern, module_path, dbname);
 				}
 				m_options[ni] = mem;
 			}
@@ -286,8 +287,12 @@ void clean_directory(const char* path)
 			string name(path);
 			name += fd.name;
 
-			if (0 != _unlink(name.c_str())) {
-				throw runtime_error(tmp_str("Unable to delete file \"%s\"", name.c_str()));
+			if (0 != fd.attrib & _A_SUBDIR) {
+				clean_directory((name + "/").c_str());
+			} else {
+				if (0 != _unlink(name.c_str())) {
+					throw runtime_error(tmp_str("Unable to delete file \"%s\"", name.c_str()));
+				}
 			}
 		}
 	} while (0 == _findnext(dir, &fd));
@@ -297,7 +302,7 @@ void clean_directory(const char* path)
 	}
 }
 
-void prepare_mysql(const char* path)
+void prepare_mysql(const char* path, const string& dbname)
 {
 	bool   rc = true;
 	string config;
@@ -317,6 +322,14 @@ void prepare_mysql(const char* path)
 	}
 
 	config = string(path) + "/data";
+
+	if (0 != _access(config.c_str(), 6)) {
+		if (0 != _mkdir(config.c_str())) {
+			throw runtime_error(tmp_str("Unable to create directory \"%s\"", config.c_str()));
+		}
+	}
+
+	config += "/dbtmp_" + dbname;
 
 	if (0 != _access(config.c_str(), 6)) {
 		if (0 != _mkdir(config.c_str())) {
@@ -1188,7 +1201,7 @@ int main(int argc, char* argv[])
 		("process",     po::value< string >(), "What to process - \"fb2\", \"usr\", \"all\" (default: fb2)")
 		("strict",      po::value< string >(), "What to put in INPX as file type - \"ext\", \"db\", \"ignore\" (default: ext). ext - use real file extension. db - use file type from database. ignore - ignore files with file extension not equal to file type")
 		("no-import",                          "Do not import dumps, just check dump time and use existing database")
-		("db-name",     po::value< string >(), "Name of MYSQL database (default: librusec)")
+		("db-name",     po::value< string >(), "Name of MYSQL database (default: flibusta)")
 		("archives",    po::value< string >(), "Path(s) to off-line archives. Multiple entries should be separated by ';'. Each path must be valid and must point to some archives, or processing would be aborted. (If not present - entire database in converted for online usage)")
 		("read-fb2",    po::value< string >(), "When archived book is not present in the database - try to parse fb2 in archive to get information. \"all\" - do it for all absent books, \"last\" - only process books with ids larger than last database id (If not present - no fb2 parsing)")
 		("prefer-fb2",  po::value< string >(), "Try to parse fb2 in archive to get information (default: ignore). \"ignore\" - ignore fb2 information, \"merge\" - always prefer book sequence info from fb2, \"replace\" - always use book sequence info from fb2")
@@ -1498,7 +1511,7 @@ int main(int argc, char* argv[])
 		}
 
 		normalize_path(module_path);
-		prepare_mysql(module_path);
+		prepare_mysql(module_path, db_name);
 
 		if (vm.count("inpx")) {
 			inpx = vm["inpx"].as<string>();
@@ -1512,7 +1525,7 @@ int main(int argc, char* argv[])
 		{
 			string table_name = (e20111106 == g_format) ? "libavtors" : "libavtorname";
 
-			mysql_connection mysql(module_path, g_db_name.c_str());
+			mysql_connection mysql(module_path, g_db_name.c_str(), db_name.c_str());
 
 			if (!g_no_import) {
 				cout << endl << "Creating MYSQL database \"" << db_name << "\"" << endl << endl;
@@ -1741,24 +1754,18 @@ int main(int argc, char* argv[])
 		}
 
 		if (g_clean_when_done) {
-			string db_dir(module_path);
-			db_dir += "/data/";
-			db_dir += db_name;
-			db_dir += "/";
+			string data_dir(module_path);
+			data_dir += "/data/";
+
+			string db_tmp_dir = data_dir + "dbtmp_" + db_name + "/";
+			clean_directory(db_tmp_dir.c_str());
+			string db_dir = data_dir + db_name + "/";
 			clean_directory(db_dir.c_str());
 
 			string file_to_del = string(module_path) + "/data/auto.cnf";
 			if (0 != _unlink(file_to_del.c_str())) {
 				throw runtime_error(tmp_str("Unable to delete file \"%s\"", file_to_del.c_str()));
 			}
-			file_to_del = string(module_path) + "/data/ib_buffer_pool";
-			_unlink(file_to_del.c_str());
-			file_to_del = string(module_path) + "/data/ib_logfile0";
-			_unlink(file_to_del.c_str());
-			file_to_del = string(module_path) + "/data/ib_logfile1";
-			_unlink(file_to_del.c_str());
-			file_to_del = string(module_path) + "/data/ibdata1";
-			_unlink(file_to_del.c_str());
 		}
 
 		rc = 0;
