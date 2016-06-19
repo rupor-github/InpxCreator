@@ -62,13 +62,12 @@ install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${DEST_DI
 install(TARGETS lib2inpx DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 install(TARGETS libsplit DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
+find_package(Go 1.6 REQUIRED)
 # Proper go build structure will be here
 set(GO_PATH "${CMAKE_BINARY_DIR}/go")
-
-configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libget2/version.go")
 include_directories("${PROJECT_BINARY_DIR}")
 
-find_package(Go 1.6 REQUIRED)
+configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libget2/version.go")
 file(GLOB SRCS_LIBGET2 RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libget2/*.go)
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libget2.exe
 	DEPENDS ${SRCS_LIBGET2} "${GO_PATH}/src/libget2/version.go"
@@ -78,7 +77,24 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libget2.exe
 	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/golang.org/x/net/.git --work-tree go/src/golang.org/x/net checkout --detach 30be488e9140ebb7fac3b2995ac5a4b4d5e715ed
 	# Building
 	COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} ${GO_EXECUTABLE} build libget2
-	COMMENT "Building GO program")
+	COMMENT "Building GO program - libget2")
 add_custom_target(libget2 ALL DEPENDS ${CMAKE_BINARY_DIR}/libget2.exe)
-
 install(PROGRAMS ${CMAKE_BINARY_DIR}/libget2.exe DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
+
+configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libmerge/version.go")
+file(GLOB SRCS_LIBMERGE RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libmerge/*.go)
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libmerge.exe
+	DEPENDS ${SRCS_LIBMERGE} "${GO_PATH}/src/libget2/version.go"
+	# setting up source tree
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libmerge/ go/src/libmerge
+	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://github.com/rsc/zipmerge.git go/src/github.com/rsc/zipmerge
+	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/github.com/rsc/zipmerge/.git --work-tree go/src/github.com/rsc/zipmerge checkout --detach 24e6c1052c641c534b2627d45daf9ade090c4364
+	COMMAND ${CMAKE_COMMAND} -E copy_directory go/src/github.com/rsc/zipmerge/internal go/src/libmerge/internal
+	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://github.com/pkg/errors.git go/src/github.com/pkg/errors
+	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/github.com/pkg/errors/.git --work-tree go/src/github.com/pkg/errors checkout --detach 0bc61eb85b3cab5d83c9432263916d5df58d9855
+
+	# Building
+	COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} ${GO_EXECUTABLE} build libmerge
+	COMMENT "Building GO program - libmerge")
+add_custom_target(libmerge ALL DEPENDS ${CMAKE_BINARY_DIR}/libmerge.exe)
+install(PROGRAMS ${CMAKE_BINARY_DIR}/libmerge.exe DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
