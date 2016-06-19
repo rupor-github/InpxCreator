@@ -872,8 +872,9 @@ void process_local_archives(const mysql_connection& mysql, const zip& zz, const 
 	if (0 == files.size()) {
 		throw runtime_error(tmp_str("No archives are available for processing \"%s\"", archives_path.c_str()));
 	}
-
 	cout << endl << "Archives processing - " << files.size() << " file(s) [" << archives_path << "]" << endl << endl;
+
+	sort(files.begin(), files.end());
 
 	for (vector<string>::const_iterator it = files.begin(); it != files.end(); ++it) {
 		vector<string> errors;
