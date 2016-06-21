@@ -59,12 +59,12 @@ type archive struct {
 	end   int
 }
 
-func getLastArchive(archives []os.FileInfo) (archive, error) {
+func getLastArchive(files []os.FileInfo) (archive, error) {
 
 	var a archive
 	var err error
 
-	for _, f := range archives {
+	for _, f := range files {
 		if ok, fst, snd, err := archivesFilt.dissectName(f.Name()); ok {
 			if a.end < snd {
 				a.begin = fst
@@ -78,12 +78,12 @@ func getLastArchive(archives []os.FileInfo) (archive, error) {
 	return a, err
 }
 
-func getUpdates(archives []os.FileInfo, last int) ([]archive, error) {
+func getUpdates(files []os.FileInfo, last int) ([]archive, error) {
 
 	updates := []archive{}
 	var err error
 
-	for _, f := range archives {
+	for _, f := range files {
 		if ok, fst, snd, err := updatesFilt.dissectName(f.Name()); ok {
 			if last < fst {
 				updates = append(updates, archive{begin: fst, end: snd, info: f})
@@ -180,9 +180,10 @@ func main() {
 		w = zip.NewWriter(f)
 
 		if (sizeBytes - last.info.Size()) > 0 {
-			updates = updates[0 : len(updates)+1]
-			copy(updates[1:], updates[0:])
-			updates[0] = last
+			tmp := make([]archive, len(updates)+1, len(updates)+1)
+			tmp[0] = last
+			copy(tmp[1:], updates[0:])
+			updates = tmp
 		}
 
 	} else {
