@@ -255,6 +255,8 @@ func main() {
 						firstBook = 0
 					}
 				}
+			} else {
+				log.Printf("\t\tWrong book name, skipping: \"%s\"\n", file.Name)
 			}
 		}
 		if err := rc.Close(); err != nil {
