@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 project(InpxCreator)
 # Project version number
 set(PRJ_VERSION_MAJOR 6)
-set(PRJ_VERSION_MINOR 52)
+set(PRJ_VERSION_MINOR 53)
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -92,7 +92,6 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libmerge.exe
 	COMMAND ${CMAKE_COMMAND} -E copy_directory go/src/github.com/rsc/zipmerge/internal go/src/libmerge/internal
 	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://github.com/pkg/errors.git go/src/github.com/pkg/errors
 	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/github.com/pkg/errors/.git --work-tree go/src/github.com/pkg/errors checkout --detach 0bc61eb85b3cab5d83c9432263916d5df58d9855
-
 	# Building
 	COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} ${GO_EXECUTABLE} build libmerge
 	COMMENT "Building GO program - libmerge")

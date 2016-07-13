@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
 		("help",                                                 "Print help message")
 		("from",   po::value< string >(),                        "Directory with fb2 books")
 		("to",     po::value< string >(),                        "Directory to put resulting archives into")
-		("size",   po::value<long>(&rsize)->default_value(2000), "Individual archive size in MB, if greater than 2GB - Zip64 archive will be created")
+		("size",   po::value<long>(&rsize)->default_value(2000), "Individual archive size in MB, if greater than 2GB - Zip64 archive will be created (metric, not binary)")
 		("text",                                                 "Open books in text mode")
 		;
 		// clang-format on

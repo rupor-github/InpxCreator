@@ -101,7 +101,7 @@ func init() {
 		log.Fatal(err)
 	}
 
-	flag.IntVar(&size, "size", 2000, "Individual archive size in MB")
+	flag.IntVar(&size, "size", 2000, "Individual archive size in MB (metric, not binary)")
 	flag.BoolVar(&inplace, "inplace", false, "merge in-place and remove merged updates on completion")
 	flag.BoolVar(&verbose, "verbose", false, "print detailed information")
 	flag.StringVar(&dest, "destination", pwd, "path to archives")
@@ -133,7 +133,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var sizeBytes int64 = int64(size) * 1024 * 1024
+	var sizeBytes int64 = int64(size) * 1000 * 1000
 
 	var files []os.FileInfo
 	if files, err = ioutil.ReadDir(dest); err != nil {
