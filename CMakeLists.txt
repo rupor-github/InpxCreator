@@ -7,7 +7,7 @@ project(InpxCreator)
 # Project version number
 set(PRJ_VERSION_MAJOR 6)
 set(PRJ_VERSION_MINOR 53)
-configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
+configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
 # Cannot win here - libwinpthread-1.dll will still be required on run-time (unless somebody rebuilds mingw compilers in MSYS2 with win32 threads)
@@ -67,14 +67,16 @@ find_package(Go 1.6 REQUIRED)
 set(GO_PATH "${CMAKE_BINARY_DIR}/go")
 include_directories("${PROJECT_BINARY_DIR}")
 
-configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libget2/version.go")
+configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libget2/version.go")
 file(GLOB SRCS_LIBGET2 RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libget2/*.go)
+message(STATUS "Vendoring for libget2...")
+execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://go.googlesource.com/net go/src/golang.org/x/net)
+execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/golang.org/x/net/.git --work-tree go/src/golang.org/x/net checkout --detach 30be488e9140ebb7fac3b2995ac5a4b4d5e715ed)
+
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libget2.exe
 	DEPENDS ${SRCS_LIBGET2} "${GO_PATH}/src/libget2/version.go"
 	# setting up source tree
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libget2/ go/src/libget2
-	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://go.googlesource.com/net go/src/golang.org/x/net
-	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/golang.org/x/net/.git --work-tree go/src/golang.org/x/net checkout --detach 30be488e9140ebb7fac3b2995ac5a4b4d5e715ed
 	# Building
 	COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} ${GO_EXECUTABLE} build libget2
 	COMMENT "Building GO program - libget2")
@@ -83,15 +85,17 @@ install(PROGRAMS ${CMAKE_BINARY_DIR}/libget2.exe DESTINATION ${DEST_DIR} CONFIGU
 
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libmerge/version.go")
 file(GLOB SRCS_LIBMERGE RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libmerge/*.go)
+message(STATUS "Vendoring for libmerge")
+execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://github.com/rsc/zipmerge.git go/src/github.com/rsc/zipmerge)
+execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/github.com/rsc/zipmerge/.git --work-tree go/src/github.com/rsc/zipmerge checkout --detach 24e6c1052c641c534b2627d45daf9ade090c4364)
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory go/src/github.com/rsc/zipmerge/internal go/src/libmerge/internal)
+execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://github.com/pkg/errors.git go/src/github.com/pkg/errors)
+execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/github.com/pkg/errors/.git --work-tree go/src/github.com/pkg/errors checkout --detach 0bc61eb85b3cab5d83c9432263916d5df58d9855)
+
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libmerge.exe
 	DEPENDS ${SRCS_LIBMERGE} "${GO_PATH}/src/libget2/version.go"
 	# setting up source tree
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libmerge/ go/src/libmerge
-	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://github.com/rsc/zipmerge.git go/src/github.com/rsc/zipmerge
-	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/github.com/rsc/zipmerge/.git --work-tree go/src/github.com/rsc/zipmerge checkout --detach 24e6c1052c641c534b2627d45daf9ade090c4364
-	COMMAND ${CMAKE_COMMAND} -E copy_directory go/src/github.com/rsc/zipmerge/internal go/src/libmerge/internal
-	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://github.com/pkg/errors.git go/src/github.com/pkg/errors
-	COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/github.com/pkg/errors/.git --work-tree go/src/github.com/pkg/errors checkout --detach 0bc61eb85b3cab5d83c9432263916d5df58d9855
 	# Building
 	COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} ${GO_EXECUTABLE} build libmerge
 	COMMENT "Building GO program - libmerge")
