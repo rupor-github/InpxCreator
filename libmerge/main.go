@@ -17,7 +17,6 @@ import (
 
 var size int
 var sizeBytes int64
-var inplace bool
 var verbose bool
 var dest string
 
@@ -51,6 +50,7 @@ func (f *filter) dissectName(name string) (bool, int, int, error) {
 }
 
 var archivesFilt filter
+var mergeFilt filter
 var updatesFilt filter
 
 type archive struct {
@@ -62,7 +62,6 @@ type archive struct {
 func getLastArchive(files []os.FileInfo) (archive, error) {
 
 	var a archive
-	var err error
 
 	for _, f := range files {
 		if ok, fst, snd, err := archivesFilt.dissectName(f.Name()); ok {
@@ -75,7 +74,28 @@ func getLastArchive(files []os.FileInfo) (archive, error) {
 			return a, errors.Wrap(err, "getLastArchive")
 		}
 	}
-	return a, err
+	return a, nil
+}
+
+func getMergeArchive(files []os.FileInfo) (archive, error) {
+
+	var a archive
+	var count int
+
+	for _, f := range files {
+		if ok, fst, snd, err := mergeFilt.dissectName(f.Name()); ok {
+			a.begin = fst
+			a.end = snd
+			a.info = f
+			count++
+		} else if err != nil {
+			return a, errors.Wrap(err, "getMergeArchive")
+		}
+	}
+	if count <= 1 {
+		return a, nil
+	}
+	return a, errors.Errorf("getMergeArchive: there could only be single merge archive")
 }
 
 func getUpdates(files []os.FileInfo, last int) ([]archive, error) {
@@ -102,11 +122,13 @@ func init() {
 	}
 
 	flag.IntVar(&size, "size", 2000, "Individual archive size in MB (metric, not binary)")
-	flag.BoolVar(&inplace, "inplace", false, "merge in-place and remove merged updates on completion")
 	flag.BoolVar(&verbose, "verbose", false, "print detailed information")
 	flag.StringVar(&dest, "destination", pwd, "path to archives")
 
 	if archivesFilt.re, err = regexp.Compile("(?i)\\s*fb2-([0-9]+)-([0-9]+).zip"); err != nil {
+		log.Fatal(err)
+	}
+	if mergeFilt.re, err = regexp.Compile("(?i)\\s*merge-fb2-([0-9]+)-([0-9]+).zip"); err != nil {
 		log.Fatal(err)
 	}
 	if updatesFilt.re, err = regexp.Compile("(?i)\\s*fb2.([0-9]+)-([0-9]+).zip"); err != nil {
@@ -148,7 +170,26 @@ func main() {
 		fmt.Printf("Last archive: %s - from %d to %d size %d\n", last.info.Name(), last.begin, last.end, last.info.Size())
 	}
 
-	updates, err := getUpdates(files, last.end)
+	merge, err := getMergeArchive(files)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if merge.info != nil {
+		if merge.begin != last.begin {
+			log.Fatalf("Merge archive (%s) and last archive (%s) do not match", merge.info.Name(), last.info.Name())
+		}
+		if verbose {
+			fmt.Printf("Merge archive: %s - from %d to %d size %d\n", merge.info.Name(), merge.begin, merge.end, merge.info.Size())
+		}
+	} else {
+		merge.begin, merge.end = last.begin, last.end
+		if verbose {
+			fmt.Printf("Merge archive: %s - from %d to %d size %d\n", "**new**", merge.begin, merge.end, last.info.Size())
+		}
+	}
+
+	updates, err := getUpdates(files, merge.end)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -170,7 +211,9 @@ func main() {
 	var firstBook, lastBook int
 	leftBytes := sizeBytes
 
-	if !inplace {
+	var skipFirst bool
+
+	if merge.info == nil {
 
 		f, err = ioutil.TempFile(dest, "merge-")
 		if err != nil {
@@ -180,6 +223,7 @@ func main() {
 		w = zip.NewWriter(f)
 
 		if (sizeBytes - last.info.Size()) > 0 {
+			skipFirst = true
 			tmp := make([]archive, len(updates)+1, len(updates)+1)
 			tmp[0] = last
 			copy(tmp[1:], updates[0:])
@@ -188,7 +232,7 @@ func main() {
 
 	} else {
 
-		tmpOut = filepath.Join(dest, last.info.Name())
+		tmpOut = filepath.Join(dest, merge.info.Name())
 
 		f, err = os.OpenFile(tmpOut, os.O_RDWR, 0)
 		if err != nil {
@@ -206,7 +250,7 @@ func main() {
 			log.Fatal(err)
 		}
 		w = r.Append(f)
-		firstBook = last.begin
+		firstBook = merge.begin
 	}
 
 	for _, u := range updates {
@@ -232,17 +276,22 @@ func main() {
 
 					if leftBytes <= 0 {
 						if err := w.Close(); err != nil {
-							log.Fatal("Finishing zip file: %v", err)
+							log.Fatalf("Finishing zip file: %v", err)
 						}
 						if err := f.Close(); err != nil {
-							log.Fatal("Finishing zip file: %v", err)
+							log.Fatalf("Finishing zip file: %v", err)
 						}
 						newName := fmt.Sprintf("fb2-%06d-%06d.zip", firstBook, lastBook)
 						fmt.Printf("\t--> Finalizing archive: %s\n", newName)
 
 						newName = filepath.Join(dest, newName)
 						if err := os.Rename(tmpOut, newName); err != nil {
-							log.Fatal("Renaming archive: %v", err)
+							log.Fatalf("Renaming archive: %v", err)
+						}
+
+						fmt.Printf("\t--> Removing old last archive: %s\n", last.info.Name())
+						if err := os.Remove(filepath.Join(dest, last.info.Name())); err != nil {
+							log.Fatalf("Removing old last archive: %v", err)
 						}
 
 						f, err = ioutil.TempFile(dest, "merge-")
@@ -260,43 +309,44 @@ func main() {
 			}
 		}
 		if err := rc.Close(); err != nil {
-			log.Fatal("Closing update file: %v", err)
+			log.Fatalf("Closing update file: %v", err)
 		}
 	}
 
 	if err := w.Close(); err != nil {
-		log.Fatal("Finishing zip file: %v", err)
+		log.Fatalf("Finishing zip file: %v", err)
 	}
 	if err := f.Close(); err != nil {
-		log.Fatal("Finishing zip file: %v", err)
-	}
-	newName := fmt.Sprintf("fb2-%06d-%06d.zip", firstBook, lastBook)
-	fmt.Printf("\t--> Finalizing archive: %s\n", newName)
-
-	newName = filepath.Join(dest, newName)
-	if err := os.Rename(tmpOut, newName); err != nil {
-		log.Fatal("Renaming archive: %v", err)
+		log.Fatalf("Finishing zip file: %v", err)
 	}
 
-	if !inplace {
-		for _, u := range updates {
-			name := filepath.Join(dest, u.info.Name())
-			if verbose {
-				fmt.Printf("Renaming archive: %s\n", u.info.Name())
-			}
-			if err := os.Rename(name, name+"_merged"); err != nil {
-				log.Fatal("Renaming archive: %v", err)
-			}
+	if firstBook == 0 {
+
+		if err := os.Remove(tmpOut); err != nil {
+			log.Fatalf("Removing empty archive: %v", err)
 		}
+
 	} else {
-		for _, u := range updates {
-			name := filepath.Join(dest, u.info.Name())
-			if verbose {
-				fmt.Printf("Removing archive: %s\n", u.info.Name())
-			}
-			if err := os.Remove(name); err != nil {
-				log.Fatal("Removing archive: %v", err)
-			}
+
+		newName := fmt.Sprintf("merge-fb2-%06d-%06d.zip", firstBook, lastBook)
+		fmt.Printf("\t--> Finalizing archive: %s\n", newName)
+
+		newName = filepath.Join(dest, newName)
+		if err := os.Rename(tmpOut, newName); err != nil {
+			log.Fatalf("Renaming archive: %v", err)
+		}
+	}
+
+	for i, u := range updates {
+		if i == 0 && skipFirst {
+			continue
+		}
+		name := filepath.Join(dest, u.info.Name())
+		if verbose {
+			fmt.Printf("Removing archive: %s\n", u.info.Name())
+		}
+		if err := os.Remove(name); err != nil {
+			log.Fatalf("Removing archive: %v", err)
 		}
 	}
 }
