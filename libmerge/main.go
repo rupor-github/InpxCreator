@@ -128,7 +128,7 @@ func init() {
 	if archivesFilt.re, err = regexp.Compile("(?i)\\s*fb2-([0-9]+)-([0-9]+).zip"); err != nil {
 		log.Fatal(err)
 	}
-	if mergeFilt.re, err = regexp.Compile("(?i)\\s*merge-fb2-([0-9]+)-([0-9]+).zip"); err != nil {
+	if mergeFilt.re, err = regexp.Compile("(?i)\\s*fb2-([0-9]+)-([0-9]+).merging"); err != nil {
 		log.Fatal(err)
 	}
 	if updatesFilt.re, err = regexp.Compile("(?i)\\s*fb2.([0-9]+)-([0-9]+).zip"); err != nil {
@@ -328,7 +328,7 @@ func main() {
 
 	} else {
 
-		newName := fmt.Sprintf("merge-fb2-%06d-%06d.zip", firstBook, lastBook)
+		newName := fmt.Sprintf("fb2-%06d-%06d.merging", firstBook, lastBook)
 		fmt.Printf("\t--> Finalizing archive: %s\n", newName)
 
 		newName = filepath.Join(dest, newName)
