@@ -41,9 +41,9 @@ func (f *filter) dissectName(name string) (bool, int, int, error) {
 	m := f.re.FindStringSubmatch(name)
 	if ok = (m != nil); ok {
 		if fst, err = strconv.Atoi(m[1]); err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("dissecting %s", name))
+			err = errors.Wrapf(err, "dissecting %s", name)
 		} else if snd, err = strconv.Atoi(m[2]); err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("dissecting %s", name))
+			err = errors.Wrapf(err, "dissecting %s", name)
 		}
 	}
 	return ok, fst, snd, err

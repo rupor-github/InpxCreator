@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 project(InpxCreator)
 # Project version number
 set(PRJ_VERSION_MAJOR 6)
-set(PRJ_VERSION_MINOR 61)
+set(PRJ_VERSION_MINOR 62)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -63,15 +63,19 @@ install(TARGETS lib2inpx DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 install(TARGETS libsplit DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
 find_package(Go 1.6 REQUIRED)
+find_package(Glide 0.11 REQUIRED)
 # Proper go build structure will be here
 set(GO_PATH "${CMAKE_BINARY_DIR}/go")
 include_directories("${PROJECT_BINARY_DIR}")
 
+message(STATUS "Vendoring for go")
+execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory go/src)
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/glide.yaml go/src/.)
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/glide.lock go/src/.)
+execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GLIDE_EXECUTABLE} install WORKING_DIRECTORY go/src)
+
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libget2/version.go")
 file(GLOB SRCS_LIBGET2 RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libget2/*.go)
-message(STATUS "Vendoring for libget2...")
-execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://go.googlesource.com/net go/src/golang.org/x/net)
-execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/golang.org/x/net/.git --work-tree go/src/golang.org/x/net checkout --detach 30be488e9140ebb7fac3b2995ac5a4b4d5e715ed)
 
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libget2.exe
 	DEPENDS ${SRCS_LIBGET2} "${GO_PATH}/src/libget2/version.go"
@@ -85,12 +89,6 @@ install(PROGRAMS ${CMAKE_BINARY_DIR}/libget2.exe DESTINATION ${DEST_DIR} CONFIGU
 
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libmerge/version.go")
 file(GLOB SRCS_LIBMERGE RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libmerge/*.go)
-message(STATUS "Vendoring for libmerge")
-execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://github.com/rsc/zipmerge.git go/src/github.com/rsc/zipmerge)
-execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/github.com/rsc/zipmerge/.git --work-tree go/src/github.com/rsc/zipmerge checkout --detach 24e6c1052c641c534b2627d45daf9ade090c4364)
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory go/src/github.com/rsc/zipmerge/internal go/src/libmerge/internal)
-execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} clone https://github.com/pkg/errors.git go/src/github.com/pkg/errors)
-execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} --git-dir go/src/github.com/pkg/errors/.git --work-tree go/src/github.com/pkg/errors checkout --detach 0bc61eb85b3cab5d83c9432263916d5df58d9855)
 
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libmerge.exe
 	DEPENDS ${SRCS_LIBMERGE} "${GO_PATH}/src/libget2/version.go"

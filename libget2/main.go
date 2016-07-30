@@ -1,14 +1,11 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"golang.org/x/net/proxy"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,6 +14,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	"golang.org/x/net/proxy"
 )
 
 const emptyString = ""
@@ -24,6 +24,7 @@ const emptyString = ""
 var library string
 var retry int
 var timeout int
+var chunkSize int
 var noSql bool
 var noRedirect bool
 var dest string
@@ -33,6 +34,7 @@ var verbose bool
 var ranges bool
 
 var reNumbers *regexp.Regexp
+var reMerge *regexp.Regexp
 var lastBook int
 var proxyUrl *url.URL
 
@@ -44,59 +46,76 @@ func init() {
 	flag.StringVar(&library, "library", "flibusta", "name of the library profile")
 	flag.IntVar(&retry, "retry", 3, "number of re-tries")
 	flag.IntVar(&timeout, "timeout", 20, "communication timeout in seconds")
+	flag.IntVar(&chunkSize, "chunksize", 10, "Size of the chunk (megabytes) to be received in timeout time")
 	flag.BoolVar(&noSql, "nosql", false, "do not download database")
 	flag.BoolVar(&noRedirect, "sticky", false, "(hack) ignore http redirects, stick with original host address")
 	flag.BoolVar(&verbose, "verbose", false, "print detailed information")
-	flag.BoolVar(&ranges, "continue", false, "continue getting a partially-downloaded file")
+	flag.BoolVar(&ranges, "continue", false, "continue getting a partially-downloaded file (until retry limit is reached)")
 	flag.StringVar(&dest, "to", pwd, "destination directory for archives")
 	flag.StringVar(&destSql, "tosql", emptyString, "destination directory for database files")
 	flag.StringVar(&configPath, "config", filepath.Join(pwd, "libget2.conf"), "configuration file")
 	if reNumbers, err = regexp.Compile("(?i)\\s*([0-9]+)-([0-9]+).zip"); err != nil {
 		log.Fatal(err)
 	}
+	if reMerge, err = regexp.Compile("(?i)\\s*fb2-([0-9]+)-([0-9]+).merging"); err != nil {
+		log.Fatal(err)
+	}
 }
 
-func getLastBook(path string) (book int, err error) {
-	var archives []os.FileInfo
-	if archives, err = ioutil.ReadDir(path); err != nil {
-		return
+func getLastBook(path string) (int, error) {
+
+	archives, err := ioutil.ReadDir(path)
+	if err != nil {
+		return 0, errors.Wrap(err, "getLastBook")
 	}
+
+	var lastBegin, lastEnd, mergeBegin, mergeEnd int
+
 	for _, f := range archives {
-		if _, snd, err := dissect(f.Name()); err == nil {
-			if book < snd {
-				book = snd
+
+		if ok, fst, snd, err := dissect(reNumbers, f.Name()); ok {
+			if lastEnd < snd {
+				lastBegin = fst
+				lastEnd = snd
 			}
-		} else {
-			return 0, err
+		} else if err != nil {
+			return 0, errors.Wrap(err, "geLastBook")
 		}
 	}
-	return
+
+	var count int
+	for _, f := range archives {
+
+		if ok, fst, snd, err := dissect(reMerge, f.Name()); ok {
+			mergeBegin = fst
+			mergeEnd = snd
+			count++
+		} else if err != nil {
+			return 0, errors.Wrap(err, "getLastBook")
+		}
+	}
+	if count > 1 {
+		return 0, errors.New("getLastBook: there could only be single merge archive")
+	} else if count == 0 {
+		return lastEnd, nil
+	} else if mergeBegin != lastBegin || mergeEnd < lastEnd {
+		return 0, errors.New("getLastBook: merge and last archive do not match")
+	} else {
+		return mergeEnd, nil
+	}
 }
 
-func acceptsRanges(url string) (accepts bool, err error) {
-	resp, err := httpReq(url, "HEAD", 1)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
+func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, error) {
 
-	_, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-
-	return resp.StatusCode == http.StatusPartialContent, nil
-}
-
-func httpReq(hostAddr, verb string, start int64) (*http.Response, error) {
 	hostUrl, err := url.Parse(hostAddr)
 	if err != nil {
-		return nil, err
+		return nil, nil, errors.Wrap(err, "httpReq")
 	}
 
 	var redirect = func(req *http.Request, via []*http.Request) error {
+
 		if len(via) >= 10 {
-			return errors.New("stopped after 10 redirects")
+			return errors.New("httpReq: stopped after 10 redirects")
 		}
 		if verbose {
 			fmt.Printf("Detected redirect from \"%s\" to \"%s\"", hostUrl.Host, req.URL.Host)
@@ -114,6 +133,7 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, error) {
 	}
 
 	var transport *http.Transport
+
 	if proxyUrl != nil {
 		switch proxyUrl.Scheme {
 		case "socks5":
@@ -124,51 +144,85 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, error) {
 			}
 			p, err := proxy.SOCKS5("tcp4", proxyUrl.Host, a, proxy.Direct)
 			if err != nil {
-				return nil, err
+				return nil, nil, errors.Wrap(err, "httpReq")
 			}
 			transport = &http.Transport{Dial: p.Dial, DisableKeepAlives: true}
 		case "http":
-			transport = &http.Transport{Dial: net.Dial, DisableKeepAlives: true}
+			transport = &http.Transport{DisableKeepAlives: true}
 		default:
-			return nil, errors.New("Unsupported proxy scheme: " + proxyUrl.Scheme)
+			return nil, nil, errors.New("httpReq: Unsupported proxy scheme: " + proxyUrl.Scheme)
 		}
 	} else {
 		transport = &http.Transport{DisableKeepAlives: true}
 	}
-	client := &http.Client{CheckRedirect: redirect, Timeout: time.Second * time.Duration(timeout), Transport: transport}
+	client := &http.Client{CheckRedirect: redirect, Timeout: 0, Transport: transport}
+
+	c := make(chan struct{})
+	timer := time.AfterFunc(time.Duration(timeout)*time.Second, func() {
+		close(c)
+	})
 
 	req, err := http.NewRequest(verb, hostAddr, nil)
 	if err != nil {
-		return nil, err
+		timer.Stop()
+		return nil, nil, errors.Wrap(err, "httpReq")
 	}
+	req.Cancel = c
 
 	req.Header.Set("Referer", hostAddr)
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows; en-US)")
+	req.Header.Set("User-Agent", fmt.Sprintf("libget2/%s", getVersion()))
 	req.Header.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	req.Header.Set("Pragma", "no-cache")
 	req.Header.Set("Expires", "0")
 	if ranges && start > 0 {
 		req.Header.Set("Range", "bytes="+strconv.FormatInt(start, 10)+"-")
 	}
-	return client.Do(req)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		timer.Stop()
+		return nil, nil, errors.Wrap(err, "httpReq")
+	}
+	return resp, timer, nil
+}
+
+func acceptsRanges(url string) (bool, error) {
+
+	resp, _, err := httpReq(url, "HEAD", 1)
+	if err != nil {
+		return false, errors.Wrap(err, "acceptsRanges")
+	}
+	defer resp.Body.Close()
+
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false, errors.Wrap(err, "acceptsRanges")
+	}
+
+	return resp.StatusCode == http.StatusPartialContent, nil
 }
 
 func fetchString(url string) (string, error) {
-	resp, err := httpReq(url, "GET", 0)
+
+	resp, _, err := httpReq(url, "GET", 0)
 	if err != nil {
-		return emptyString, err
+		return emptyString, errors.Wrap(err, "fetchString")
 	}
 	defer resp.Body.Close()
 
 	bodyb, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return emptyString, err
+		return emptyString, errors.Wrap(err, "fetchString")
 	}
 	return string(bodyb), nil
 }
 
-func getLinks(url, pattern string) (links []string, err error) {
+func getLinks(url, pattern string) ([]string, error) {
+
+	var err error
+	var links []string
 	var body string
+
 	for ni := 1; ni <= retry; ni++ {
 		fmt.Printf("\nDownloading index for %-30.30s (%d) ", url, ni)
 		body, err = fetchString(url)
@@ -177,59 +231,67 @@ func getLinks(url, pattern string) (links []string, err error) {
 		}
 		fmt.Print(err)
 	}
-	// fmt.Println()
+
 	if err != nil {
-		err = errors.New("Unable to get index html for new archives")
-		return
+		return nil, errors.Wrap(err, "Unable to get index html for new archives")
 	}
+
 	var re *regexp.Regexp
 	if re, err = regexp.Compile(pattern); err != nil {
-		return
+		return nil, errors.Wrap(err, "getLinks")
 	}
+
 	if m := re.FindAllStringSubmatch(body, -1); m != nil {
 		links = make([]string, 0, len(m))
 		for _, v := range m {
-			if fst, _, err := dissect(v[1]); err == nil && lastBook < fst {
+			if ok, fst, _, err := dissect(reNumbers, v[1]); err == nil && ok && lastBook < fst {
 				links = append(links, v[1])
 			}
 		}
 	} else {
-		err = errors.New("No sutable links found for new archives")
+		err = errors.New("getLinks: No sutable links found for new archives")
 	}
-	return
+	return links, err
 }
 
-func getSqlLinks(url, pattern string) (links []string, err error) {
+func getSqlLinks(url, pattern string) ([]string, error) {
+
+	var err error
+	var links []string
 	var body string
+
 	for ni := 1; ni <= retry; ni++ {
+
 		fmt.Printf("\nDownloading SQL tables for %-30.30s (%d) ", url, ni)
-		body, err = fetchString(url)
-		if err == nil {
+		if body, err = fetchString(url); err == nil {
 			break
 		}
 		fmt.Print(err)
 	}
-	// fmt.Println()
+
 	if err != nil {
-		err = errors.New("Unable to get index html for SQL tables")
-		return
+		return nil, errors.Wrap(err, "Unable to get index html for SQL tables")
 	}
+
 	var re *regexp.Regexp
 	if re, err = regexp.Compile(pattern); err != nil {
-		return
+		return nil, errors.Wrap(err, "getSqlLinks")
 	}
+
 	if m := re.FindAllStringSubmatch(body, -1); m != nil {
 		links = make([]string, len(m))
 		for ni, v := range m {
 			links[ni] = v[1]
 		}
 	} else {
-		err = errors.New("No sutable links found for SQL tables")
+		err = errors.New("getSqlLinks: No sutable links found for SQL tables")
 	}
-	return
+
+	return links, err
 }
 
 func fetchFile(url, tmpIn string, start int64) (tmpOut string, size int64, err error) {
+
 	var out *os.File
 
 	tmpOut = tmpIn
@@ -239,40 +301,61 @@ func fetchFile(url, tmpIn string, start int64) (tmpOut string, size int64, err e
 		if start > 0 {
 			out, err = os.OpenFile(tmpIn, os.O_RDWR|os.O_APPEND, 0666)
 			if err != nil {
+				err = errors.Wrap(err, "fetchFile")
 				return
 			}
 			_, err = out.Seek(start, os.SEEK_SET)
 			if err != nil {
+				err = errors.Wrap(err, "fetchFile")
 				return
 			}
 		} else {
 			out, err = os.Create(tmpIn)
 			if err != nil {
+				err = errors.Wrap(err, "fetchFile")
 				return
 			}
 		}
 	} else {
 		out, err = ioutil.TempFile("", "libget")
 		if err != nil {
+			err = errors.Wrap(err, "fetchFile")
 			return
 		}
 		tmpOut = out.Name()
 	}
 	defer out.Close()
 
-	resp, err := httpReq(url, "GET", start)
+	resp, timer, err := httpReq(url, "GET", start)
 	if err != nil {
+		err = errors.Wrap(err, "fetchFile")
 		return
 	}
 	defer resp.Body.Close()
 
-	size, err = io.Copy(out, resp.Body)
-	size = size + start
+	for {
+		timer.Reset(time.Duration(timeout) * time.Second)
+		rcvd, e := io.CopyN(out, resp.Body, int64(chunkSize)*1024*1024)
+		size += rcvd
+		if e == nil {
+			fmt.Print("+")
+			continue
+		}
+		if e == io.EOF {
+			break
+		} else {
+			err = errors.Wrap(e, "fetchFile")
+			break
+		}
+	}
 
 	return
 }
 
-func processFile(tmp, file string) (err error) {
+func processFile(tmp, file string) error {
+
+	var err error
+
 	ext := filepath.Ext(file)
 	switch ext {
 	case ".zip":
@@ -282,16 +365,26 @@ func processFile(tmp, file string) (err error) {
 	case ".gz":
 		err = unGzipFile(tmp, strings.TrimSuffix(file, ext))
 	default:
-		err = errors.New("Unknown file extension")
+		err = errors.New("processFile: Unknown file extension")
 	}
-	return
+
+	if err != nil {
+		return errors.Wrap(err, "processFile")
+	}
+
+	return nil
 }
 
-func getFiles(files []string, url, dest string) (err error) {
+func getFiles(files []string, url, dest string) error {
+
+	var err error
+
 	for _, f := range files {
+
 		var start int64
 		var tmp string
 		var with_ranges bool
+
 		for ni := 1; ni <= retry; ni++ {
 			if ranges && start > 0 {
 				for nj := 1; nj <= retry; nj++ {
@@ -320,20 +413,19 @@ func getFiles(files []string, url, dest string) (err error) {
 		}
 		defer os.Remove(tmp)
 
-		//fmt.Println()
 		if err != nil {
-			return errors.New("Unable to download files")
+			return errors.Wrap(err, "Unable to download files")
 		}
 
-		err = processFile(tmp, filepath.Join(dest, f))
-		if err != nil {
+		if err = processFile(tmp, filepath.Join(dest, f)); err != nil {
 			break
 		}
 	}
-	return
+	return err
 }
 
 func main() {
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "\nTool to download library updates\nVersion %s\n\n", getVersion())
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
