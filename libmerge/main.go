@@ -250,6 +250,7 @@ func main() {
 			log.Fatal(err)
 		}
 		w = r.Append(f)
+		leftBytes -= r.AppendOffset()
 		firstBook = merge.begin
 	}
 
@@ -269,9 +270,13 @@ func main() {
 				}
 				lastBook = id
 
+				// I know this is wrong, leftBytes could already be negative, but to repeat what libsplit does
+				// always copy first file...
+
 				if err := w.Copy(file); err != nil {
 					log.Printf("Error copying from %s (%s): %v", name, file.Name, err)
 				} else {
+
 					leftBytes -= int64(file.CompressedSize64)
 
 					if leftBytes <= 0 {
