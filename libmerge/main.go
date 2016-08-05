@@ -176,7 +176,7 @@ func main() {
 	}
 
 	if merge.info != nil {
-		if merge.begin != last.begin {
+	    if (merge.begin < last.begin || merge.begin > last.begin && merge.begin <= last.end) || merge.end < last.end {
 			log.Fatalf("Merge archive (%s) and last archive (%s) do not match", merge.info.Name(), last.info.Name())
 		}
 		if verbose {

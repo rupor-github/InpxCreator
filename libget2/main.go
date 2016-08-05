@@ -98,8 +98,8 @@ func getLastBook(path string) (int, error) {
 		return 0, errors.New("getLastBook: there could only be single merge archive")
 	} else if count == 0 {
 		return lastEnd, nil
-	} else if mergeBegin != lastBegin || mergeEnd < lastEnd {
-		return 0, errors.New("getLastBook: merge and last archive do not match")
+	} else if mergeBegin < lastBegin || mergeBegin > lastBegin && mergeBegin <= lastEnd || mergeEnd < lastEnd {
+		return 0, errors.Errorf("getLastBook: merge (%d:%d) and last (%d:%d) archive do not match", mergeBegin, mergeEnd, lastBegin, lastEnd)
 	} else {
 		return mergeEnd, nil
 	}
