@@ -3,7 +3,7 @@
 set -e
 
 ver_major=5.7
-ver_minor=12
+ver_minor=14
 
 # from_url="http://mysql.mirrors.pair.com/Downloads"
 from_url="http://dev.mysql.com/get/Downloads"
