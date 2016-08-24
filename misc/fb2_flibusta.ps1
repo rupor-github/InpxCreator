@@ -55,7 +55,7 @@ if( $LASTEXITCODE -gt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !"; Power-
 if( $LASTEXITCODE -eq 0 ) { Write-Output "No archive updates..."; Power-Balanced; exit 0 }
 
 # Clean old database directories - we have at least one good download
-$old_dbs = Join-Path $adir "flibusta_*"
+$old_dbs = Join-Path $archive_path "flibusta_*"
 Get-ChildItem $old_dbs | Where-Object {$_.PSIsContainer -eq $True} | sort CreationTime -desc | select -Skip 5 | Remove-Item -Force
 
 $new_full_archives = 0
