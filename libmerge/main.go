@@ -176,7 +176,7 @@ func main() {
 	}
 
 	if merge.info != nil {
-	    if (merge.begin < last.begin || merge.begin > last.begin && merge.begin <= last.end) || merge.end < last.end {
+		if (merge.begin < last.begin || merge.begin > last.begin && merge.begin <= last.end) || merge.end < last.end {
 			log.Fatalf("Merge archive (%s) and last archive (%s) do not match", merge.info.Name(), last.info.Name())
 		}
 		if verbose {
@@ -294,10 +294,13 @@ func main() {
 							log.Fatalf("Renaming archive: %v", err)
 						}
 
-						fmt.Printf("\t--> Removing old last archive: %s\n", last.info.Name())
-						if err := os.Remove(filepath.Join(dest, last.info.Name())); err != nil {
-							log.Fatalf("Removing old last archive: %v", err)
+						last.info, err = os.Stat(newName)
+						if err != nil {
+							log.Fatalf("Stat failed: %v", err)
 						}
+						last.begin = firstBook
+						last.end = lastBook
+						fmt.Printf("\t--> New last archive: %s\n", newName)
 
 						f, err = ioutil.TempFile(dest, "merge-")
 						if err != nil {
