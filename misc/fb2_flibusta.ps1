@@ -56,7 +56,7 @@ if( $LASTEXITCODE -eq 0 ) { Write-Output "No archive updates..."; Power-Balanced
 
 # Clean old database directories - we have at least one good download
 $old_dbs = Join-Path $archive_path "flibusta_*"
-Get-ChildItem $old_dbs | Where-Object {$_.PSIsContainer -eq $True} | sort CreationTime -desc | select -Skip 5 | Remove-Item -Force
+Get-ChildItem $old_dbs | Where-Object {$_.PSIsContainer -eq $True} | sort CreationTime -desc | select -Skip 5 | Remove-Item  -Recurse -Force
 
 $new_full_archives = 0
 $before_dir = @(Join-path $adir "fb2-*.zip" | dir)
