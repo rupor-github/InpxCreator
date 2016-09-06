@@ -16,12 +16,10 @@
 #ifndef __IMPORT_UTIL_H__
 #define __IMPORT_UTIL_H__
 
-#ifndef DOUT
 #ifdef _XML_DEBUG
-#define DOUT(a) a
+#define DOUT(...) printf(__VA_ARGS__)
 #else
-#define DOUT(a) (void)0
-#endif
+#define DOUT(...) (void)0
 #endif
 
 #ifndef DO_NOT_INCLUDE_PARSER
@@ -54,7 +52,6 @@ void normalize_path(char* path);
 std::wstring utf8_to_ucs2(const char* ptr);
 std::string ucs2_to_utf8(const wchar_t* ptr);
 std::string utf8_to_ANSI(const char* ptr);
-std::string utf8_to_OEM(const char* ptr);
 std::string duplicate_quote(const char* pstr);
 
 void split(std::vector<std::string>& result, const char* str, const char* delim, bool combine_delimiters = true);

@@ -707,6 +707,8 @@ bool read_fb2(const unzip& uz, const string& book_id, fb2_parser& fb, unz_file_i
 {
 	bool rc = false;
 
+	DOUT("   Reading %s\n", book_id.c_str());
+
 	const int                 buffer_size = 4096;
 	boost::scoped_array<char> buffer(new char[buffer_size]);
 
@@ -737,7 +739,7 @@ bool process_from_fb2(const unzip& uz, const string& book_id, string& inp, strin
 {
 	bool rc = false;
 
-	DOUT(printf("   Processing %s\n", book_id.c_str()););
+	DOUT("   Processing %s\n", book_id.c_str());
 
 	err.erase();
 	inp.erase();
@@ -872,7 +874,9 @@ void process_local_archives(const mysql_connection& mysql, const zip& zz, const 
 	if (0 == files.size()) {
 		throw runtime_error(tmp_str("No archives are available for processing \"%s\"", archives_path.c_str()));
 	}
-	cout << endl << "Archives processing - " << files.size() << " file(s) [" << archives_path << "]" << endl << endl;
+	wcout << endl
+	      << L"Archives processing - " << files.size() << L" file(s) [" << utf8_to_ucs2(archives_path.c_str()) << L"]" << endl
+	      << endl;
 
 	sort(files.begin(), files.end());
 
@@ -887,7 +891,7 @@ void process_local_archives(const mysql_connection& mysql, const zip& zz, const 
 		long       records = 0, dummy_records = 0, fb2_records = 0;
 		zip_writer zw(zz, out_inp_name, false);
 
-		cout << "Processing - " << name;
+		wcout << L"Processing - " << utf8_to_ucs2(name.c_str());
 
 		timer ftd;
 		unzip uz((archives_path + *it).c_str());
@@ -1043,15 +1047,15 @@ void process_local_archives(const mysql_connection& mysql, const zip& zz, const 
 
 		zw.close();
 
-		cout << " - done in " << ftd.passed();
+		wcout << L" - done in " << utf8_to_ucs2(ftd.passed().c_str());
 		if (0 == records) {
-			cout << " ==> Not in database!" << endl;
+			wcout << L" ==> Not in database!" << endl;
 		} else {
-			cout << " (" << records - fb2_records << ":" << fb2_records << ":" << dummy_records << " records)" << endl;
+			wcout << L" (" << records - fb2_records << L":" << fb2_records << L":" << dummy_records << L" records)" << endl;
 		}
 
 		for (vector<string>::const_iterator it = errors.begin(); it != errors.end(); ++it) {
-			cout << *it << endl;
+			wcout << utf8_to_ucs2((*it).c_str()) << endl;
 		}
 	}
 }
@@ -1112,7 +1116,7 @@ void process_database(const mysql_connection& mysql, const zip& zz)
 	long       records = 0;
 	zip_writer zw(zz, out_inp_name, false);
 
-	cout << endl << "Database processing" << endl;
+	wcout << endl << L"Database processing" << endl;
 
 	timer ftd;
 
@@ -1122,7 +1126,7 @@ void process_database(const mysql_connection& mysql, const zip& zz)
 		if (filenames_table_exist(mysql)) {
 			last_filename_id = get_last_filename_id(mysql);
 
-			cout << endl << "Largest book id which has \"old\" filename is: " << last_filename_id << endl;
+			wcout << endl << L"Largest book id which has \"old\" filename is: " << last_filename_id << endl;
 		}
 	}
 
@@ -1132,7 +1136,7 @@ void process_database(const mysql_connection& mysql, const zip& zz)
 
 	while (record = books.fetch_row()) {
 		if (++current % 3000 == 0) {
-			cout << ".";
+			wcout << L".";
 		}
 
 		string inp, file_name, ext("fb2");
@@ -1165,16 +1169,27 @@ void process_database(const mysql_connection& mysql, const zip& zz)
 		}
 	}
 
-	cout << endl << current << " records ";
+	wcout << endl << current << L" records ";
 
 	zw.close();
 
-	cout << "done in " << ftd.passed() << endl;
+	wcout << L"done in " << utf8_to_ucs2(ftd.passed().c_str()) << endl;
+}
+
+wostream& operator<<(wostream& os, const po::options_description& desc)
+{
+	stringstream buf;
+	buf << desc;
+	return os << utf8_to_ucs2(buf.str().c_str());
 }
 
 int main(int argc, char* argv[])
 {
 	int rc = 1;
+
+	fflush(stdout);
+	_setmode(_fileno(stdout), 0x00020000);
+	locale::global(locale(""));
 
 	string spec, path, inpx, comment, comment_fname, collection_comment, inp_path, inpx_name, dump_date, full_date, db_name;
 
@@ -1190,7 +1205,6 @@ int main(int argc, char* argv[])
 		timer          td;
 
 		::GetModuleFileName(NULL, module_path, sizeof module_path);
-
 		file_name = separate_file_name(module_path);
 
 		// clang-format off
@@ -1235,12 +1249,13 @@ int main(int argc, char* argv[])
 		po::notify(vm);
 
 		if (vm.count("help") || !vm.count("dump-dir")) {
-			cout << endl;
-			cout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-			cout << "Version " << PRJ_VERSION_MAJOR << "." << PRJ_VERSION_MINOR << " (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
-			cout << endl;
-			cout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
-			cout << options << endl;
+			wcout << endl;
+			wcout << L"Import file (INPX) preparation tool for MyHomeLib" << endl;
+			wcout << L"Version " << PRJ_VERSION_MAJOR << "." << PRJ_VERSION_MINOR << L" (MYSQL " << MYSQL_SERVER_VERSION << L")"
+			      << endl;
+			wcout << endl;
+			wcout << L"Usage: " << file_name << L" [options] <path to SQL dump files>" << endl << endl;
+			wcout << options << endl;
 			rc = 0;
 			goto E_x_i_t;
 		}
@@ -1254,7 +1269,7 @@ int main(int argc, char* argv[])
 			} else if (0 == _stricmp(opt.c_str(), "all")) {
 				g_process = eAll;
 			} else {
-				cout << endl << "Warning: unknown processing type, assuming FB2 only!" << endl;
+				wcout << endl << L"Warning: unknown processing type, assuming FB2 only!" << endl;
 				g_process = eFB2;
 			}
 		}
@@ -1266,7 +1281,7 @@ int main(int argc, char* argv[])
 			} else if (0 == _stricmp(opt.c_str(), "last")) {
 				g_read_fb2 = eReadLast;
 			} else {
-				cout << endl << "Warning: unknown read-fb2 action, assuming none!" << endl;
+				wcout << endl << L"Warning: unknown read-fb2 action, assuming none!" << endl;
 				g_read_fb2 = eReadNone;
 			}
 		}
@@ -1280,7 +1295,7 @@ int main(int argc, char* argv[])
 			} else if (0 == _stricmp(opt.c_str(), "replace")) {
 				g_fb2_preference = eReplaceFB2;
 			} else {
-				cout << endl << "Warning: unknown prefer-fb2 action, assuming ignore!" << endl;
+				wcout << endl << L"Warning: unknown prefer-fb2 action, assuming ignore!" << endl;
 				g_fb2_preference = eIgnoreFB2;
 			}
 		}
@@ -1294,10 +1309,10 @@ int main(int argc, char* argv[])
 			} else if (0 == _stricmp(opt.c_str(), "ignore")) {
 				g_series_type = eIgnoreST;
 			} else {
-				cout << endl
-				     << "Warning: unknown sequence type, assuming author's "
-				        "sequence!"
-				     << endl;
+				wcout << endl
+				      << L"Warning: unknown sequence type, assuming author's "
+				         L"sequence!"
+				      << endl;
 				g_series_type = eAuthorST;
 			}
 		}
@@ -1311,7 +1326,7 @@ int main(int argc, char* argv[])
 			} else if (0 == _stricmp(opt.c_str(), "ignore")) {
 				g_strict = eIgnore;
 			} else {
-				cout << endl << "Warning: unknown strictness, will use file extensions!" << endl;
+				wcout << endl << L"Warning: unknown strictness, will use file extensions!" << endl;
 				g_strict = eFileExt;
 			}
 		}
@@ -1327,7 +1342,7 @@ int main(int argc, char* argv[])
 			} else if (0 == _stricmp(opt.c_str(), "2011-11-06")) {
 				g_format = e20111106;
 			} else {
-				cout << endl << "Warning: unknown database format, will use default!" << endl;
+				wcout << endl << L"Warning: unknown database format, will use default!" << endl;
 				g_format = eDefault;
 			}
 		}
@@ -1339,7 +1354,7 @@ int main(int argc, char* argv[])
 			} else if (0 == _stricmp(opt.c_str(), "2.x")) {
 				g_inpx_format = e2X;
 			} else {
-				cout << endl << "Warning: unknown INPX format, will use default!" << endl;
+				wcout << endl << L"Warning: unknown INPX format, will use default!" << endl;
 				g_inpx_format = e2X;
 			}
 		}
@@ -1395,7 +1410,7 @@ int main(int argc, char* argv[])
 			comment_fname = vm["comment"].as<string>();
 
 			if (0 != _access(comment_fname.c_str(), 4)) {
-				cout << endl << "Warning: Ignoring wrong comment file: " << comment_fname.c_str() << endl;
+				wcout << endl << L"Warning: Ignoring wrong comment file: " << utf8_to_ucs2(comment_fname.c_str()) << endl;
 			} else {
 				ifstream     in(comment_fname.c_str());
 				stringstream ss;
@@ -1529,7 +1544,7 @@ int main(int argc, char* argv[])
 			mysql_connection mysql(module_path, g_db_name.c_str(), db_name.c_str());
 
 			if (!g_no_import) {
-				cout << endl << "Creating MYSQL database \"" << db_name << "\"" << endl << endl;
+				wcout << endl << L"Creating MYSQL database \"" << utf8_to_ucs2(db_name.c_str()) << L"\"" << endl << endl;
 			}
 
 			mysql.query(string("CREATE DATABASE IF NOT EXISTS " + db_name + " CHARACTER SET=utf8;"));
@@ -1540,7 +1555,7 @@ int main(int argc, char* argv[])
 				string name = "\"" + *it + "\"";
 				name.append(max(0, (int)(25 - name.length())), ' ');
 
-				cout << "Importing - " << name;
+				wcout << L"Importing - " << utf8_to_ucs2(name.c_str());
 
 				timer ftd;
 
@@ -1604,7 +1619,7 @@ int main(int argc, char* argv[])
 					getline(in, buf);
 				}
 
-				cout << " - done in " << ftd.passed() << endl;
+				wcout << L" - done in " << utf8_to_ucs2(ftd.passed().c_str()) << endl;
 			}
 
 			if (g_clean_authors) {
@@ -1616,7 +1631,7 @@ int main(int argc, char* argv[])
 				                    table_name.c_str()));
 				mysql_results dupes(mysql);
 
-				cout << endl << "Processing duplicate authors" << endl;
+				wcout << endl << L"Processing duplicate authors" << endl;
 
 				while (record = dupes.fetch_row()) {
 					MYSQL_ROW record1;
@@ -1647,9 +1662,9 @@ int main(int argc, char* argv[])
 
 							if (not_first) {
 								if (g_verbose)
-									cout << "   De-duping author " << setw(8) << record1[0] << " (" << setw(4) << count
-									     << ") : " << utf8_to_OEM(record[2]) << "-" << utf8_to_OEM(record[0]) << "-"
-									     << utf8_to_OEM(record[1]) << endl;
+									wcout << L"   De-duping author " << setw(8) << record1[0] << L" (" << setw(4) << count << L") : "
+									      << utf8_to_ucs2(record[2]) << "-" << utf8_to_ucs2(record[0]) << L"-"
+									      << utf8_to_ucs2(record[1]) << endl;
 								if (0 < count) {
 									mysql.query(tmp_str("UPDATE libavtor SET "
 									                    "aid=%s WHERE aid=%s;",
@@ -1660,9 +1675,9 @@ int main(int argc, char* argv[])
 							} else {
 								if (0 == count) {
 									if (g_verbose)
-										cout << "*  De-duping author " << setw(8) << record1[0] << " (" << setw(4) << count
-										     << ") : " << utf8_to_OEM(record[2]) << "-" << utf8_to_OEM(record[0]) << "-"
-										     << utf8_to_OEM(record[1]) << endl;
+										wcout << L"*  De-duping author " << setw(8) << record1[0] << L" (" << setw(4) << count
+										      << L") : " << utf8_to_ucs2(record[2]) << "-" << utf8_to_ucs2(record[0]) << L"-"
+										      << utf8_to_ucs2(record[1]) << endl;
 
 									mysql.query(tmp_str("DELETE FROM %s WHERE aid=%s;", table_name.c_str(), record1[0]));
 									first.clear();
@@ -1689,7 +1704,7 @@ int main(int argc, char* argv[])
 					g_last_fb2 = atol(record[0]);
 				}
 
-				cout << endl << "Largest FB2 book id in database: " << g_last_fb2 << endl;
+				wcout << endl << L"Largest FB2 book id in database: " << g_last_fb2 << endl;
 			}
 
 			if (comment.empty()) {
@@ -1751,7 +1766,7 @@ int main(int argc, char* argv[])
 
 			zz.close();
 
-			cout << endl << "Complete processing took " << td.passed() << endl;
+			wcout << endl << L"Complete processing took " << utf8_to_ucs2(td.passed().c_str()) << endl << endl;
 		}
 
 		if (g_clean_when_done) {
@@ -1772,7 +1787,7 @@ int main(int argc, char* argv[])
 		rc = 0;
 
 	} catch (exception& e) {
-		cerr << endl << endl << "***ERROR: " << e.what() << endl;
+		wcerr << endl << endl << L"***ERROR: " << e.what() << endl;
 	}
 
 E_x_i_t:

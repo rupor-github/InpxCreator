@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 project(InpxCreator)
 # Project version number
 set(PRJ_VERSION_MAJOR 6)
-set(PRJ_VERSION_MINOR 7)
+set(PRJ_VERSION_MINOR 81)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -31,10 +31,16 @@ if(NOT MVCS)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message("** Debug mode")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_XML_DEBUG")
+endif()
+
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.60.0 REQUIRED COMPONENTS "date_time" "program_options")
 find_package(MySQL REQUIRED)
 find_package(ZLib REQUIRED)
+find_package(iconv REQUIRED)
 find_package(Expat REQUIRED)
 find_package(Git REQUIRED)
 
@@ -44,9 +50,9 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} changelog --fi
 set(SRCS_MINIZIP minizip/ioapi.c minizip/iowin32.c minizip/unzip.c minizip/zip.c)
 add_library(minizip ${SRCS_MINIZIP})
 
-set(SRCS_LIB2INPX lib2inpx/util.cpp lib2inpx/guid.cpp lib2inpx/lib2inpx.cpp)
+set(SRCS_LIB2INPX lib2inpx/util.cpp lib2inpx/lib2inpx.cpp)
 add_executable(lib2inpx ${SRCS_LIB2INPX})
-target_link_libraries(lib2inpx minizip ${Boost_LIBRARIES} ${MYSQL_LIBRARIES} ${ZLIB_LIBRARIES} ${EXPAT_LIBRARIES})
+target_link_libraries(lib2inpx minizip ${Boost_LIBRARIES} ${MYSQL_LIBRARIES} ${ZLIB_LIBRARIES} ${EXPAT_LIBRARIES} ${ICONV_LIBRARIES})
 
 set(SRCS_LIBSPLIT lib2inpx/util.cpp lib2inpx/libsplit.cpp)
 add_executable(libsplit ${SRCS_LIBSPLIT})
@@ -66,12 +72,12 @@ find_package(Go 1.6 REQUIRED)
 find_package(Glide 0.11 REQUIRED)
 # Proper go build structure will be here
 set(GO_PATH "${CMAKE_BINARY_DIR}/go")
-include_directories("${PROJECT_BINARY_DIR}")
 
 message(STATUS "Vendoring for go")
 execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory go/src)
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/glide.yaml go/src/.)
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/glide.lock go/src/.)
+set(ENV{GOPATH} ${GO_PATH})
 execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GLIDE_EXECUTABLE} install WORKING_DIRECTORY go/src)
 
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libget2/version.go")

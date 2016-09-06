@@ -20,8 +20,10 @@
 #include <direct.h>
 #include <time.h>
 #include <limits.h>
+#include <errno.h>
 
 #include <mysql.h>
+#include <iconv.h>
 
 #include <algorithm>
 #include <string>
@@ -54,9 +56,6 @@
 #include <minizip/iowin32.h>
 #include <expat.h>
 
-#include <mlang.h>
-
-#define DO_NOT_INCLUDE_XML 1
 #include "util.h"
 
 #define STARTING_SIZE 0x400
@@ -265,27 +264,6 @@ string utf8_to_ANSI(const char* ptr)
 	return string(buf2.get());
 }
 
-string utf8_to_OEM(const char* ptr)
-{
-	size_t len = MultiByteToWideChar(CP_UTF8, 0, ptr, -1, NULL, 0);
-
-	boost::scoped_array<wchar_t> buf(new wchar_t[len + 1]);
-
-	MultiByteToWideChar(CP_UTF8, 0, ptr, -1, buf.get(), (int)len);
-
-	buf.get()[len] = L'\0';
-
-	len = WideCharToMultiByte(CP_OEMCP, 0, buf.get(), -1, NULL, 0, NULL, NULL);
-
-	boost::scoped_array<char> buf2(new char[len + 1]);
-
-	WideCharToMultiByte(CP_OEMCP, 0, buf.get(), -1, buf2.get(), (int)len, NULL, NULL);
-
-	buf2.get()[len] = L'\0';
-
-	return string(buf2.get());
-}
-
 void join(string& result, const vector<string>& src, const char* delim)
 {
 	result.erase();
@@ -370,95 +348,73 @@ zlib_filefunc64_def unzip::m_ffunc;
 
 #ifndef DO_NOT_INCLUDE_PARSER
 
-DEFINE_GUID(IID_IMultiLanguage, 0x275c23e1, 0x3747, 0x11d0, 0x9f, 0xea, 0, 0xaa, 0, 0x3f, 0x86, 0x46);
-
-class multi_lang {
-  public:
-	multi_lang() : m_initialized(false), m_pml(NULL)
-	{
-		HRESULT hr = CoInitialize(NULL);
-		if (!SUCCEEDED(hr)) {
-			throw std::runtime_error(tmp_str("MLANG CoInitialize(%08x)", hr));
-		}
-		m_initialized = true;
-
-		hr = CoCreateInstance(CLSID_CMultiLanguage, NULL, CLSCTX_ALL, IID_IMultiLanguage, (void**)&m_pml);
-		if (!SUCCEEDED(hr)) {
-			throw std::runtime_error(tmp_str("MLANG CLSID_CMultiLanguage(%08x)", hr));
-		}
-	}
-
-	~multi_lang()
-	{
-		if (NULL != m_pml) {
-			m_pml->Release();
-		}
-		if (m_initialized) {
-			CoUninitialize();
-		}
-	}
-
-	UINT getCP(const char* name)
-	{
-		MIMECSETINFO mi;
-	std:
-		wstring wstr = utf8_to_ucs2(name);
-		BSTR    bstr = ::SysAllocString(wstr.c_str());
-		HRESULT hr   = m_pml->GetCharsetInfo(bstr, &mi);
-
-		::SysFreeString(bstr);
-
-		return SUCCEEDED(hr) ? mi.uiCodePage : 0;
-	}
-
-	bool isMBCS(UINT cp) { return (932 == cp) || (936 == cp) || (949 == cp) || (950 == cp) || (1361 == cp); }
-
-  private:
-	bool            m_initialized;
-	IMultiLanguage* m_pml;
-};
-
 static int XMLCALL xml_convert(void* data, const char* s)
 {
-	UINT    cp  = (uintptr_t)data;
-	wchar_t sym = 0;
+	size_t inbytes = 1;
+	char   in      = *s;
+	char*  pin     = &in;
 
-	if (0 == MultiByteToWideChar(cp, MB_ERR_INVALID_CHARS, s, 2, &sym, 1)) {
+	size_t outbytes = 4;
+	char   out[4]   = {0, 0, 0, 0};
+	char*  pout     = &out[0];
+
+	size_t res = iconv(data, &pin, &inbytes, &pout, &outbytes);
+
+	if ((size_t)-1 == res) {
 		return -1;
-	} else {
-		return sym;
 	}
+
+	wchar_t ret = 0;
+	for (size_t j = 0; j < 4 - outbytes; j++) {
+		ret = (ret << 8) + (unsigned char)out[j];
+	}
+	return ret;
 }
+
+static void xml_convert_release(void* data) { iconv_close(data); }
 
 int fb2_parser::on_unknown_encoding(const XML_Char* name, XML_Encoding* info)
 {
-	static multi_lang mlang;
+	iconv_t cd;
 
-	UINT cp = mlang.getCP(name);
-
-	if (0 == cp) {
+	if ((cd = iconv_open("UCS-2BE", name)) == (iconv_t)-1) {
+		DOUT("DBG*** unsupported encoding: %s\n", name);
+		printf("DBG*** unsupported encoding: %s\n", name);
 		return XML_STATUS_ERROR;
 	}
 
-	bool mbcs = mlang.isMBCS(cp);
+	for (size_t i = 0; i < 256; i++) {
 
-	info->data    = (void*)(uintptr_t)cp;
-	info->convert = mbcs ? xml_convert : NULL;
-	info->release = NULL;
+		iconv(cd, NULL, NULL, NULL, NULL);
 
-	for (int ni = 0; ni < 256; ++ni) {
-		if (mbcs && IsDBCSLeadByteEx(cp, ni)) {
-			info->map[ni] = -2;
-		} else {
-			wchar_t sym = 0;
+		size_t inbytes = 1;
+		char   in      = i;
+		char*  pin     = &in;
 
-			if (0 == MultiByteToWideChar(cp, MB_ERR_INVALID_CHARS, (char*)&ni, 1, &sym, 1)) {
-				info->map[ni] = -1;
+		size_t outbytes = 4;
+		char   out[4]   = {0, 0, 0, 0};
+		char*  pout     = &out[0];
+
+		size_t res = iconv(cd, &pin, &inbytes, &pout, &outbytes);
+
+		if ((size_t)-1 == res) {
+			if (errno == EINVAL) {
+				info->map[i] = -2;
 			} else {
-				info->map[ni] = sym;
+				info->map[i] = -1;
 			}
+		} else {
+			wchar_t ret = 0;
+			for (size_t j = 0; j < 4 - outbytes; j++) {
+				ret = (ret << 8) + (unsigned char)out[j];
+			}
+			info->map[i] = ret;
 		}
 	}
+	info->data    = cd;
+	info->convert = xml_convert;
+	info->release = xml_convert_release;
+
 	return XML_STATUS_OK;
 }
 
@@ -502,14 +458,15 @@ void fb2_parser::on_start_element(const char* name, const char** attrs)
 				m_path.push_back(m_current);
 				m_current = *ai;
 			} else {
-				DOUT(printf("DBG*** Cardinality broken: %s\n", name););
+				DOUT("DBG*** Cardinality broken: %s\n", name);
 			}
 
 			found = true;
 			break;
 		}
 	}
-	DOUT(if (!found) printf("DBG*** Unexpected element starts: %s\n", name););
+	if (!found)
+		DOUT("DBG*** Unexpected element starts: %s\n", name);
 }
 
 void fb2_parser::on_end_element(const char* name)
@@ -547,10 +504,10 @@ void fb2_parser::on_end_element(const char* name)
 			m_current = m_path.back();
 			m_path.pop_back();
 		} else {
-			DOUT(printf("DBG*** Unexpected element ends (path empty): %s\n", name););
+			DOUT("DBG*** Unexpected element ends (path empty): %s\n", name);
 		}
 	} else {
-		DOUT(printf("DBG*** Unexpected element ends: %s\n", name););
+		DOUT("DBG*** Unexpected element ends: %s\n", name);
 	}
 }
 
