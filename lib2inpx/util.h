@@ -17,7 +17,7 @@
 #define __IMPORT_UTIL_H__
 
 #ifdef _XML_DEBUG
-#define DOUT(...) printf(__VA_ARGS__)
+#define DOUT(format, ...) wprintf(L##format, __VA_ARGS__)
 #else
 #define DOUT(...) (void)0
 #endif
@@ -38,8 +38,8 @@ extern db_limits g_limits;
 extern bool      g_fix;
 
 void initialize_limits(const std::string& config);
-std::string fix_data(const char* pstr, size_t max_len);
-bool remove_crlf(std::string& str);
+std::string fix_data(const std::string& str, size_t max_len);
+std::string cleanse(const std::string& s);
 
 #endif // DO_NOT_INCLUDE_PARSER
 
@@ -49,13 +49,9 @@ const char* separate_file_name(char* buf);
 void normalize_path(std::string& path, bool trailing = true);
 void normalize_path(char* path);
 
-std::wstring utf8_to_ucs2(const char* ptr);
-std::string ucs2_to_utf8(const wchar_t* ptr);
-std::string utf8_to_ANSI(const char* ptr);
-std::string duplicate_quote(const char* pstr);
-
-void split(std::vector<std::string>& result, const char* str, const char* delim, bool combine_delimiters = true);
-void join(std::string& result, const std::vector<std::string>& src, const char* delim);
+std::wstring utf8_to_wchar(const std::string&);
+std::string wchar_to_utf8(const std::wstring&);
+std::string duplicate_quote(const std::string&);
 
 class tmp_str : public std::string {
   public:
@@ -148,12 +144,7 @@ class zip_writer : boost::noncopyable {
 	zip_writer(const zip& zip, const std::string& name, bool auto_open = true, bool zip64 = false)
 	    : m_opened(false), m_ziperr(ZIP_OK), m_zip(zip), m_name(name)
 	{
-		m_zi.tmz_date.tm_sec = m_zi.tmz_date.tm_min = m_zi.tmz_date.tm_hour = m_zi.tmz_date.tm_mday = m_zi.tmz_date.tm_mon =
-		    m_zi.tmz_date.tm_year                                                                   = 0;
-		m_zi.dosDate                                                                                = 0;
-		m_zi.internal_fa                                                                            = 0;
-		m_zi.external_fa                                                                            = 0;
-
+		memset(&m_zi, 0, sizeof(m_zi));
 		filetime(&m_zi.dosDate);
 
 		if (auto_open) {
@@ -407,7 +398,7 @@ class fb2_parser {
 	typedef std::list<element_t>                            element_list_t;
 
   public:
-	fb2_parser() : m_parser(NULL), m_stop_processing(false)
+	fb2_parser() : m_parser(NULL), m_stop_processing(false), m_unicode(false)
 	{
 		prepare_xml_graph();
 
@@ -416,10 +407,19 @@ class fb2_parser {
 			throw std::runtime_error("Unable to create XML parser - XML_ParserCreate()");
 		}
 
+		const XML_Feature* f = XML_GetFeatureList();
+		while (f->feature != XML_FEATURE_END) {
+			if ((f->feature == XML_FEATURE_UNICODE) || (f->feature == XML_FEATURE_UNICODE_WCHAR_T)) {
+				m_unicode = true;
+			}
+			f++;
+		}
 		XML_SetUserData(m_parser, this);
 		XML_SetUnknownEncodingHandler(m_parser, unknownEncoding, this);
 		XML_SetElementHandler(m_parser, startElement, endElement);
 		XML_SetCharacterDataHandler(m_parser, characterData);
+
+		assert(m_unicode == false);
 	}
 
 	~fb2_parser()
@@ -430,6 +430,8 @@ class fb2_parser {
 
 		m_graph.clear();
 	}
+
+	bool is_unicode() const { return m_unicode; }
 
 	bool operator()(const char* buf, int length, bool done = false)
 	{
@@ -493,6 +495,7 @@ class fb2_parser {
 
 	XML_Parser m_parser;
 	bool       m_stop_processing;
+	bool       m_unicode;
 };
 
 #endif // DO_NOT_INCLUDE_PARSER

@@ -14,7 +14,6 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 #include <windows.h>
-#include <tchar.h>
 #include <stdio.h>
 #include <io.h>
 #include <direct.h>
@@ -50,9 +49,15 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
 
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/erase.hpp>
+
 #include <zlib.h>
 #include <minizip/unzip.h>
 #include <minizip/zip.h>
+// TODO: Windows specific, for Linux use minizip/ioapi.h
 #include <minizip/iowin32.h>
 #include <expat.h>
 
@@ -90,81 +95,66 @@ void initialize_limits(const string& config)
 	}
 }
 
-wstring trim_right(const wchar_t* str)
+string fix_data(const string& str, size_t max_len)
 {
-	size_t                       len = wcslen(str) + 1;
-	boost::scoped_array<wchar_t> buffer(new wchar_t[len]);
+	if (g_fix && (max_len > 0)) {
 
-	wcscpy_s(buffer.get(), len, str);
+		// TODO: for compatibility with previous implementation, I think this is wrong
+		size_t len = max_len - 1;
 
-	wchar_t* ptr      = buffer.get();
-	wchar_t* ptr_last = NULL;
+		string::value_type sym       = 0;
+		string::size_type  last_byte = -1;
+		string::size_type  utf_len   = 0;
 
-	while (*ptr != L'\0') {
-		if (iswspace(*ptr)) {
-			if (ptr_last == NULL) {
-				ptr_last = ptr;
+		for (auto i = 0; i < str.size(); ++i) {
+
+			sym = str[i];
+
+			// ASCII character
+			if ((sym & 0b10000000) == 0) {
+
+				if (utf_len < len) {
+					last_byte = i;
+					utf_len++;
+					continue;
+				}
+				break;
 			}
-		} else {
-			ptr_last = NULL;
-		}
-		ptr = CharNextW(ptr);
-	}
+			// utf-8 code points
+			if ((sym & 0b11000000) == 0b11000000) {
 
-	if (ptr_last != NULL) {
-		// truncate at trailing space start
-
-		*ptr_last = L'\0';
-	}
-	return wstring(buffer.get());
-}
-
-string fix_data(const char* pstr, size_t max_len)
-{
-	if (g_fix) {
-		wstring wstr = utf8_to_ucs2(pstr);
-
-		wstr = trim_right(wstr.c_str());
-
-		if (wstr.size() >= max_len) {
-			wstr = wstr.substr(0, max_len - 1);
+				if (utf_len < len) {
+					utf_len++;
+					continue;
+				}
+				break;
+			}
+			// What's left of code point
+			last_byte = i;
 		}
 
-		wstr = trim_right(wstr.c_str());
-
-		return ucs2_to_utf8(wstr.c_str());
-	} else {
-		return string(pstr);
-	}
-}
-
-bool remove_crlf(string& str)
-{
-	bool   rc = false;
-	size_t pos;
-
-	while (string::npos != (pos = str.find("\r\n"))) {
-		str.replace(pos, 2, string(" "));
-		rc = true;
-	}
-	while (string::npos != (pos = str.find("\n"))) {
-		str.erase(pos, 1);
-		rc = true;
-	}
-	return rc;
-}
-
-string duplicate_quote(const char* pstr)
-{
-	string buf;
-
-	while (*pstr != '\0') {
-		buf += *pstr;
-		if (*pstr++ == '\'') {
-			buf += '\'';
+		string s;
+		if (utf_len > 0) {
+			s = str.substr(0, last_byte + 1);
+			boost::algorithm::trim_right(s);
 		}
+		return s;
 	}
-	return buf;
+	return str;
+}
+
+string cleanse(const string& s)
+{
+	string str(s);
+	boost::algorithm::replace_all(str, "\r\n", " ");
+	boost::algorithm::erase_all(str, "\n");
+	boost::algorithm::replace_all(str, "\xC2\xA0", " ");
+	return str;
+}
+
+string duplicate_quote(const string& str)
+{
+	return boost::algorithm::replace_all_copy(str, "\'", "\'\'");
 }
 
 #endif // DO_NOT_INCLUDE_PARSER
@@ -217,110 +207,84 @@ void normalize_path(char* path)
 	}
 }
 
-wstring utf8_to_ucs2(const char* ptr)
+wstring utf8_to_wchar(const string& str)
 {
-	size_t len = MultiByteToWideChar(CP_UTF8, 0, ptr, -1, NULL, 0);
+	wstring        w;
+	static iconv_t cd = NULL;
 
-	boost::scoped_array<wchar_t> buf(new wchar_t[len + 1]);
-
-	MultiByteToWideChar(CP_UTF8, 0, ptr, -1, buf.get(), (int)len);
-
-	buf.get()[len] = L'\0';
-
-	return wstring(buf.get());
-}
-
-string ucs2_to_utf8(const wchar_t* ptr)
-{
-	size_t len = WideCharToMultiByte(CP_UTF8, 0, ptr, -1, NULL, 0, NULL, NULL);
-
-	boost::scoped_array<char> buf(new char[len + 1]);
-
-	WideCharToMultiByte(CP_UTF8, 0, ptr, -1, buf.get(), (int)len, NULL, NULL);
-
-	buf.get()[len] = L'\0';
-
-	return string(buf.get());
-}
-
-string utf8_to_ANSI(const char* ptr)
-{
-	size_t len = MultiByteToWideChar(CP_UTF8, 0, ptr, -1, NULL, 0);
-
-	boost::scoped_array<wchar_t> buf(new wchar_t[len + 1]);
-
-	MultiByteToWideChar(CP_UTF8, 0, ptr, -1, buf.get(), (int)len);
-
-	buf.get()[len] = L'\0';
-
-	len = ::WideCharToMultiByte(CP_ACP, 0, buf.get(), -1, NULL, 0, NULL, NULL);
-
-	boost::scoped_array<char> buf2(new char[len + 1]);
-
-	WideCharToMultiByte(CP_ACP, 0, buf.get(), -1, buf2.get(), (int)len, NULL, NULL);
-
-	buf2.get()[len] = L'\0';
-
-	return string(buf2.get());
-}
-
-void join(string& result, const vector<string>& src, const char* delim)
-{
-	result.erase();
-
-	if ((NULL != delim) && ('\0' != *delim)) {
-		bool first_time = true;
-
-		for (vector<string>::const_iterator it = src.begin(); it != src.end(); ++it) {
-			if (!first_time) {
-				result += delim;
-			} else {
-				first_time = false;
-			}
-			result += (*it);
-		}
-	}
-}
-
-void split(vector<string>& result, const char* str, const char* delim, bool combine_delimiters)
-{
-	result.clear();
-
-	if (NULL == str || '\0' == *str) {
-		goto E_x_i_t;
-	}
-
-	if (NULL == delim || '\0' == *delim) {
-		result.push_back(str);
-		goto E_x_i_t;
-	}
-
-	if (combine_delimiters) {
-		size_t                    size = strlen(str) + 1;
-		boost::scoped_array<char> buffer(new char[size]);
-
-		strcpy_s(buffer.get(), size, str);
-
-		char* ctx;
-		char* ptr = strtok_s(buffer.get(), delim, &ctx);
-
-		while (NULL != ptr) {
-			result.push_back(ptr);
-			ptr = strtok_s(NULL, delim, &ctx);
+	if (NULL == cd) {
+		// TODO: UCS-2LE is Windows specific, Linux terminal have different wchar_t
+		if ((cd = iconv_open("UCS-2LE//IGNORE", "UTF-8")) == (iconv_t)-1) {
+			DOUT("DBG*** iconv_open error: %d\n", errno);
+			return w;
 		}
 	} else {
-		const char *ptr = str, *ptr1 = strpbrk(ptr, delim);
-
-		while (NULL != ptr1) {
-			result.push_back(string(ptr, ptr1 - ptr));
-			ptr  = ptr1 + 1;
-			ptr1 = strpbrk(ptr, delim);
-		}
-
-		result.push_back(ptr);
+		iconv(cd, NULL, NULL, NULL, NULL);
 	}
 
-E_x_i_t:;
+	size_t                       len = str.length();
+	boost::scoped_array<wchar_t> buf(new wchar_t[len + 1]);
+
+	char*  pin     = (char*)str.c_str();
+	size_t inbytes = len;
+
+	while (inbytes > 0) {
+
+		size_t outbytes = len * sizeof(wchar_t);
+		char*  pout     = (char*)buf.get();
+
+		size_t res = iconv(cd, &pin, &inbytes, &pout, &outbytes);
+
+		if (((size_t)-1 == res) && (errno != E2BIG)) {
+			DOUT("DBG*** iconv error: %d\n", errno);
+			return w;
+		}
+
+		buf[len - (outbytes / sizeof(wchar_t))] = L'\0';
+		w += buf.get();
+	}
+	return w;
+}
+
+string wchar_to_utf8(const wstring& str)
+{
+	string         s;
+	static iconv_t cd = NULL;
+
+	if (NULL == cd) {
+		// TODO: UCS-2LE is Windows specific, Linux terminal have different wchar_t
+		if ((cd = iconv_open("UTF-8//IGNORE", "UCS-2LE")) == (iconv_t)-1) {
+			DOUT("DBG*** iconv_open error: %d\n", errno);
+			return s;
+		}
+	} else {
+		iconv(cd, NULL, NULL, NULL, NULL);
+	}
+
+	size_t len     = str.length();
+	size_t len_out = max(len, sizeof(char) * 31); // iconv does not like output buffers for 1 char
+
+	boost::scoped_array<char> buf(new char[len_out + 1]);
+
+	char*  pin     = (char*)str.c_str();
+	size_t inbytes = len * sizeof(wchar_t);
+
+	while (inbytes > 0) {
+
+		size_t outbytes = len_out;
+		char*  pout     = buf.get();
+
+		size_t res = iconv(cd, &pin, &inbytes, &pout, &outbytes);
+
+		if (((size_t)-1 == res) && (errno != E2BIG)) {
+			DOUT("DBG*** iconv error: %d\n", errno);
+			return s;
+		}
+
+		buf[len_out - outbytes] = '\0';
+		s += buf.get();
+	}
+	return s;
 }
 
 tmp_str::tmp_str(const char* format, ...)
@@ -348,6 +312,8 @@ zlib_filefunc64_def unzip::m_ffunc;
 
 #ifndef DO_NOT_INCLUDE_PARSER
 
+// TODO: for simplicity we are assuming Intel incoding
+
 static int XMLCALL xml_convert(void* data, const char* s)
 {
 	size_t inbytes = 1;
@@ -364,9 +330,19 @@ static int XMLCALL xml_convert(void* data, const char* s)
 		return -1;
 	}
 
-	wchar_t ret = 0;
-	for (size_t j = 0; j < 4 - outbytes; j++) {
-		ret = (ret << 8) + (unsigned char)out[j];
+	int ret = 0;
+	switch (4 - outbytes) {
+		case 2:
+			ret = *(short int*)&out[0];
+			break;
+		case 4:
+			ret = *(int*)&out[0];
+			break;
+		default:
+			ret = -1;
+			DOUT("DBG*** unsupported conversion length %d for: %s -> [%02x,%02x,%02x,%02x]\n", 4 - outbytes, s, out[0], out[1], out[2],
+			     out[3]);
+			break;
 	}
 	return ret;
 }
@@ -377,9 +353,9 @@ int fb2_parser::on_unknown_encoding(const XML_Char* name, XML_Encoding* info)
 {
 	iconv_t cd;
 
-	if ((cd = iconv_open("UCS-2BE", name)) == (iconv_t)-1) {
+	// TODO: UCS-2LE is Windows specific, Linux terminal have different wchar_t
+	if ((cd = iconv_open("UCS-2LE", name)) == (iconv_t)-1) {
 		DOUT("DBG*** unsupported encoding: %s\n", name);
-		printf("DBG*** unsupported encoding: %s\n", name);
 		return XML_STATUS_ERROR;
 	}
 
@@ -399,16 +375,25 @@ int fb2_parser::on_unknown_encoding(const XML_Char* name, XML_Encoding* info)
 
 		if ((size_t)-1 == res) {
 			if (errno == EINVAL) {
-				info->map[i] = -2;
+				// Really? I have no way of knowing what the lenght of variable encoding would be
+				info->map[i] = -(int)sizeof(wchar_t);
 			} else {
 				info->map[i] = -1;
 			}
 		} else {
-			wchar_t ret = 0;
-			for (size_t j = 0; j < 4 - outbytes; j++) {
-				ret = (ret << 8) + (unsigned char)out[j];
+			switch (4 - outbytes) {
+				case 2:
+					info->map[i] = *(short int*)&out[0];
+					break;
+				case 4:
+					info->map[i] = *(int*)&out[0];
+					break;
+				default:
+					info->map[i] = -1;
+					DOUT("DBG*** unsupported encoding (%s) length %d for: %02x -> [%02x,%02x,%02x,%02x]\n", name, 4 - outbytes, i,
+					     out[0], out[1], out[2], out[3]);
+					break;
 			}
-			info->map[i] = ret;
 		}
 	}
 	info->data    = cd;
@@ -624,46 +609,34 @@ void fb2_parser::prepare_xml_graph()
 
 void fb2_parser::on_genre(const std::string& str, const attributes_t& attrs)
 {
-	string temp = str;
-	remove_crlf(temp);
-	m_genres.push_back(fix_data(temp.c_str(), g_limits.G_FB2Code));
+	m_genres.push_back(fix_data(cleanse(str), g_limits.G_FB2Code));
 }
 
 void fb2_parser::on_author_first_name(const std::string& str, const attributes_t& attrs)
 {
-	m_f = str;
-	remove_crlf(m_f);
-	m_f = fix_data(m_f.c_str(), g_limits.A_Name);
+	m_f = fix_data(cleanse(str), g_limits.A_Name);
 }
 
 void fb2_parser::on_author_middle_name(const std::string& str, const attributes_t& attrs)
 {
-	m_m = str;
-	remove_crlf(m_m);
-	m_m = fix_data(m_m.c_str(), g_limits.A_Middle);
+	m_m = fix_data(cleanse(str), g_limits.A_Middle);
 }
 
 void fb2_parser::on_author_last_name(const std::string& str, const attributes_t& attrs)
 {
-	m_l = str;
-	remove_crlf(m_l);
-	m_l = fix_data(m_l.c_str(), g_limits.A_Family);
+	m_l = fix_data(cleanse(str), g_limits.A_Family);
 }
 
 void fb2_parser::on_author(const std::string& str, const attributes_t& attrs) { m_authors.push_back(m_l + "," + m_f + "," + m_m); }
 
 void fb2_parser::on_book_title(const std::string& str, const attributes_t& attrs)
 {
-	m_title = str;
-	remove_crlf(m_title);
-	m_title = fix_data(m_title.c_str(), g_limits.Title);
+	m_title = fix_data(cleanse(str), g_limits.Title);
 }
 
 void fb2_parser::on_keywords(const std::string& str, const attributes_t& attrs)
 {
-	m_keywords = str;
-	remove_crlf(m_keywords);
-	m_keywords = fix_data(m_keywords.c_str(), g_limits.KeyWords);
+	m_keywords = fix_data(cleanse(str), g_limits.KeyWords);
 }
 
 void fb2_parser::on_lang(const std::string& str, const attributes_t& attrs) { m_language = str; }
@@ -674,9 +647,7 @@ void fb2_parser::on_sequence(const std::string& str, const attributes_t& attrs)
 
 	it = attrs.find("name");
 	if (attrs.end() != it) {
-		m_seq_name = (*it).second;
-		remove_crlf(m_seq_name);
-		m_seq_name = fix_data(m_seq_name.c_str(), g_limits.S_Title);
+		m_seq_name = fix_data(cleanse((*it).second), g_limits.S_Title);
 	}
 
 	it = attrs.find("number");

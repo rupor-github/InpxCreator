@@ -5,8 +5,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 project(InpxCreator)
 # Project version number
-set(PRJ_VERSION_MAJOR 6)
-set(PRJ_VERSION_MINOR 81)
+set(PRJ_VERSION_MAJOR 7)
+set(PRJ_VERSION_MINOR 0)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -54,11 +54,6 @@ set(SRCS_LIB2INPX lib2inpx/util.cpp lib2inpx/lib2inpx.cpp)
 add_executable(lib2inpx ${SRCS_LIB2INPX})
 target_link_libraries(lib2inpx minizip ${Boost_LIBRARIES} ${MYSQL_LIBRARIES} ${ZLIB_LIBRARIES} ${EXPAT_LIBRARIES} ${ICONV_LIBRARIES})
 
-set(SRCS_LIBSPLIT lib2inpx/util.cpp lib2inpx/libsplit.cpp)
-add_executable(libsplit ${SRCS_LIBSPLIT})
-target_compile_definitions(libsplit PUBLIC DO_NOT_INCLUDE_PARSER)
-target_link_libraries(libsplit minizip ${Boost_LIBRARIES} ${ZLIB_LIBRARIES})
-
 FILE(GLOB files "misc/*")
 install(FILES ${files} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 install(FILES ${PROJECT_BINARY_DIR}/history.txt DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
@@ -66,7 +61,6 @@ install(PROGRAMS ${MYSQL_LIB_DIR}/libmysqld.dll DESTINATION ${DEST_DIR} CONFIGUR
 install(PROGRAMS ${WINPTHREAD_DLL_DIR}/libwinpthread-1.dll DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${DEST_DIR}/language CONFIGURATIONS Release)
 install(TARGETS lib2inpx DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
-install(TARGETS libsplit DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
 find_package(Go 1.6 REQUIRED)
 find_package(Glide 0.11 REQUIRED)
