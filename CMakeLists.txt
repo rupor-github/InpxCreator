@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 project(InpxCreator)
 # Project version number
 set(PRJ_VERSION_MAJOR 7)
-set(PRJ_VERSION_MINOR 0)
+set(PRJ_VERSION_MINOR 1)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -62,8 +62,8 @@ install(PROGRAMS ${WINPTHREAD_DLL_DIR}/libwinpthread-1.dll DESTINATION ${DEST_DI
 install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${DEST_DIR}/language CONFIGURATIONS Release)
 install(TARGETS lib2inpx DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
-find_package(Go 1.6 REQUIRED)
-find_package(Glide 0.11 REQUIRED)
+find_package(Go 1.7 REQUIRED)
+find_package(Glide 0.12 REQUIRED)
 # Proper go build structure will be here
 set(GO_PATH "${CMAKE_BINARY_DIR}/go")
 
