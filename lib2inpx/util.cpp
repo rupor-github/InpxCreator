@@ -1,18 +1,3 @@
-/* Copyright 2009 Michael Berganovsky
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; version 2 of the License.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
-
 #include <windows.h>
 #include <stdio.h>
 #include <io.h>
@@ -152,10 +137,7 @@ string cleanse(const string& s)
 	return str;
 }
 
-string duplicate_quote(const string& str)
-{
-	return boost::algorithm::replace_all_copy(str, "\'", "\'\'");
-}
+string duplicate_quote(const string& str) { return boost::algorithm::replace_all_copy(str, "\'", "\'\'"); }
 
 #endif // DO_NOT_INCLUDE_PARSER
 
@@ -516,28 +498,29 @@ void fb2_parser::prepare_xml_graph()
 	name_map_t  name_map  = get(vertex_name, m_graph);
 	props_map_t props_map = get(vertex_element_properties, m_graph);
 
-	element_t start = add_vertex(m_graph), // 1
-	    fictionbook = add_vertex(m_graph), // 1
-	    description = add_vertex(m_graph), // 1
-	    title_info  = add_vertex(m_graph), // 1
-	    genre       = add_vertex(m_graph), // 1 - many
-	    author      = add_vertex(m_graph), // 1 - many
-	    first_name  = add_vertex(m_graph), // 0 - 1
-	    middle_name = add_vertex(m_graph), // 0 - 1
-	    last_name   = add_vertex(m_graph), // 0 - 1
-	                                       //   nickname    = add_vertex( m_graph ), // 0 - 1
-	                                       //   home_page   = add_vertex( m_graph ), // 0 - 1
-	                                       //   email       = add_vertex( m_graph ), // 0 - 1
-	    book_title = add_vertex(m_graph),  // 1
-	                                       //   annotation     = add_vertex( m_graph ), // 0 - 1
-	    keywords = add_vertex(m_graph),    // 0 - 1
-	    date     = add_vertex(m_graph),    // 0 - 1
-	                                       //   coverpage      = add_vertex( m_graph ), // 0 - 1
-	    lang = add_vertex(m_graph),        // 1
-	                                       //   src_lang       = add_vertex( m_graph ), // 0 - 1
-	                                       //   translator     = add_vertex( m_graph ), // 0 - many
-	    sequence = add_vertex(m_graph),    // 0 - many
-	    end      = add_vertex(m_graph);    // 1
+	// clang-format off
+	element_t start = add_vertex(m_graph),            // 1
+	    fictionbook = add_vertex(m_graph),            // 1
+	    description = add_vertex(m_graph),            // 1
+	    title_info  = add_vertex(m_graph),            // 1
+	    genre       = add_vertex(m_graph),            // 1 - many
+	    author      = add_vertex(m_graph),            // 1 - many
+	    first_name  = add_vertex(m_graph),            // 0 - 1
+	    middle_name = add_vertex(m_graph),            // 0 - 1
+	    last_name   = add_vertex(m_graph),            // 0 - 1
+	    // nickname    = add_vertex( m_graph ),       // 0 - 1
+	    // home_page   = add_vertex( m_graph ),          // 0 - 1
+	    // email       = add_vertex( m_graph ),          // 0 - 1
+	    book_title  = add_vertex(m_graph),            // 1
+	    // annotation     = add_vertex( m_graph ),       // 0 - 1
+	    keywords    = add_vertex(m_graph),            // 0 - 1
+	    date        = add_vertex(m_graph),            // 0 - 1
+	    // coverpage      = add_vertex( m_graph ),       // 0 - 1
+	    lang = add_vertex(m_graph),                   // 1
+	    // src_lang       = add_vertex( m_graph ),       // 0 - 1
+	    // translator     = add_vertex( m_graph ),       // 0 - many
+	    sequence    = add_vertex(m_graph),            // 0 - many
+	    end         = add_vertex(m_graph);            // 1
 
 	name_map[start]        = "&start&";
 	props_map[start]       = element_props(make_pair(1, 1));
@@ -557,29 +540,38 @@ void fb2_parser::prepare_xml_graph()
 	props_map[middle_name] = element_props(make_pair(0, 1), &fb2_parser::on_author_middle_name);
 	name_map[last_name]    = "last-name";
 	props_map[last_name]   = element_props(make_pair(0, 1), &fb2_parser::on_author_last_name);
-	//   name_map[ nickname    ] = "nickname";    props_map[ nickname    ] = element_props( make_pair( 0,  1 ) );
-	//   name_map[ home_page   ] = "home-page";   props_map[ home_page   ] = element_props( make_pair( 0,  1 ) );
-	//   name_map[ email       ] = "email";       props_map[ email       ] = element_props( make_pair( 0,  1 ) );
-	name_map[book_title]  = "book-title";
-	props_map[book_title] = element_props(make_pair(1, 1), &fb2_parser::on_book_title);
-	//   name_map[ annotation  ] = "annotation";  props_map[ annotation  ] = element_props( make_pair( 0,  1 ) );
-	name_map[keywords]  = "keywords";
-	props_map[keywords] = element_props(make_pair(0, 1), &fb2_parser::on_keywords);
-	name_map[date]      = "date";
-	props_map[date]     = element_props(make_pair(0, 1));
-	//   name_map[ coverpage   ] = "coverpage";   props_map[ coverpage   ] = element_props( make_pair( 0,  1 ) );
-	name_map[lang]  = "lang";
-	props_map[lang] = element_props(make_pair(1, 1), &fb2_parser::on_lang);
-	//   name_map[ src_lang    ] = "src-lang";    props_map[ src_lang    ] = element_props( make_pair( 0,  1 ) );
-	//   name_map[ translator  ] = "translator";  props_map[ translator  ] = element_props( make_pair( 0, -1 ) );
+	// name_map[ nickname]    = "nickname";
+	// props_map[nickname]    = element_props(make_pair(0, 1));
+	// name_map[home_page]    = "home-page";
+	// props_map[home_page]   = element_props(make_pair(0, 1));
+	// name_map[email]        = "email";
+	// props_map[email]       = element_props(make_pair(0, 1));
+	name_map[book_title]   = "book-title";
+	props_map[book_title]  = element_props(make_pair(1, 1), &fb2_parser::on_book_title);
+	// name_map[annotation]   = "annotation";
+	// props_map[annotation]  = element_props(make_pair(0, 1));
+	name_map[keywords]     = "keywords";
+	props_map[keywords]    = element_props(make_pair(0, 1), &fb2_parser::on_keywords);
+	name_map[date]         = "date";
+	props_map[date]        = element_props(make_pair(0, 1));
+	// name_map[coverpage]    = "coverpage";
+	// props_map[coverpage]   = element_props(make_pair(0, 1));
+	name_map[lang]         = "lang";
+	props_map[lang]        = element_props(make_pair(1, 1), &fb2_parser::on_lang);
+	// name_map[src_lang]     = "src-lang";
+	// props_map[src_lang]    = element_props(make_pair(0, 1));
+	// name_map[translator]   = "translator";
+	// props_map[translator]  = element_props(make_pair(0, -1));
 	name_map[sequence]  = "sequence";
 	props_map[sequence] = element_props(make_pair(0, -1), &fb2_parser::on_sequence);
 	name_map[end]       = "&end&";
 	props_map[end]      = element_props(make_pair(1, 1));
+	// clang-format on
 
 	graph_traits<graph_t>::edge_descriptor ed;
 	bool                                   inserted;
 
+	// clang-format off
 	tie(ed, inserted) = add_edge(start, fictionbook, m_graph);
 	tie(ed, inserted) = add_edge(fictionbook, description, m_graph);
 	tie(ed, inserted) = add_edge(description, title_info, m_graph);
@@ -588,21 +580,22 @@ void fb2_parser::prepare_xml_graph()
 	tie(ed, inserted) = add_edge(author, first_name, m_graph);
 	tie(ed, inserted) = add_edge(author, middle_name, m_graph);
 	tie(ed, inserted) = add_edge(author, last_name, m_graph);
-	//   tie( ed, inserted ) = add_edge( author,      nickname,    m_graph );
-	//   tie( ed, inserted ) = add_edge( author,      home_page,   m_graph );
-	//   tie( ed, inserted ) = add_edge( author,      email,       m_graph );
+	// tie(ed, inserted) = add_edge(author, nickname, m_graph);
+	// tie(ed, inserted) = add_edge(author, home_page, m_graph);
+	// tie(ed, inserted) = add_edge(author, email, m_graph);
 	tie(ed, inserted) = add_edge(title_info, book_title, m_graph);
-	//   tie( ed, inserted ) = add_edge( title_info,  annotation,  m_graph );
+	// tie(ed, inserted ) = add_edge(title_info, annotation, m_graph);
 	tie(ed, inserted) = add_edge(title_info, keywords, m_graph);
 	tie(ed, inserted) = add_edge(title_info, date, m_graph);
-	//   tie( ed, inserted ) = add_edge( title_info,  coverpage,   m_graph );
+	// tie(ed, inserted) = add_edge(title_info, coverpage, m_graph);
 	tie(ed, inserted) = add_edge(title_info, lang, m_graph);
-	//   tie( ed, inserted ) = add_edge( title_info,  src_lang,    m_graph );
-	//   tie( ed, inserted ) = add_edge( title_info,  translator,  m_graph );
+	// tie(ed, inserted) = add_edge(title_info, src_lang, m_graph);
+	// tie(ed, inserted) = add_edge(title_info, translator, m_graph);
 	tie(ed, inserted) = add_edge(title_info, sequence, m_graph);
 	tie(ed, inserted) = add_edge(fictionbook, end, m_graph);
 	tie(ed, inserted) = add_edge(description, end, m_graph); // do not process unnecessary information
 	tie(ed, inserted) = add_edge(title_info, end, m_graph);  // do not process unnecessary information
+	// clang-format on
 
 	m_current = start;
 }
@@ -629,10 +622,7 @@ void fb2_parser::on_author_last_name(const std::string& str, const attributes_t&
 
 void fb2_parser::on_author(const std::string& str, const attributes_t& attrs) { m_authors.push_back(m_l + "," + m_f + "," + m_m); }
 
-void fb2_parser::on_book_title(const std::string& str, const attributes_t& attrs)
-{
-	m_title = fix_data(cleanse(str), g_limits.Title);
-}
+void fb2_parser::on_book_title(const std::string& str, const attributes_t& attrs) { m_title = fix_data(cleanse(str), g_limits.Title); }
 
 void fb2_parser::on_keywords(const std::string& str, const attributes_t& attrs)
 {

@@ -1,18 +1,3 @@
-/* Copyright 2009 Michael Berganovsky
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; version 2 of the License.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
-
 #include <windows.h>
 #include <stdio.h>
 #include <io.h>
@@ -350,7 +335,7 @@ string get_dump_date(const string& file)
 	ifstream     in(file.c_str());
 	stringstream ss;
 
-	regex                                 dump_date("^--\\s*Dump\\scompleted\\son\\s(\\d{4}-\\d{2}-\\d{2}).*$");
+	regex                                 dump_date("--\\s*Dump\\scompleted\\son\\s(\\d{4}-\\d{2}-\\d{2})");
 	match_results<string::const_iterator> mr;
 
 	if (!in) {
@@ -1188,6 +1173,8 @@ int main(int argc, char* argv[])
 	// TODO: Windows specific?
 	fflush(stdout);
 	_setmode(_fileno(stdout), _O_U8TEXT);
+	fflush(stderr);
+	_setmode(_fileno(stderr), _O_U8TEXT);
 
 	string spec, path, inpx, comment, comment_fname, collection_comment, inp_path, inpx_name, dump_date, full_date, db_name;
 
@@ -1495,6 +1482,8 @@ int main(int argc, char* argv[])
 		if (!g_no_import && (0 == files.size())) {
 			throw runtime_error(tmp_str("No SQL dumps are available for importing \"%s\"", path.c_str()));
 		}
+
+        wcout << endl << "Detected MySQL dump date: " << utf8_to_wchar((0 == dump_date.size()) ? "none" : dump_date) << endl << flush;
 
 		full_date = (0 == dump_date.size()) ? to_iso_extended_string(date(day_clock::universal_day())) : dump_date;
 		dump_date = full_date;
