@@ -259,6 +259,18 @@ bool is_fictionbook(const string& file)
 	return ((0 == _stricmp(ext.c_str(), "fb2")) && is_numeric(name));
 }
 
+bool is_backup(const string& file)
+{
+	string name = file, ext;
+	size_t pos  = name.rfind(".");
+
+	if (string::npos != pos) {
+		ext = name.substr(pos + 1);
+	}
+
+	return 0 == _stricmp(ext.c_str(), "org");
+}
+
 void clean_directory(const char* path)
 {
 	_finddata_t fd;
@@ -880,6 +892,14 @@ void process_local_archives(const mysql_connection& mysql, const zip& zz, const 
 		unzip uz((archives_path + *it).c_str());
 
 		for (unsigned int ni = 0; ni < uz.count(); ++ni) {
+
+			if (is_backup(uz.current())) {
+				if (ni < (uz.count() - 1)) {
+					uz.move_next();
+				}
+				continue;
+			}
+
 			string inp, book_id, ext, stmt;
 			bool   fdummy = false;
 			bool   fb2    = is_fictionbook(uz.current());
