@@ -1,12 +1,20 @@
 cmake_minimum_required(VERSION 2.6)
 message(STATUS "Running cmake version ${CMAKE_VERSION}")
 
+project(InpxCreator)
+
+message(STATUS "Running cmake version ${CMAKE_VERSION}")
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "default to release build type" FORCE)
+endif()
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
-project(InpxCreator)
 # Project version number
 set(PRJ_VERSION_MAJOR 7)
-set(PRJ_VERSION_MINOR 2)
+set(PRJ_VERSION_MINOR 3)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -37,12 +45,15 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.60.0 REQUIRED COMPONENTS "date_time" "program_options")
+set(Boost_USE_STATIC_RUNTIME ON)
+find_package(Boost 1.62.0 REQUIRED COMPONENTS "date_time" "program_options")
 find_package(MySQL REQUIRED)
 find_package(ZLib REQUIRED)
 find_package(iconv REQUIRED)
 find_package(Expat REQUIRED)
 find_package(Git REQUIRED)
+
+get_filename_component(MYSQL_NAME ${MYSQL_LIBRARIES} NAME_WE)
 
 # Prepare history file
 execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} changelog --final-tag ${PRJ_VERSION_MAJOR}.${PRJ_VERSION_MINOR} --stdout OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
@@ -57,10 +68,14 @@ target_link_libraries(lib2inpx minizip ${Boost_LIBRARIES} ${MYSQL_LIBRARIES} ${Z
 FILE(GLOB files "misc/*")
 install(FILES ${files} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 install(FILES ${PROJECT_BINARY_DIR}/history.txt DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
-install(PROGRAMS ${MYSQL_LIB_DIR}/libmysqld.dll DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
+install(PROGRAMS ${MYSQL_LIB_DIR}/${MYSQL_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 install(PROGRAMS ${WINPTHREAD_DLL_DIR}/libwinpthread-1.dll DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${DEST_DIR}/language CONFIGURATIONS Release)
 install(TARGETS lib2inpx DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
+# for debugging purposes
+install(PROGRAMS ${MYSQL_LIB_DIR}/${MYSQL_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} DESTINATION ${PROJECT_BINARY_DIR} CONFIGURATIONS Release Debug)
+install(PROGRAMS ${WINPTHREAD_DLL_DIR}/libwinpthread-1.dll DESTINATION ${PROJECT_BINARY_DIR} CONFIGURATIONS Release Debug)
+install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${PROJECT_BINARY_DIR}/language CONFIGURATIONS Release Debug)
 
 find_package(Go 1.7 REQUIRED)
 find_package(Glide 0.12 REQUIRED)
