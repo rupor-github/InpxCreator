@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -18,6 +19,7 @@ import (
 var size int
 var sizeBytes int64
 var verbose bool
+var keepUpdates bool
 var dest string
 
 func name2id(name string) int {
@@ -54,21 +56,29 @@ var mergeFilt filter
 var updatesFilt filter
 
 type archive struct {
+	dir   string
 	info  os.FileInfo
 	begin int
 	end   int
 }
 
-func getLastArchive(files []os.FileInfo) (archive, error) {
+type byName []archive
+
+func (a byName) Len() int           { return len(a) }
+func (a byName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byName) Less(i, j int) bool { return a[i].info.Name() < a[j].info.Name() }
+
+func getLastArchive(files []archive) (archive, error) {
 
 	var a archive
 
 	for _, f := range files {
-		if ok, fst, snd, err := archivesFilt.dissectName(f.Name()); ok {
+		if ok, fst, snd, err := archivesFilt.dissectName(f.info.Name()); ok {
 			if a.end < snd {
 				a.begin = fst
 				a.end = snd
-				a.info = f
+				a.info = f.info
+				a.dir = f.dir
 			}
 		} else if err != nil {
 			return a, errors.Wrap(err, "getLastArchive")
@@ -77,16 +87,17 @@ func getLastArchive(files []os.FileInfo) (archive, error) {
 	return a, nil
 }
 
-func getMergeArchive(files []os.FileInfo) (archive, error) {
+func getMergeArchive(files []archive) (archive, error) {
 
 	var a archive
 	var count int
 
 	for _, f := range files {
-		if ok, fst, snd, err := mergeFilt.dissectName(f.Name()); ok {
+		if ok, fst, snd, err := mergeFilt.dissectName(f.info.Name()); ok {
 			a.begin = fst
 			a.end = snd
-			a.info = f
+			a.info = f.info
+			a.dir = f.dir
 			count++
 		} else if err != nil {
 			return a, errors.Wrap(err, "getMergeArchive")
@@ -98,18 +109,18 @@ func getMergeArchive(files []os.FileInfo) (archive, error) {
 	return a, errors.Errorf("getMergeArchive: there could only be single merge archive")
 }
 
-func getUpdates(files []os.FileInfo, last int) ([]archive, error) {
+func getUpdates(files []archive, last int) ([]archive, error) {
 
 	updates := []archive{}
 	var err error
 
 	for _, f := range files {
-		if ok, fst, snd, err := updatesFilt.dissectName(f.Name()); ok {
+		if ok, fst, snd, err := updatesFilt.dissectName(f.info.Name()); ok {
 			if last < fst {
-				updates = append(updates, archive{begin: fst, end: snd, info: f})
+				updates = append(updates, archive{begin: fst, end: snd, info: f.info, dir: f.dir})
 			}
 		} else if err != nil {
-			return updates, errors.Wrap(err, "getiUpdates")
+			return updates, errors.Wrap(err, "getUpdates")
 		}
 	}
 	return updates, err
@@ -123,7 +134,8 @@ func init() {
 
 	flag.IntVar(&size, "size", 2000, "Individual archive size in MB (metric, not binary)")
 	flag.BoolVar(&verbose, "verbose", false, "print detailed information")
-	flag.StringVar(&dest, "destination", pwd, "path to archives")
+	flag.BoolVar(&keepUpdates, "keep-updates", false, "Keep merged updates")
+	flag.StringVar(&dest, "destination", pwd, "path to archives and updates (separated by \";\", merge archive will be created where \"last\" archive is)")
 
 	if archivesFilt.re, err = regexp.Compile("(?i)\\s*fb2-([0-9]+)-([0-9]+).zip"); err != nil {
 		log.Fatal(err)
@@ -150,37 +162,51 @@ func main() {
 
 	fmt.Printf("\nProcessing archives from \"%s\"\n", dest)
 
-	var err error
-	if dest, err = filepath.Abs(dest); err != nil {
-		log.Fatal(err)
-	}
-
 	var sizeBytes int64 = int64(size) * 1000 * 1000
+	var err error
+	var archives []archive
 
-	var files []os.FileInfo
-	if files, err = ioutil.ReadDir(dest); err != nil {
-		log.Fatal(err)
+	paths := strings.Split(dest, ";")
+
+	for _, path := range paths {
+
+		if path, err = filepath.Abs(path); err != nil {
+			log.Fatal(err)
+		}
+
+		var files []os.FileInfo
+		if files, err = ioutil.ReadDir(path); err != nil {
+			log.Fatal(err)
+		}
+
+		for _, file := range files {
+			archives = append(archives, archive{info: file, dir: path})
+		}
 	}
+	sort.Sort(byName(archives))
 
-	last, err := getLastArchive(files)
+	last, err := getLastArchive(archives)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if verbose {
-		fmt.Printf("Last archive: %s - from %d to %d size %d\n", last.info.Name(), last.begin, last.end, last.info.Size())
+	if last.info == nil {
+		last.dir = paths[0]
+		fmt.Printf("Unable to find last archive, assuming destination directory: %s\n", last.dir)
+	} else if verbose {
+		fmt.Printf("Last archive: %s - from %d to %d size %d\n", filepath.Join(last.dir, last.info.Name()), last.begin, last.end, last.info.Size())
 	}
 
-	merge, err := getMergeArchive(files)
+	merge, err := getMergeArchive(archives)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if merge.info != nil {
 		if (merge.begin < last.begin || merge.begin > last.begin && merge.begin <= last.end) || merge.end < last.end {
-			log.Fatalf("Merge archive (%s) and last archive (%s) do not match", merge.info.Name(), last.info.Name())
+			log.Fatalf("Merge archive (%s) and last archive (%s) do not match", filepath.Join(merge.dir, merge.info.Name()), filepath.Join(last.dir, last.info.Name()))
 		}
 		if verbose {
-			fmt.Printf("Merge archive: %s - from %d to %d size %d\n", merge.info.Name(), merge.begin, merge.end, merge.info.Size())
+			fmt.Printf("Merge archive: %s - from %d to %d size %d\n", filepath.Join(merge.dir, merge.info.Name()), merge.begin, merge.end, merge.info.Size())
 		}
 	} else {
 		merge.begin, merge.end = last.begin, last.end
@@ -189,7 +215,7 @@ func main() {
 		}
 	}
 
-	updates, err := getUpdates(files, merge.end)
+	updates, err := getUpdates(archives, merge.end)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -200,7 +226,7 @@ func main() {
 	} else if verbose {
 		fmt.Printf("Found updates: %v\n", len(updates))
 		for _, u := range updates {
-			fmt.Printf("\t--> %s\n", u.info.Name())
+			fmt.Printf("\t--> %s\n", filepath.Join(u.dir, u.info.Name()))
 		}
 	}
 
@@ -215,7 +241,7 @@ func main() {
 
 	if merge.info == nil {
 
-		f, err = ioutil.TempFile(dest, "merge-")
+		f, err = ioutil.TempFile(last.dir, "merge-")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -223,6 +249,7 @@ func main() {
 		w = zip.NewWriter(f)
 
 		if (sizeBytes - last.info.Size()) > 0 {
+			fmt.Printf("Merging last archive, possibly fist time processing: %s\n", filepath.Join(last.dir, last.info.Name()))
 			skipFirst = true
 			tmp := make([]archive, len(updates)+1, len(updates)+1)
 			tmp[0] = last
@@ -232,7 +259,7 @@ func main() {
 
 	} else {
 
-		tmpOut = filepath.Join(dest, merge.info.Name())
+		tmpOut = filepath.Join(merge.dir, merge.info.Name())
 
 		f, err = os.OpenFile(tmpOut, os.O_RDWR, 0)
 		if err != nil {
@@ -255,13 +282,13 @@ func main() {
 	}
 
 	for _, u := range updates {
-		name := filepath.Join(dest, u.info.Name())
+		name := filepath.Join(u.dir, u.info.Name())
 		rc, err := zip.OpenReader(name)
 		if err != nil {
-			log.Print("\tError opening update file %s, skipping: %v", u.info.Name(), err)
+			log.Print("\tError opening update file %s, skipping: %v", filepath.Join(u.dir, u.info.Name()), err)
 			continue
 		}
-		fmt.Printf("\tProcessing update: %s\n", u.info.Name())
+		fmt.Printf("\tProcessing update: %s\n", filepath.Join(u.dir, u.info.Name()))
 		for _, file := range rc.File {
 			if id := name2id(file.Name); id > 0 {
 
@@ -270,7 +297,7 @@ func main() {
 				}
 				lastBook = id
 
-				// I know this is wrong, leftBytes could already be negative, but to repeat what libsplit does
+				// I know this is wrong, leftBytes could already be negative, but to repeat what libsplit did
 				// always copy first file...
 
 				if err := w.Copy(file); err != nil {
@@ -289,7 +316,7 @@ func main() {
 						newName := fmt.Sprintf("fb2-%06d-%06d.zip", firstBook, lastBook)
 						fmt.Printf("\t--> Finalizing archive: %s\n", newName)
 
-						newName = filepath.Join(dest, newName)
+						newName = filepath.Join(last.dir, newName)
 						if err := os.Rename(tmpOut, newName); err != nil {
 							log.Fatalf("Renaming archive: %v", err)
 						}
@@ -302,7 +329,7 @@ func main() {
 						last.end = lastBook
 						fmt.Printf("\t--> New last archive: %s\n", newName)
 
-						f, err = ioutil.TempFile(dest, "merge-")
+						f, err = ioutil.TempFile(last.dir, "merge-")
 						if err != nil {
 							log.Fatal(err)
 						}
@@ -339,22 +366,24 @@ func main() {
 		newName := fmt.Sprintf("fb2-%06d-%06d.merging", firstBook, lastBook)
 		fmt.Printf("\t--> Finalizing archive: %s\n", newName)
 
-		newName = filepath.Join(dest, newName)
+		newName = filepath.Join(last.dir, newName)
 		if err := os.Rename(tmpOut, newName); err != nil {
 			log.Fatalf("Renaming archive: %v", err)
 		}
 	}
 
-	for i, u := range updates {
-		if i == 0 && skipFirst {
-			continue
-		}
-		name := filepath.Join(dest, u.info.Name())
-		if verbose {
-			fmt.Printf("Removing archive: %s\n", u.info.Name())
-		}
-		if err := os.Remove(name); err != nil {
-			log.Fatalf("Removing archive: %v", err)
+	if !keepUpdates {
+		for i, u := range updates {
+			if i == 0 && skipFirst {
+				continue
+			}
+			name := filepath.Join(u.dir, u.info.Name())
+			if verbose {
+				fmt.Printf("Removing archive: %s\n", filepath.Join(u.dir, u.info.Name()))
+			}
+			if err := os.Remove(name); err != nil {
+				log.Fatalf("Removing archive: %v", err)
+			}
 		}
 	}
 }

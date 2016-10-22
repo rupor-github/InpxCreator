@@ -33,6 +33,7 @@ $timeout = 90
 $mydir   = Get-ScriptDirectory
 $wdir    = Join-Path $archive_path ($name + (get-date -format "_yyyyMMdd_HHmmss"))
 $adir    = Join-Path $archive_path $name
+$udir    = Join-Path $archive_path ($name + "_upd")
 $glog    = Join-Path $mydir ($name + "_res" + (get-date -format "_yyyyMMdd") + ".log")
 
 # -----------------------------------------------------------------------------
@@ -49,7 +50,7 @@ Power-High
 
 Write-Output "Downloading $name ..."
 
-& $mydir/libget2 --verbose --library is_$name --retry $retries --timeout $timeout --continue --to $adir --tosql $wdir --config $mydir/libget2.conf 2>&1 | Write-Host
+& $mydir/libget2 --verbose --library is_$name --retry $retries --timeout $timeout --continue --to $udir --tosql $wdir --config $mydir/libget2.conf 2>&1 | Write-Host
 
 if( $LASTEXITCODE -gt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !"; Power-Balanced; exit 0 }
 if( $LASTEXITCODE -eq 0 ) { Write-Output "No archive updates..."; Power-Balanced; exit 0 }
@@ -61,7 +62,7 @@ Get-ChildItem $old_dbs | Where-Object {$_.PSIsContainer -eq $True} | sort Creati
 $new_full_archives = 0
 $before_dir = @(Join-path $adir "fb2-*.zip" | dir)
 
-& $mydir/libmerge --verbose --destination $adir 2>&1 | Write-Host
+& $mydir/libmerge --verbose --keep-updates --destination $adir;$udir 2>&1 | Write-Host
 
 if( $LASTEXITCODE -gt 0 ) { Write-Error "LIBMERGE error - $LASTEXITCODE !"; Power-Balanced; exit 0 }
 

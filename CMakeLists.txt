@@ -14,7 +14,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 # Project version number
 set(PRJ_VERSION_MAJOR 7)
-set(PRJ_VERSION_MINOR 3)
+set(PRJ_VERSION_MINOR 4)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -31,7 +31,7 @@ ELSE()
 ENDIF()
 
 # I want static libraries everywhere but for MySQL
-set(CMAKE_FIND_LIBRARY_SUFFIXES .a .dll.a)
+set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_SHARED_LIBRARY_SUFFIX}.a)
 set(BUILD_SHARED_LIBS OFF)
 
 if(NOT MVCS)
