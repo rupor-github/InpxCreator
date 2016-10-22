@@ -57,14 +57,17 @@ if( $LASTEXITCODE -eq 0 ) { Write-Output "No archive updates..."; Power-Balanced
 
 # Clean old database directories - we have at least one good download
 $old_dbs = Join-Path $archive_path "flibusta_*"
-Get-ChildItem $old_dbs | Where-Object {$_.PSIsContainer -eq $True} | sort CreationTime -desc | select -Skip 5 | Remove-Item  -Recurse -Force
+Get-ChildItem $old_dbs | Where-Object {$_.PSIsContainer -eq $True} | sort CreationTime -desc | select -Skip 5 | Remove-Item -Recurse -Force
 
 $new_full_archives = 0
 $before_dir = @(Join-path $adir "fb2-*.zip" | dir)
 
-& $mydir/libmerge --verbose --keep-updates --destination $adir;$udir 2>&1 | Write-Host
+& $mydir/libmerge --verbose --keep-updates --destination ($adir + ";" + $udir) 2>&1 | Write-Host
 
 if( $LASTEXITCODE -gt 0 ) { Write-Error "LIBMERGE error - $LASTEXITCODE !"; Power-Balanced; exit 0 }
+
+# Clean updates leaving last ones so libget2 would not download unnesessary updates next time
+Get-ChildItem $udir | sort Name -desc | select -Skip 10 | Remove-Item -Force
 
 $after_dir = @(Join-path $adir "fb2-*.zip" | dir)
 $diff_dir  = Compare-Object $before_dir $after_dir
