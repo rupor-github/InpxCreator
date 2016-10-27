@@ -19,6 +19,13 @@ function Power-High
    & powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 }
 
+function Wake-Synology
+{
+   Write-Output "Waking up Synology..."
+   Get-ChildItem $archive_path | out-null
+   Start-Sleep -s 1
+}
+
 # no line wrapping please!
 $host.UI.RawUI.BufferSize = new-object System.Management.Automation.Host.Size(512,50)
 
@@ -33,7 +40,7 @@ $timeout = 90
 $mydir   = Get-ScriptDirectory
 $wdir    = Join-Path $archive_path ($name + (get-date -format "_yyyyMMdd_HHmmss"))
 $adir    = Join-Path $archive_path $name
-$udir    = Join-Path $archive_path ($name + "_upd")
+$udir    = Join-Path $archive_path ("upd_" + $name)
 $glog    = Join-Path $mydir ($name + "_res" + (get-date -format "_yyyyMMdd") + ".log")
 
 # -----------------------------------------------------------------------------
@@ -47,6 +54,7 @@ Trap {
 }
 
 Power-High
+Wake-Synology
 
 Write-Output "Downloading $name ..."
 

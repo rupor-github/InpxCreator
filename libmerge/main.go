@@ -171,12 +171,12 @@ func main() {
 	for _, path := range paths {
 
 		if path, err = filepath.Abs(path); err != nil {
-			log.Fatal(err)
+			log.Fatalf("Problem with path: %v", err)
 		}
 
 		var files []os.FileInfo
 		if files, err = ioutil.ReadDir(path); err != nil {
-			log.Fatal(err)
+			log.Fatalf("Unable to read directory: %v", err)
 		}
 
 		for _, file := range files {
@@ -187,7 +187,7 @@ func main() {
 
 	last, err := getLastArchive(archives)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Unable to find last archive: %v", err)
 	}
 	if last.info == nil {
 		last.dir = paths[0]
@@ -198,7 +198,7 @@ func main() {
 
 	merge, err := getMergeArchive(archives)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Unable to find merge archive: %v", err)
 	}
 
 	if merge.info != nil {
@@ -217,7 +217,7 @@ func main() {
 
 	updates, err := getUpdates(archives, merge.end)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Unable to find updates: %v", err)
 	}
 
 	if len(updates) == 0 {
@@ -243,7 +243,7 @@ func main() {
 
 		f, err = ioutil.TempFile(last.dir, "merge-")
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Unable to create temp file: %v", err)
 		}
 		tmpOut = f.Name()
 		w = zip.NewWriter(f)
@@ -263,18 +263,18 @@ func main() {
 
 		f, err = os.OpenFile(tmpOut, os.O_RDWR, 0)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Unable to open merge archive: %v", err)
 		}
 		size, err := f.Seek(0, 2)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Seek failed (1): %v", err)
 		}
 		r, err := zip.NewReader(f, size)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Unable to create zip reader: %v", err)
 		}
 		if _, err := f.Seek(r.AppendOffset(), 0); err != nil {
-			log.Fatal(err)
+			log.Fatalf("Seek failed (2): %v", err)
 		}
 		w = r.Append(f)
 		leftBytes -= r.AppendOffset()
@@ -331,7 +331,7 @@ func main() {
 
 						f, err = ioutil.TempFile(last.dir, "merge-")
 						if err != nil {
-							log.Fatal(err)
+							log.Fatalf("Unable to create temp file: %v", err)
 						}
 						tmpOut = f.Name()
 						w = zip.NewWriter(f)
