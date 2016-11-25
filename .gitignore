@@ -200,10 +200,18 @@ lib2inpx-win32.rar
 lib2inpx-win64.rar
 lib2inpx-win32.7z
 lib2inpx-win64.7z
+lib2inpx_linux_i686.tar.gz
+lib2inpx_linux_x86_64.tar.gz
 
 [Bb]in
 [Bb]in64
+[Bb]in_linux_i686
+[Bb]in_linux_x86_64
 
+mysql-?.?.??-linux-glibc2.5-x86_64.tar.gz
+mysql-?.?.??-linux-glibc2.5-x86_64/**
+mysql-?.?.??-linux-glibc2.5-i686.tar.gz
+mysql-?.?.??-linux-glibc2.5-i686/**
 mysql-?.?.??-win32.zip
 mysql-?.?.??-win32/**
 !mysql-?.?.??-win32/readme.txt
@@ -219,5 +227,10 @@ zlib-?.?.?/contrib/masmx86/*.lst
 [Dd]ebug64/
 [Rr]elease32/
 [Rr]elease64/
+
+[Dd]ebug_linux_i686/
+[Dd]ebug_linux_x86_64/
+[Rr]elease_linux_i686/
+[Rr]elease_linux_x86_64/
 
 /pkg

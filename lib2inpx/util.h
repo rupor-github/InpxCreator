@@ -35,29 +35,14 @@ void normalize_path(std::string& path, bool trailing = true);
 void normalize_path(char* path);
 
 std::wstring utf8_to_wchar(const std::string&);
-std::string wchar_to_utf8(const std::wstring&);
-std::string duplicate_quote(const std::string&);
+std::string  wchar_to_utf8(const std::wstring&);
+std::string  duplicate_quote(const std::string&);
 
 class tmp_str : public std::string {
   public:
 	tmp_str(const char* format, ...);
 
-	operator LPCSTR() const { return c_str(); }
-};
-
-class auto_ffn : boost::noncopyable {
-  public:
-	auto_ffn(intptr_t handle) : m_handle(handle) {}
-	~auto_ffn()
-	{
-		if (-1 != m_handle) {
-			_findclose(m_handle);
-		}
-	}
-	operator bool() const { return -1 != m_handle; }
-	operator intptr_t() const { return m_handle; }
-  private:
-	intptr_t m_handle;
+	operator const char*() const { return c_str(); }
 };
 
 class timer {
@@ -86,7 +71,11 @@ class zip : boost::noncopyable {
 	{
 		if (!m_func_set) {
 			m_func_set = true;
+#ifdef _WIN32
 			fill_win32_filefunc64A(&m_ffunc);
+#else
+			fill_fopen64_filefunc(&m_ffunc);
+#endif
 		}
 
 		if (NULL == (m_zf = zipOpen2_64(m_name.c_str(), create ? APPEND_STATUS_CREATE : APPEND_STATUS_ADDINZIP, NULL, &m_ffunc))) {
@@ -130,7 +119,7 @@ class zip_writer : boost::noncopyable {
 	    : m_opened(false), m_ziperr(ZIP_OK), m_zip(zip), m_name(name)
 	{
 		memset(&m_zi, 0, sizeof(m_zi));
-		filetime(&m_zi.dosDate);
+		filltime(m_zi.tmz_date);
 
 		if (auto_open) {
 			open(zip64);
@@ -140,9 +129,8 @@ class zip_writer : boost::noncopyable {
 	void open(bool zip64 = false)
 	{
 		if (!m_opened) {
-			if (ZIP_OK !=
-			    (m_ziperr = zipOpenNewFileInZip3_64(m_zip.m_zf, m_name.c_str(), &m_zi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, 9, 0,
-			                                        -MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY, NULL, 0, zip64 ? 1 : 0))) {
+			if (ZIP_OK != (m_ziperr = zipOpenNewFileInZip3_64(m_zip.m_zf, m_name.c_str(), &m_zi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, 9,
+			                   0, -MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY, NULL, 0, zip64 ? 1 : 0))) {
 				throw std::runtime_error(tmp_str("Error writing to INPX zipOpenNewFileInZip3(%d) \"%s\"", m_ziperr, m_name.c_str()));
 			}
 			m_opened = true;
@@ -176,14 +164,20 @@ class zip_writer : boost::noncopyable {
 	}
 
   private:
-	void filetime(DWORD* pdt)
+	void filltime(tm_zip& tmz)
 	{
-		SYSTEMTIME st;
-		FILETIME   ft;
+		time_t rawtime;
 
-		GetSystemTime(&st);
-		SystemTimeToFileTime(&st, &ft);
-		FileTimeToDosDateTime(&ft, ((LPWORD)pdt) + 1, ((LPWORD)pdt) + 0);
+		time(&rawtime);
+
+		struct tm* ptm = gmtime(&rawtime);
+
+		tmz.tm_sec  = ptm->tm_sec;
+		tmz.tm_min  = ptm->tm_min;
+		tmz.tm_hour = ptm->tm_hour;
+		tmz.tm_mday = ptm->tm_mday;
+		tmz.tm_mon  = ptm->tm_mon;
+		tmz.tm_year = ptm->tm_year + 1900;
 	}
 
 	bool         m_opened;
@@ -201,7 +195,11 @@ class unzip : boost::noncopyable {
 	{
 		if (!m_func_set) {
 			m_func_set = true;
+#ifdef _WIN32
 			fill_win32_filefunc64A(&m_ffunc);
+#else
+			fill_fopen64_filefunc(&m_ffunc);
+#endif
 		}
 
 		if (NULL == (m_uf = unzOpen2_64(m_name.c_str(), &m_ffunc))) {
@@ -232,7 +230,7 @@ class unzip : boost::noncopyable {
 
 	std::string current() const
 	{
-		char name_inzip[MAX_PATH + 1];
+		char name_inzip[PATH_MAX + 1];
 
 		int zip_err = unzGetCurrentFileInfo64(m_uf, NULL, name_inzip, sizeof(name_inzip) - 1, NULL, 0, NULL, 0);
 
@@ -370,8 +368,7 @@ class fb2_parser {
 		}
 	};
 
-	typedef boost::adjacency_list<
-	    boost::listS, boost::listS, boost::directedS,
+	typedef boost::adjacency_list<boost::listS, boost::listS, boost::directedS,
 	    boost::property<boost::vertex_name_t, std::string, boost::property<boost::vertex_element_properties_t, element_props>>>
 	    graph_t;
 
@@ -421,8 +418,8 @@ class fb2_parser {
 	bool operator()(const char* buf, int length, bool done = false)
 	{
 		if (!m_stop_processing && (XML_STATUS_ERROR == XML_Parse(m_parser, buf, length, done ? 1 : 0)))
-			throw std::runtime_error(tmp_str("%s at line %" XML_FMT_INT_MOD "u", XML_ErrorString(XML_GetErrorCode(m_parser)),
-			                                 XML_GetCurrentLineNumber(m_parser)));
+			throw std::runtime_error(tmp_str(
+			    "%s at line %" XML_FMT_INT_MOD "u", XML_ErrorString(XML_GetErrorCode(m_parser)), XML_GetCurrentLineNumber(m_parser)));
 		return !m_stop_processing;
 	}
 

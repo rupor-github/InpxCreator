@@ -60,7 +60,7 @@ Write-Output "Downloading $name ..."
 
 & $mydir/libget2 --verbose --library is_$name --retry $retries --timeout $timeout --continue --to $udir --tosql $wdir --config $mydir/libget2.conf 2>&1 | Write-Host
 
-if( $LASTEXITCODE -gt 0 ) { Write-Error "LIBGET error - $LASTEXITCODE !"; Power-Balanced; exit 0 }
+if( $LASTEXITCODE -eq 1 ) { Write-Error "LIBGET error!"; Power-Balanced; exit 0 }
 if( $LASTEXITCODE -eq 0 ) { Write-Output "No archive updates..."; Power-Balanced; exit 0 }
 
 # Clean old database directories - we have at least one good download
@@ -72,7 +72,7 @@ $before_dir = @(Join-path $adir "fb2-*.zip" | dir)
 
 & $mydir/libmerge --verbose --keep-updates --destination ($adir + ";" + $udir) 2>&1 | Write-Host
 
-if( $LASTEXITCODE -gt 0 ) { Write-Error "LIBMERGE error - $LASTEXITCODE !"; Power-Balanced; exit 0 }
+if( $LASTEXITCODE -eq 1 ) { Write-Error "LIBMERGE error!"; Power-Balanced; exit 0 }
 
 # Clean updates leaving last ones so libget2 would not download unnesessary updates next time
 Get-ChildItem $udir | sort Name -desc | select -Skip 10 | Remove-Item -Force

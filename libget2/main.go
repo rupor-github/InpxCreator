@@ -426,6 +426,8 @@ func getFiles(files []string, url, dest string) error {
 
 func main() {
 
+	var code int
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "\nTool to download library updates\nVersion %s\n\n", getVersion())
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
@@ -433,7 +435,7 @@ func main() {
 	}
 	if flag.Parse(); flag.NFlag() == 0 {
 		flag.Usage()
-		os.Exit(0)
+		os.Exit(code)
 	}
 
 	conf, err := ReadLibraries(configPath)
@@ -493,13 +495,14 @@ func main() {
 	}
 	newArchives := len(links)
 	if newArchives > 0 {
+		code = 2
 		fmt.Printf("\nProcessed %d new archive(s)\n", newArchives)
 	} else {
-		fmt.Println()
+		fmt.Printf("\nProcessed no new archive(s)\n")
 	}
 	if noSql {
 		fmt.Println("\nDone...")
-		os.Exit(0)
+		os.Exit(code)
 	}
 
 	if links, err = getSqlLinks(lib.UrlSQL, lib.PatternSQL); err != nil {
@@ -517,5 +520,5 @@ func main() {
 		fmt.Println()
 	}
 	fmt.Println("\nDone...")
-	os.Exit(-newArchives)
+	os.Exit(code)
 }
