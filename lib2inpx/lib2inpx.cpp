@@ -1,8 +1,12 @@
+#ifdef _WIN32
 #include <windows.h>
-#include <stdio.h>
 #include <io.h>
-#include <fcntl.h>
 #include <direct.h>
+#else
+#include <sys/io.h>
+#endif
+#include <stdio.h>
+#include <fcntl.h>
 #include <time.h>
 #include <limits.h>
 
@@ -36,11 +40,16 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 
+#include <boost/filesystem.hpp>
+
 #include <zlib.h>
 #include <minizip/unzip.h>
 #include <minizip/zip.h>
-// TODO: Windows specific, for Linux use minizip/ioapi.h
+#ifdef _WIN32
 #include <minizip/iowin32.h>
+#else
+#include <minizip/ioapi.h>
+#endif
 #include <expat.h>
 
 #include <version.h>
@@ -51,6 +60,7 @@ using namespace boost::posix_time;
 using namespace boost::gregorian;
 using namespace boost::algorithm;
 
+namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
 static bool g_no_import        = false;
@@ -83,9 +93,10 @@ static long   g_last_fb2 = 0;
 static string g_update;
 static string g_db_name = "flibusta";
 
+static string g_outdir;
+
 static bool g_clean_authors = false;
 static bool g_clean_aliases = false;
-static bool g_follow_links  = false;
 
 static string sep = "\x04";
 
@@ -116,16 +127,9 @@ static const char* dummy = "dummy:"
                            "\x04"
                            "\r\n";
 
-static const char* options_pattern[] = {"%s",
-                                        "--defaults-file=%s/mysql.ini",
-                                        "--datadir=%s/data",
-                                        "--language=%s/language",
-                                        "--skip-grant-tables",
-                                        "--innodb_data_home_dir=%s/data/dbtmp_%s",
-                                        "--innodb_log_group_home_dir=%s/data/dbtmp_%s",
-                                        "--innodb_tmpdir=%s/data/dbtmp_%s",
-                                        "--log_syslog=0",
-                                        NULL};
+static const char* options_pattern[] = {"%s", "--defaults-file=%s/mysql.ini", "--datadir=%s/data", "--language=%s/language",
+    "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s", "--innodb_log_group_home_dir=%s/data/dbtmp_%s",
+    "--innodb_tmpdir=%s/data/dbtmp_%s", "--log_syslog=0", NULL};
 
 class mysql_connection : boost::noncopyable {
 	enum { num_options = sizeof(options_pattern) / sizeof(char*) };
@@ -133,7 +137,7 @@ class mysql_connection : boost::noncopyable {
 	char* m_options[num_options];
 
   public:
-	mysql_connection(const char* module_path, const char* name, const char* dbname) : m_mysql(NULL)
+	mysql_connection(const char* path, const char* name, const char* dbname) : m_mysql(NULL)
 	{
 		if (0 == m_initialized) {
 			for (int ni = 0; ni < num_options; ++ni) {
@@ -142,12 +146,12 @@ class mysql_connection : boost::noncopyable {
 					m_options[ni] = NULL;
 					break;
 				}
-				char* mem = new char[MAX_PATH * 2];
+				char* mem = new char[PATH_MAX * 2];
 
 				if (0 == ni) {
 					sprintf(mem, pattern, name);
 				} else {
-					sprintf(mem, pattern, module_path, dbname);
+					sprintf(mem, pattern, path, dbname);
 				}
 				m_options[ni] = mem;
 			}
@@ -256,7 +260,7 @@ bool is_fictionbook(const string& file)
 		name.erase(pos);
 	}
 
-	return ((0 == _stricmp(ext.c_str(), "fb2")) && is_numeric(name));
+	return ((0 == strcasecmp(ext.c_str(), "fb2")) && is_numeric(name));
 }
 
 bool is_backup(const string& file)
@@ -268,50 +272,20 @@ bool is_backup(const string& file)
 		ext = name.substr(pos + 1);
 	}
 
-	return 0 == _stricmp(ext.c_str(), "org");
-}
-
-void clean_directory(const char* path)
-{
-	_finddata_t fd;
-	string      spec(path);
-
-	spec += "*.*";
-
-	auto_ffn dir(_findfirst(spec.c_str(), &fd));
-
-	if (!dir) {
-		throw runtime_error(tmp_str("Unable to clean database directory \"%s\"", spec.c_str()));
-	}
-
-	do {
-		if ((0 != strcmp(fd.name, "..")) && (0 != strcmp(fd.name, "."))) {
-			string name(path);
-			name += fd.name;
-
-			if (0 != fd.attrib & _A_SUBDIR) {
-				clean_directory((name + "/").c_str());
-			} else {
-				if (0 != _unlink(name.c_str())) {
-					throw runtime_error(tmp_str("Unable to delete file \"%s\"", name.c_str()));
-				}
-			}
-		}
-	} while (0 == _findnext(dir, &fd));
-
-	if (0 != _rmdir(path)) {
-		throw runtime_error(tmp_str("Unable to delete directory \"%s\"", path));
-	}
+	return 0 == strcasecmp(ext.c_str(), "org");
 }
 
 void prepare_mysql(const char* path, const string& dbname)
 {
-	bool   rc = true;
-	string config;
+	bool rc = true;
 
-	config = string(path) + "/mysql.ini";
+	if (0 == access(path, 6)) {
+		fs::create_directories(path);
+	}
 
-	if (0 != _access(config.c_str(), 6)) {
+	string config = string(path) + "/mysql.ini";
+
+	if (0 != access(config.c_str(), 6)) {
 		ofstream out(config.c_str());
 
 		if (out) {
@@ -324,19 +298,13 @@ void prepare_mysql(const char* path, const string& dbname)
 	}
 
 	config = string(path) + "/data";
-
-	if (0 != _access(config.c_str(), 6)) {
-		if (0 != _mkdir(config.c_str())) {
-			throw runtime_error(tmp_str("Unable to create directory \"%s\"", config.c_str()));
-		}
+	if (0 != access(config.c_str(), 6)) {
+		fs::create_directories(config.c_str());
 	}
 
 	config += "/dbtmp_" + dbname;
-
-	if (0 != _access(config.c_str(), 6)) {
-		if (0 != _mkdir(config.c_str())) {
-			throw runtime_error(tmp_str("Unable to create directory \"%s\"", config.c_str()));
-		}
+	if (0 != access(config.c_str(), 6)) {
+		fs::create_directories(config.c_str());
 	}
 }
 
@@ -625,7 +593,7 @@ void get_book_squence(const mysql_connection& mysql, const string& book_id, stri
 }
 
 void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string& file_name, const string& ext, const string& seq_name,
-                  const string& seq_num, string& inp)
+    const string& seq_num, string& inp)
 {
 	inp.erase();
 
@@ -677,7 +645,7 @@ void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string&
 	inp += sep;
 	inp += book_sequence_num;
 	inp += sep;
-	inp += ((eIgnore == g_strict) && (0 != _stricmp(ext.c_str(), book_type.c_str()))) ? "" : book_file;
+	inp += ((eIgnore == g_strict) && (0 != strcasecmp(ext.c_str(), book_type.c_str()))) ? "" : book_file;
 	inp += sep;
 	inp += book_filesize;
 	inp += sep;
@@ -806,41 +774,23 @@ void name_to_bookid(const string& file, string& book_id, string& ext)
 
 void process_local_archives(const mysql_connection& mysql, const zip& zz, const string& archives_path)
 {
-	_finddata_t    fd;
 	vector<string> files;
-	string         spec(archives_path + "*.zip");
 
-	auto_ffn archives(_findfirst(spec.c_str(), &fd));
-
-	if (!archives) {
-		throw runtime_error(tmp_str("Unable to process archive path (%d) \"%s\"", errno, spec.c_str()));
-	}
-
-	do {
-		if (g_follow_links) {
-			if (0 != (fd.attrib & FILE_ATTRIBUTE_REPARSE_POINT)) {
-				files.push_back(fd.name);
-			} else {
-				if (fd.size > 22) {
-					files.push_back(fd.name);
-				}
-			}
-		} else {
-			if ((0 == (fd.attrib & FILE_ATTRIBUTE_REPARSE_POINT)) && (fd.size > 22)) {
-				files.push_back(fd.name);
-			}
+	for (auto&& x : fs::directory_iterator(archives_path)) {
+		if (strcasecmp(x.path().extension().string().c_str(), ".zip") == 0) {
+			files.push_back(x.path().filename().string());
 		}
-	} while (0 == _findnext(archives, &fd));
+	}
 
 	if (!g_update.empty()) {
 		vector<string>::iterator it;
 
 		struct finder_fb2_t {
-			bool operator()(const string& arg) { return (0 == _strnicmp(arg.c_str(), "fb2-", 4)); }
+			bool operator()(const string& arg) { return (0 == strncasecmp(arg.c_str(), "fb2-", 4)); }
 		} finder_fb2;
 
 		struct finder_usr_t {
-			bool operator()(const string& arg) { return (0 == _strnicmp(arg.c_str(), "usr-", 4)); }
+			bool operator()(const string& arg) { return (0 == strncasecmp(arg.c_str(), "usr-", 4)); }
 		} finder_usr;
 
 		for (it = find_if(files.begin(), files.end(), finder_usr); it != files.end();) {
@@ -871,7 +821,8 @@ void process_local_archives(const mysql_connection& mysql, const zip& zz, const 
 	}
 	wcout << endl
 	      << "Archives processing - " << files.size() << " file(s) [" << utf8_to_wchar(archives_path) << "]" << endl
-	      << endl << flush;
+	      << endl
+	      << flush;
 
 	sort(files.begin(), files.end());
 
@@ -1144,7 +1095,7 @@ void process_database(const mysql_connection& mysql, const zip& zz)
 
 		string inp, file_name, ext("fb2");
 
-		if (0 == _stricmp(record[3], ext.c_str())) {
+		if (0 == strcasecmp(record[3], ext.c_str())) {
 			file_name = record[0];
 		} else {
 			if ((e20100411 == g_format) || (e20111106 == g_format)) {
@@ -1190,27 +1141,36 @@ int main(int argc, char* argv[])
 {
 	int rc = 1;
 
-	// TODO: Windows specific?
+#ifdef _WIN32
 	fflush(stdout);
 	_setmode(_fileno(stdout), _O_U8TEXT);
 	fflush(stderr);
 	_setmode(_fileno(stderr), _O_U8TEXT);
+#else
+	setlocale(LC_ALL, "");
+	wcout.sync_with_stdio(false);
+	wcout.imbue(locale());
+	wcerr.sync_with_stdio(false);
+	wcerr.imbue(locale());
+#endif
 
-	string spec, path, inpx, comment, comment_fname, collection_comment, inp_path, inpx_name, dump_date, full_date, db_name;
+	string path, inpx, comment, comment_fname, collection_comment, inp_path, inpx_name, dump_date, full_date, db_name;
 
 	vector<string> archives_path;
 
-	_finddata_t fd;
-
 	const char* file_name;
-	char        module_path[MAX_PATH + 1];
+	char        module_path[PATH_MAX + 1];
 
 	try {
 		vector<string> files;
 		timer          td;
 
-		// TODO: Linux - readlink("/proc/self/exe", buf, bufsize)
-		::GetModuleFileName(NULL, module_path, sizeof module_path);
+#ifdef _WIN32
+		GetModuleFileName(NULL, module_path, sizeof module_path);
+#else
+		readlink("/proc/self/exe", module_path, sizeof module_path);
+#endif
+
 		file_name = separate_file_name(module_path);
 
 		// clang-format off
@@ -1223,17 +1183,17 @@ int main(int argc, char* argv[])
 		("strict",      po::value< string >(), "What to put in INPX as file type - \"ext\", \"db\", \"ignore\" (default: ext). ext - use real file extension. db - use file type from database. ignore - ignore files with file extension not equal to file type")
 		("no-import",                          "Do not import dumps, just check dump time and use existing database")
 		("db-name",     po::value< string >(), "Name of MYSQL database (default: flibusta)")
-		("archives",    po::value< string >(), "Path(s) to off-line archives. Multiple entries should be separated by ';'. Each path must be valid and must point to some archives, or processing would be aborted. (If not present - entire database in converted for online usage)")
+		("archives",    po::value< string >(), "Path(s) to off-line archives. Multiple entries should be separated by ';'. Each path must be valid and must point to some archives, or processing would be aborted. (If not present - entire database is converted for online usage)")
 		("read-fb2",    po::value< string >(), "When archived book is not present in the database - try to parse fb2 in archive to get information. \"all\" - do it for all absent books, \"last\" - only process books with ids larger than last database id (If not present - no fb2 parsing)")
 		("prefer-fb2",  po::value< string >(), "Try to parse fb2 in archive to get information (default: ignore). \"ignore\" - ignore fb2 information, \"merge\" - always prefer book sequence info from fb2, \"replace\" - always use book sequence info from fb2")
 		("sequence",    po::value< string >(), "How to process sequence types from database (default: author). \"author\" - always select author's book sequence, \"publisher\" - always select publisher's book sequence, \"ignore\" - don't do any processing. Only relevant for librusec database format 2011-11-06")
-		("inpx",        po::value< string >(), "Full name of output file (default: <db_name>_<db_dump_date>.inpx)")
+		("out-dir",     po::value< string >(), "Where to put resulting inpx file and temporary MySQL database (default: <program_path>)")
+		("inpx",        po::value< string >(), "Full name of output file (default: <program_path>/data/<db_name>_<db_dump_date>.inpx)")
 		("comment",     po::value< string >(), "File name of template (UTF-8) for INPX comment")
 		("update",      po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")")
 		("db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2011-11-06. (Default - old librusec format before 2010-02-06)")
 		("clean-authors",                      "Clean duplicate authors (librusec)")
 		("clean-aliases",                      "Fix libavtoraliase table (flibusta)")
-		("follow-links",                       "Do not ignore symbolic links")
 		("inpx-format", po::value< string >(), "INPX format, Supported: 1.x, 2.x, (Default - new MyHomeLib format 2.x)")
 		("quick-fix",                          "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)")
 		("fix-config",  po::value< string >(), "Allows to specify configuration file with MyHomeLib database size constrains")
@@ -1257,8 +1217,7 @@ int main(int argc, char* argv[])
 		if (vm.count("help") || !vm.count("dump-dir")) {
 			wcout << endl;
 			wcout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-			wcout << "Version " << PRJ_VERSION_MAJOR << "." << PRJ_VERSION_MINOR << " (MYSQL " << MYSQL_SERVER_VERSION << ")"
-			      << endl;
+			wcout << "Version " << PRJ_VERSION_MAJOR << "." << PRJ_VERSION_MINOR << " (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
 			wcout << endl;
 			wcout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
 			wcout << options << endl << flush;
@@ -1268,11 +1227,11 @@ int main(int argc, char* argv[])
 
 		if (vm.count("process")) {
 			string opt = vm["process"].as<string>();
-			if (0 == _stricmp(opt.c_str(), "fb2")) {
+			if (0 == strcasecmp(opt.c_str(), "fb2")) {
 				g_process = eFB2;
-			} else if (0 == _stricmp(opt.c_str(), "usr")) {
+			} else if (0 == strcasecmp(opt.c_str(), "usr")) {
 				g_process = eUSR;
-			} else if (0 == _stricmp(opt.c_str(), "all")) {
+			} else if (0 == strcasecmp(opt.c_str(), "all")) {
 				g_process = eAll;
 			} else {
 				wcout << endl << "Warning: unknown processing type, assuming FB2 only!" << endl << flush;
@@ -1280,11 +1239,22 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		if (vm.count("out-dir")) {
+			g_outdir = vm["out-dir"].as<string>();
+		} else {
+			g_outdir = module_path;
+		}
+		normalize_path(g_outdir);
+
+		if (0 != access(g_outdir.c_str(), 6)) {
+			throw runtime_error(tmp_str("Unable to use output directory \"%s\"", g_outdir.c_str()));
+		}
+
 		if (vm.count("read-fb2")) {
 			string opt = vm["read-fb2"].as<string>();
-			if (0 == _stricmp(opt.c_str(), "all")) {
+			if (0 == strcasecmp(opt.c_str(), "all")) {
 				g_read_fb2 = eReadAll;
-			} else if (0 == _stricmp(opt.c_str(), "last")) {
+			} else if (0 == strcasecmp(opt.c_str(), "last")) {
 				g_read_fb2 = eReadLast;
 			} else {
 				wcout << endl << "Warning: unknown read-fb2 action, assuming none!" << endl << flush;
@@ -1294,11 +1264,11 @@ int main(int argc, char* argv[])
 
 		if (vm.count("prefer-fb2")) {
 			string opt = vm["prefer-fb2"].as<string>();
-			if (0 == _stricmp(opt.c_str(), "ignore")) {
+			if (0 == strcasecmp(opt.c_str(), "ignore")) {
 				g_fb2_preference = eIgnoreFB2;
-			} else if (0 == _stricmp(opt.c_str(), "merge")) {
+			} else if (0 == strcasecmp(opt.c_str(), "merge")) {
 				g_fb2_preference = eMergeFB2;
-			} else if (0 == _stricmp(opt.c_str(), "replace")) {
+			} else if (0 == strcasecmp(opt.c_str(), "replace")) {
 				g_fb2_preference = eReplaceFB2;
 			} else {
 				wcout << endl << "Warning: unknown prefer-fb2 action, assuming ignore!" << endl << flush;
@@ -1308,11 +1278,11 @@ int main(int argc, char* argv[])
 
 		if (vm.count("sequence")) {
 			string opt = vm["sequence"].as<string>();
-			if (0 == _stricmp(opt.c_str(), "author")) {
+			if (0 == strcasecmp(opt.c_str(), "author")) {
 				g_series_type = eAuthorST;
-			} else if (0 == _stricmp(opt.c_str(), "publisher")) {
+			} else if (0 == strcasecmp(opt.c_str(), "publisher")) {
 				g_series_type = ePublisherST;
-			} else if (0 == _stricmp(opt.c_str(), "ignore")) {
+			} else if (0 == strcasecmp(opt.c_str(), "ignore")) {
 				g_series_type = eIgnoreST;
 			} else {
 				wcout << endl << "Warning: unknown sequence type, assuming author's sequence!" << endl << flush;
@@ -1322,11 +1292,11 @@ int main(int argc, char* argv[])
 
 		if (vm.count("strict")) {
 			string opt = vm["strict"].as<string>();
-			if (0 == _stricmp(opt.c_str(), "ext")) {
+			if (0 == strcasecmp(opt.c_str(), "ext")) {
 				g_strict = eFileExt;
-			} else if (0 == _stricmp(opt.c_str(), "db")) {
+			} else if (0 == strcasecmp(opt.c_str(), "db")) {
 				g_strict = eFileType;
-			} else if (0 == _stricmp(opt.c_str(), "ignore")) {
+			} else if (0 == strcasecmp(opt.c_str(), "ignore")) {
 				g_strict = eIgnore;
 			} else {
 				wcout << endl << "Warning: unknown strictness, will use file extensions!" << endl << flush;
@@ -1336,13 +1306,13 @@ int main(int argc, char* argv[])
 
 		if (vm.count("db-format")) {
 			string opt = vm["db-format"].as<string>();
-			if (0 == _stricmp(opt.c_str(), "2010-02-06")) {
+			if (0 == strcasecmp(opt.c_str(), "2010-02-06")) {
 				g_format = e20100206;
-			} else if (0 == _stricmp(opt.c_str(), "2010-03-17")) {
+			} else if (0 == strcasecmp(opt.c_str(), "2010-03-17")) {
 				g_format = e20100317;
-			} else if (0 == _stricmp(opt.c_str(), "2010-04-11")) {
+			} else if (0 == strcasecmp(opt.c_str(), "2010-04-11")) {
 				g_format = e20100411;
-			} else if (0 == _stricmp(opt.c_str(), "2011-11-06")) {
+			} else if (0 == strcasecmp(opt.c_str(), "2011-11-06")) {
 				g_format = e20111106;
 			} else {
 				wcout << endl << "Warning: unknown database format, will use default!" << endl << flush;
@@ -1352,9 +1322,9 @@ int main(int argc, char* argv[])
 
 		if (vm.count("inpx-format")) {
 			string opt = vm["inpx-format"].as<string>();
-			if (0 == _stricmp(opt.c_str(), "1.x")) {
+			if (0 == strcasecmp(opt.c_str(), "1.x")) {
 				g_inpx_format = e1X;
-			} else if (0 == _stricmp(opt.c_str(), "2.x")) {
+			} else if (0 == strcasecmp(opt.c_str(), "2.x")) {
 				g_inpx_format = e2X;
 			} else {
 				wcout << endl << "Warning: unknown INPX format, will use default!" << endl << flush;
@@ -1394,10 +1364,6 @@ int main(int argc, char* argv[])
 				g_clean_aliases = true;
 			}
 
-		if (vm.count("follow-links")) {
-			g_follow_links = true;
-		}
-
 		if (vm.count("dump-dir")) {
 			path = vm["dump-dir"].as<string>();
 		}
@@ -1412,7 +1378,7 @@ int main(int argc, char* argv[])
 		if (vm.count("comment")) {
 			comment_fname = vm["comment"].as<string>();
 
-			if (0 != _access(comment_fname.c_str(), 4)) {
+			if (0 != access(comment_fname.c_str(), 4)) {
 				wcout << endl << "Warning: Ignoring wrong comment file: " << utf8_to_wchar(comment_fname) << endl << flush;
 			} else {
 				ifstream     in(comment_fname.c_str());
@@ -1434,12 +1400,12 @@ int main(int argc, char* argv[])
 
 		if (vm.count("archives")) {
 			string tmp = vm["archives"].as<string>();
-            split(archives_path, tmp, is_any_of(";"), token_compress_on);
+			split(archives_path, tmp, is_any_of(";"), token_compress_on);
 		}
 
 		if (!archives_path.empty()) {
 			for (vector<string>::iterator it = archives_path.begin(); it != archives_path.end(); ++it) {
-				if (0 != _access((*it).c_str(), 4)) {
+				if (0 != access((*it).c_str(), 4)) {
 					throw runtime_error(tmp_str("Wrong path to archives \"%s\"", (*it).c_str()));
 				}
 
@@ -1450,7 +1416,7 @@ int main(int argc, char* argv[])
 				if (1 == archives_path.size()) {
 					g_update = vm["update"].as<string>();
 
-					if (0 != _access((archives_path[0] + g_update + ".zip").c_str(), 4)) {
+					if (0 != access((archives_path[0] + g_update + ".zip").c_str(), 4)) {
 						throw runtime_error(tmp_str("Unable to find daily archive \"%s.zip\"", g_update.c_str()));
 					}
 				} else {
@@ -1464,46 +1430,38 @@ int main(int argc, char* argv[])
 			g_verbose = true;
 		}
 
-		if (0 != _access(path.c_str(), 4)) {
+		if (0 != access(path.c_str(), 4)) {
 			throw runtime_error(tmp_str("Wrong source path \"%s\"", path.c_str()));
 		}
 
 		normalize_path(path);
 
-		spec = path;
-		spec += "*.sql";
+		for (auto&& x : fs::directory_iterator(path)) {
+			if (strcasecmp(x.path().extension().string().c_str(), ".sql") == 0) {
 
-		{
-			auto_ffn dumps(_findfirst(spec.c_str(), &fd));
-
-			if (!dumps) {
-				throw runtime_error(tmp_str("Unable to process source path (%d) \"%s\"", errno, spec.c_str()));
-			}
-
-			do {
-				files.push_back(fd.name);
+				files.push_back(x.path().filename().string());
 
 				if (!g_ignore_dump_date) {
 					if (0 == dump_date.size()) {
-						dump_date = get_dump_date(path + fd.name);
+						dump_date = get_dump_date(path + x.path().filename().string());
 					} else {
-						string new_dump_date = get_dump_date(path + fd.name);
+						string new_dump_date = get_dump_date(path + x.path().filename().string());
 
 						if (dump_date != new_dump_date) {
 							throw runtime_error(tmp_str("Source dump files do not have the "
 							                            "same date (%s) \"%s\" (%s)",
-							                            dump_date.c_str(), fd.name, new_dump_date.c_str()));
+							    dump_date.c_str(), x.path().filename().string().c_str(), new_dump_date.c_str()));
 						}
 					}
 				}
-			} while (0 == _findnext(dumps, &fd));
+			}
 		}
 
 		if (!g_no_import && (0 == files.size())) {
 			throw runtime_error(tmp_str("No SQL dumps are available for importing \"%s\"", path.c_str()));
 		}
 
-        wcout << endl << "Detected MySQL dump date: " << utf8_to_wchar((0 == dump_date.size()) ? "none" : dump_date) << endl << flush;
+		wcout << endl << "Detected MySQL dump date: " << utf8_to_wchar((0 == dump_date.size()) ? "none" : dump_date) << endl << flush;
 
 		full_date = (0 == dump_date.size()) ? to_iso_extended_string(date(day_clock::universal_day())) : dump_date;
 		dump_date = full_date;
@@ -1530,13 +1488,12 @@ int main(int argc, char* argv[])
 			inpx_name = "daily_update";
 		}
 
-		normalize_path(module_path);
-		prepare_mysql(module_path, db_name);
+		prepare_mysql(g_outdir.c_str(), db_name);
 
 		if (vm.count("inpx")) {
 			inpx = vm["inpx"].as<string>();
 		} else {
-			inpx = module_path;
+			inpx = g_outdir;
 			inpx += "/data/";
 			inpx += inpx_name;
 			inpx += g_update.empty() ? ".inpx" : ".zip";
@@ -1545,7 +1502,7 @@ int main(int argc, char* argv[])
 		{
 			string table_name = (e20111106 == g_format) ? "libavtors" : "libavtorname";
 
-			mysql_connection mysql(module_path, g_db_name.c_str(), db_name.c_str());
+			mysql_connection mysql(g_outdir.c_str(), g_db_name.c_str(), db_name.c_str());
 
 			if (!g_no_import) {
 				wcout << endl << "Creating MYSQL database \"" << utf8_to_wchar(db_name) << "\"" << endl << endl << flush;
@@ -1583,17 +1540,17 @@ int main(int argc, char* argv[])
 
 						if (!regex_match(buf, sl_comment) &&
 						    !(authors && (0 ==
-						                  buf.find("UNIQUE KEY `fullname` "
-						                           "(`FirstName`,`MiddleName`,`"
-						                           "LastName`,`NickName`),")))) {
+						                     buf.find("UNIQUE KEY `fullname` "
+						                              "(`FirstName`,`MiddleName`,`"
+						                              "LastName`,`NickName`),")))) {
 							pos = buf.rfind(';');
 							if (pos == string::npos) {
 								if (aliases && ((0 ==
-								                 buf.find("`AliaseId` int(11) NOT "
-								                          "NULL auto_increment,")) ||
-								                (0 ==
-								                 buf.find("`AliaseId` int(11) NOT "
-								                          "NULL AUTO_INCREMENT,")))) {
+								                    buf.find("`AliaseId` int(11) NOT "
+								                             "NULL auto_increment,")) ||
+								                   (0 ==
+								                       buf.find("`AliaseId` int(11) NOT "
+								                                "NULL AUTO_INCREMENT,")))) {
 									line += buf;
 									line += "`dummyId` int(11) NOT NULL "
 									        "default '0',";
@@ -1632,7 +1589,7 @@ int main(int argc, char* argv[])
 				mysql.query(tmp_str("SELECT Firstname, Middlename, Lastname, Nickname "
 				                    "FROM %s GROUP BY Firstname, Middlename, Lastname, "
 				                    "Nickname HAVING COUNT(*) > 1",
-				                    table_name.c_str()));
+				    table_name.c_str()));
 				mysql_results dupes(mysql);
 
 				wcout << endl << "Processing duplicate authors" << endl << flush;
@@ -1645,8 +1602,8 @@ int main(int argc, char* argv[])
 					mysql.query(tmp_str("SELECT aid FROM %s WHERE Firstname='%s' AND "
 					                    "Middlename='%s' AND Lastname='%s' AND Nickname='%s' "
 					                    "ORDER by aid;",
-					                    table_name.c_str(), duplicate_quote(record[0]).c_str(), duplicate_quote(record[1]).c_str(),
-					                    duplicate_quote(record[2]).c_str(), duplicate_quote(record[3]).c_str()));
+					    table_name.c_str(), duplicate_quote(record[0]).c_str(), duplicate_quote(record[1]).c_str(),
+					    duplicate_quote(record[2]).c_str(), duplicate_quote(record[3]).c_str()));
 					mysql_results aids(mysql);
 
 					while (record1 = aids.fetch_row()) {
@@ -1666,14 +1623,15 @@ int main(int argc, char* argv[])
 
 							if (not_first) {
 								if (g_verbose)
-									wcout << "   De-duping author " << setw(8) << record1[0] << " (" << setw(4) << count << ") : "
-									      << utf8_to_wchar(record[2]) << "-" << utf8_to_wchar(record[0]) << "-"
-									      << utf8_to_wchar(record[1]) << endl << flush;
+									wcout << "   De-duping author " << setw(8) << record1[0] << " (" << setw(4) << count
+									      << ") : " << utf8_to_wchar(record[2]) << "-" << utf8_to_wchar(record[0]) << "-"
+									      << utf8_to_wchar(record[1]) << endl
+									      << flush;
 								if (0 < count) {
 									mysql.query(tmp_str("UPDATE libavtor SET "
 									                    "aid=%s WHERE aid=%s;",
-									                    first.c_str(), record1[0]),
-									            false);
+									                first.c_str(), record1[0]),
+									    false);
 								}
 								mysql.query(tmp_str("DELETE FROM %s WHERE aid=%s;", table_name.c_str(), record1[0]));
 							} else {
@@ -1681,7 +1639,8 @@ int main(int argc, char* argv[])
 									if (g_verbose)
 										wcout << "*  De-duping author " << setw(8) << record1[0] << " (" << setw(4) << count
 										      << ") : " << utf8_to_wchar(record[2]) << "-" << utf8_to_wchar(record[0]) << "-"
-										      << utf8_to_wchar(record[1]) << endl << flush;
+										      << utf8_to_wchar(record[1]) << endl
+										      << flush;
 
 									mysql.query(tmp_str("DELETE FROM %s WHERE aid=%s;", table_name.c_str(), record1[0]));
 									first.clear();
@@ -1714,25 +1673,22 @@ int main(int argc, char* argv[])
 			if (comment.empty()) {
 				if (!archives_path.empty()) {
 					if (g_process == eFB2) {
-						comment =
-						    tmp_str("%s FB2 - %s\r\n%s\r\n65536\r\nЛокальные "
-						            "архивы библиотеки %s (FB2) %s",
-						            g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str());
+						comment = tmp_str("%s FB2 - %s\r\n%s\r\n65536\r\nЛокальные "
+						                  "архивы библиотеки %s (FB2) %s",
+						    g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str());
 					} else if (g_process == eUSR) {
-						comment =
-						    tmp_str("%s USR - %s\r\n%s\r\n65537\r\nЛокальные "
-						            "архивы библиотеки %s (не-FB2) %s",
-						            g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str());
+						comment = tmp_str("%s USR - %s\r\n%s\r\n65537\r\nЛокальные "
+						                  "архивы библиотеки %s (не-FB2) %s",
+						    g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str());
 					} else if (g_process == eAll) {
-						comment =
-						    tmp_str("%s ALL - %s\r\n%s\r\n65537\r\nЛокальные "
-						            "архивы библиотеки %s (все) %s",
-						            g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str());
+						comment = tmp_str("%s ALL - %s\r\n%s\r\n65537\r\nЛокальные "
+						                  "архивы библиотеки %s (все) %s",
+						    g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str());
 					}
 				} else {
 					comment = tmp_str("%s FB2 online - %s\r\n%s\r\n134283264\r\nOnline "
 					                  "коллекция %s %s",
-					                  g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str());
+					    g_db_name.c_str(), full_date.c_str(), inpx_name.c_str(), g_db_name.c_str(), full_date.c_str());
 				}
 			} else {
 				comment = tmp_str(comment.c_str(), inpx_name.c_str());
@@ -1772,18 +1728,16 @@ int main(int argc, char* argv[])
 		}
 
 		if (g_clean_when_done) {
-			string data_dir(module_path);
+			string data_dir(g_outdir);
 			data_dir += "/data/";
 
 			string db_tmp_dir = data_dir + "dbtmp_" + db_name + "/";
-			clean_directory(db_tmp_dir.c_str());
+			fs::remove_all(db_tmp_dir.c_str());
 			string db_dir = data_dir + db_name + "/";
-			clean_directory(db_dir.c_str());
+			fs::remove_all(db_dir.c_str());
 
-			string file_to_del = string(module_path) + "/data/auto.cnf";
-			if (0 != _unlink(file_to_del.c_str())) {
-				throw runtime_error(tmp_str("Unable to delete file \"%s\"", file_to_del.c_str()));
-			}
+			string file_to_del = string(g_outdir) + "/data/auto.cnf";
+			fs::remove(file_to_del);
 		}
 
 		rc = 0;

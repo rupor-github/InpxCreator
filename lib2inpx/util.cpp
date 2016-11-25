@@ -1,7 +1,11 @@
+#ifdef _WIN32
 #include <windows.h>
-#include <stdio.h>
 #include <io.h>
 #include <direct.h>
+#else
+#include <sys/io.h>
+#endif
+#include <stdio.h>
 #include <time.h>
 #include <limits.h>
 #include <errno.h>
@@ -42,14 +46,24 @@
 #include <zlib.h>
 #include <minizip/unzip.h>
 #include <minizip/zip.h>
-// TODO: Windows specific, for Linux use minizip/ioapi.h
+#ifdef _WIN32
 #include <minizip/iowin32.h>
+#else
+#include <minizip/ioapi.h>
+#endif
 #include <expat.h>
 
 #include "util.h"
 
 #define STARTING_SIZE 0x400
 #define ENDING_SIZE 0x10000
+
+const char* wide_locale_name =
+#ifdef _WIN32
+    "UCS-2LE//IGNORE";
+#else
+    "UCS-4LE//IGNORE";
+#endif
 
 using namespace std;
 
@@ -65,7 +79,7 @@ void initialize_limits(const string& config)
 	g_limits.KeyWords                                       = 255;
 	g_limits.S_Title                                        = 80;
 
-	if (!config.empty() && (0 == _access(config.c_str(), 4))) {
+	if (!config.empty() && (0 == access(config.c_str(), 4))) {
 		using boost::property_tree::ptree;
 		ptree pt;
 
@@ -195,8 +209,7 @@ wstring utf8_to_wchar(const string& str)
 	static iconv_t cd = NULL;
 
 	if (NULL == cd) {
-		// TODO: UCS-2LE is Windows specific, Linux terminal have different wchar_t
-		if ((cd = iconv_open("UCS-2LE//IGNORE", "UTF-8")) == (iconv_t)-1) {
+		if ((cd = iconv_open(wide_locale_name, "UTF-8")) == (iconv_t)-1) {
 			DOUT("DBG*** iconv_open error: %d\n", errno);
 			return w;
 		}
@@ -234,8 +247,7 @@ string wchar_to_utf8(const wstring& str)
 	static iconv_t cd = NULL;
 
 	if (NULL == cd) {
-		// TODO: UCS-2LE is Windows specific, Linux terminal have different wchar_t
-		if ((cd = iconv_open("UTF-8//IGNORE", "UCS-2LE")) == (iconv_t)-1) {
+		if ((cd = iconv_open("UTF-8//IGNORE", wide_locale_name)) == (iconv_t)-1) {
 			DOUT("DBG*** iconv_open error: %d\n", errno);
 			return s;
 		}
@@ -277,7 +289,7 @@ tmp_str::tmp_str(const char* format, ...)
 	va_start(marker, format);
 	for (int size = STARTING_SIZE; size <= ENDING_SIZE; size *= 2) {
 		boost::scoped_array<char> buf(new char[size + 1]);
-		ni = _vsnprintf(buf.get(), size, format, marker);
+		ni = vsnprintf(buf.get(), size, format, marker);
 		if (-1 != ni) {
 			assign(buf.get(), ni);
 			break;
@@ -295,7 +307,6 @@ zlib_filefunc64_def unzip::m_ffunc;
 #ifndef DO_NOT_INCLUDE_PARSER
 
 // TODO: for simplicity we are assuming Intel incoding
-
 static int XMLCALL xml_convert(void* data, const char* s)
 {
 	size_t inbytes = 1;
@@ -323,7 +334,7 @@ static int XMLCALL xml_convert(void* data, const char* s)
 		default:
 			ret = -1;
 			DOUT("DBG*** unsupported conversion length %d for: %s -> [%02x,%02x,%02x,%02x]\n", 4 - outbytes, s, out[0], out[1], out[2],
-			     out[3]);
+			    out[3]);
 			break;
 	}
 	return ret;
@@ -335,8 +346,7 @@ int fb2_parser::on_unknown_encoding(const XML_Char* name, XML_Encoding* info)
 {
 	iconv_t cd;
 
-	// TODO: UCS-2LE is Windows specific, Linux terminal have different wchar_t
-	if ((cd = iconv_open("UCS-2LE", name)) == (iconv_t)-1) {
+	if ((cd = iconv_open(wide_locale_name, name)) == (iconv_t)-1) {
 		DOUT("DBG*** unsupported encoding: %s\n", name);
 		return XML_STATUS_ERROR;
 	}
@@ -373,7 +383,7 @@ int fb2_parser::on_unknown_encoding(const XML_Char* name, XML_Encoding* info)
 				default:
 					info->map[i] = -1;
 					DOUT("DBG*** unsupported encoding (%s) length %d for: %02x -> [%02x,%02x,%02x,%02x]\n", name, 4 - outbytes, i,
-					     out[0], out[1], out[2], out[3]);
+					    out[0], out[1], out[2], out[3]);
 					break;
 			}
 		}

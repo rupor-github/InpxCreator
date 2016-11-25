@@ -150,6 +150,8 @@ func init() {
 
 func main() {
 
+	var code int
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "\nTool to merge library updates\nVersion %s\n\n", getVersion())
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
@@ -157,7 +159,7 @@ func main() {
 	}
 	if flag.Parse(); flag.NFlag() == 0 {
 		flag.Usage()
-		os.Exit(0)
+		os.Exit(code)
 	}
 
 	fmt.Printf("\nProcessing archives from \"%s\"\n", dest)
@@ -221,8 +223,8 @@ func main() {
 	}
 
 	if len(updates) == 0 {
-		fmt.Printf("No updates, nothing to do...")
-		os.Exit(0)
+		fmt.Printf("No updates, nothing to do...\n")
+		os.Exit(code)
 	} else if verbose {
 		fmt.Printf("Found updates: %v\n", len(updates))
 		for _, u := range updates {
@@ -315,6 +317,7 @@ func main() {
 						}
 						newName := fmt.Sprintf("fb2-%06d-%06d.zip", firstBook, lastBook)
 						fmt.Printf("\t--> Finalizing archive: %s\n", newName)
+						code = 2
 
 						newName = filepath.Join(last.dir, newName)
 						if err := os.Rename(tmpOut, newName); err != nil {
@@ -365,6 +368,7 @@ func main() {
 
 		newName := fmt.Sprintf("fb2-%06d-%06d.merging", firstBook, lastBook)
 		fmt.Printf("\t--> Finalizing archive: %s\n", newName)
+		code = 2
 
 		newName = filepath.Join(last.dir, newName)
 		if err := os.Rename(tmpOut, newName); err != nil {
@@ -386,4 +390,5 @@ func main() {
 			}
 		}
 	}
+	os.Exit(code)
 }
