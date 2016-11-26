@@ -1,4 +1,14 @@
 #!/bin/bash
+
+# Synology task scheduler has a problem running scripts under non-root user
+
+if [ "$2" != "" ]; then
+	user_dir=`eval echo "~$2"`
+	if [ "${user_dir}" != "" ]; then
+    	cd ${user_dir}
+	fi
+fi
+
 # -----------------------------------------------------------------------------
 # Following variables could be changed
 # -----------------------------------------------------------------------------

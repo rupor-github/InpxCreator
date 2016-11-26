@@ -317,7 +317,6 @@ func main() {
 						}
 						newName := fmt.Sprintf("fb2-%06d-%06d.zip", firstBook, lastBook)
 						fmt.Printf("\t--> Finalizing archive: %s\n", newName)
-						code = 2
 
 						newName = filepath.Join(last.dir, newName)
 						if err := os.Rename(tmpOut, newName); err != nil {
@@ -331,6 +330,9 @@ func main() {
 						last.begin = firstBook
 						last.end = lastBook
 						fmt.Printf("\t--> New last archive: %s\n", newName)
+
+						// We may want to rebuild inpx - have new "last" archive ready
+						code = 2
 
 						f, err = ioutil.TempFile(last.dir, "merge-")
 						if err != nil {
@@ -368,7 +370,6 @@ func main() {
 
 		newName := fmt.Sprintf("fb2-%06d-%06d.merging", firstBook, lastBook)
 		fmt.Printf("\t--> Finalizing archive: %s\n", newName)
-		code = 2
 
 		newName = filepath.Join(last.dir, newName)
 		if err := os.Rename(tmpOut, newName); err != nil {

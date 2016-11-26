@@ -495,7 +495,10 @@ func main() {
 	}
 	newArchives := len(links)
 	if newArchives > 0 {
+
+		// We may want to "merge" updates
 		code = 2
+
 		fmt.Printf("\nProcessed %d new archive(s)\n", newArchives)
 	} else {
 		fmt.Printf("\nProcessed no new archive(s)\n")
