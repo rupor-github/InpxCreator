@@ -59,24 +59,37 @@ for _mingw in ${MINGW_INSTALLS}; do
 	esac
 
 	if [ -f "/${_mingw}/bin/gcc.exe" ]; then
+
 		print_msg1 "Building Win ${_arch} release"
+
+		[ -d Release${_arch} ] && rm -rf Release${_arch}
+		mkdir -p Release${_arch}
+
+		pushd Release${_arch} >/dev/null
+
+		MSYSTEM=${_msystem} \
+        PKG_CONFIG_PATH="${_mingw}/lib/pkgconfig:${_mingw}/share/pkgconfig" \
+		PATH=/${_mingw}/bin:$(echo $PATH | tr ':' '\n' | awk '$0 != "/opt/bin"' | paste -sd:) \
+		cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+		if (( $? != 0 )); then
+			popd
+			exit 1
+		fi
+
+		MSYSTEM=${_msystem} \
+        PKG_CONFIG_PATH="${_mingw}/lib/pkgconfig:${_mingw}/share/pkgconfig" \
+		PATH=/${_mingw}/bin:$(echo $PATH | tr ':' '\n' | awk '$0 != "/opt/bin"' | paste -sd:) \
+		make install
+		if (( $? != 0 )); then
+			popd
+			exit 1
+		fi
+
+		popd >/dev/null
+
 		(
-			export MSYSTEM=${_msystem}
-			export PATH=/${_mingw}/bin:$(echo $PATH | tr ':' '\n' | awk '$0 != "/opt/bin"' | paste -sd:)
-
-			[ -d Release${_arch} ] && rm -rf Release${_arch}
-			mkdir -p Release${_arch}
-
-			(
-				cd Release${_arch}
-				cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release ..
-				make install
-			)
-
-			(
-				cd ${_dist}
-				7z a -r ../lib2inpx-win${_arch} 
-			)
+			cd ${_dist}
+			7z a -r ../lib2inpx-win${_arch} 
 		)
 	else
 		print_warning "You don't have installed mingw-w64 toolchain for architecture ${_arch}."
