@@ -1494,7 +1494,10 @@ int main(int argc, char* argv[])
 			inpx = vm["inpx"].as<string>();
 		} else {
 			inpx = g_outdir;
-			inpx += "/data/";
+			// Keep compatible with old versions
+			if (!vm.count("out-dir")) {
+				inpx += "/data/";
+			}
 			inpx += inpx_name;
 			inpx += g_update.empty() ? ".inpx" : ".zip";
 		}
@@ -1738,6 +1741,10 @@ int main(int argc, char* argv[])
 
 			string file_to_del = string(g_outdir) + "/data/auto.cnf";
 			fs::remove(file_to_del);
+
+			if (fs::is_empty(data_dir)) {
+				fs::remove(data_dir);
+			}
 		}
 
 		rc = 0;
