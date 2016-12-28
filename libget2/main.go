@@ -183,6 +183,10 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, e
 		timer.Stop()
 		return nil, nil, errors.Wrap(err, "httpReq")
 	}
+	if resp.StatusCode != http.StatusOK {
+		timer.Stop()
+		return nil, nil, errors.New("httpReq: status [" + resp.Status + "]")
+	}
 	return resp, timer, nil
 }
 
