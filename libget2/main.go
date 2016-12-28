@@ -432,6 +432,8 @@ func main() {
 
 	var code int
 
+	log.SetPrefix("\n*** ")
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "\nTool to download library updates\nVersion %s\n\n", getVersion())
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
