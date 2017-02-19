@@ -1,8 +1,8 @@
-hash: e509ff6881b39427c20d66b6de7c7d68acba77b59aa29b8f53330814ac1485bb
-updated: 2016-07-30T08:06:44.626696-04:00
+hash: 6cb08c8f72323347bee86d68e01f63dc3bfcf1fd1c374621e813f5043225d78b
+updated: 2017-02-19T09:02:19.702074-05:00
 imports:
 - name: github.com/pkg/errors
-  version: 01fa4104b9c248c8945d14d9f128454d5b28d595
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: golang.org/x/net
   version: 6a513affb38dc9788b449d59ffed099b8de18fa0
   subpackages:

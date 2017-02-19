@@ -14,7 +14,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 # Project version number
 set(PRJ_VERSION_MAJOR 8)
-set(PRJ_VERSION_MINOR 2)
+set(PRJ_VERSION_MINOR 3)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -52,7 +52,7 @@ endif()
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
-find_package(Boost 1.62.0 REQUIRED COMPONENTS "date_time" "program_options" "filesystem")
+find_package(Boost 1.63.0 REQUIRED COMPONENTS "date_time" "program_options" "filesystem")
 find_package(Threads)
 find_package(MySQL REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -98,7 +98,7 @@ if(WIN32)
 endif()
 install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${PROJECT_BINARY_DIR}/language CONFIGURATIONS Release Debug)
 
-find_package(Go 1.7 REQUIRED)
+find_package(Go 1.8 REQUIRED)
 find_package(Glide 0.12 REQUIRED)
 # Proper go build structure will be here
 set(GO_PATH "${CMAKE_BINARY_DIR}/go")
@@ -136,3 +136,8 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX}
 add_custom_target(libmerge_exe ALL DEPENDS ${CMAKE_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX})
 install(PROGRAMS ${CMAKE_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
+add_custom_target(update DEPENDS ${GLIDE_EXECUTABLE}
+	SOURCES go/src/glide.yaml
+	COMMAND ${GLIDE_EXECUTABLE} update
+	WORKING_DIRECTORY "go/src"
+	VERBATIM)
