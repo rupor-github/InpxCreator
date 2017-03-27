@@ -604,7 +604,7 @@ void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string&
 	string book_deleted(record[4]);
 	string book_time(record[5]);
 	string book_lang(record[6]);
-	string book_kwds = fix_data(cleanse(record[7]), g_limits.KeyWords);
+	string book_kwds = (record[7] == NULL) ? "" : fix_data(cleanse(record[7]), g_limits.KeyWords);
 	string book_file(cleanse(file_name));
 
 	string book_author, book_genres, book_sequence, book_sequence_num, book_rate;
