@@ -585,7 +585,39 @@ void get_book_squence(const mysql_connection& mysql, const string& book_id, stri
     }
 }
 
-void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string& file_name, const string& ext, const string& seq_name, const string& seq_num, string& inp)
+bool read_fb2(const unzip& uz, const string& book_id, fb2_parser& fb, unz_file_info64& fi, string& err)
+{
+    bool rc = false;
+
+    DOUT("\n---------->Reading %s\n", book_id.c_str());
+
+    const int                 buffer_size = 4096;
+    boost::scoped_array<char> buffer(new char[buffer_size]);
+
+    try {
+        unzip_reader ur(uz);
+
+        uz.current(fi);
+
+        int  len                 = 0;
+        bool continue_processing = true;
+
+        while (continue_processing && (0 < (len = ur(buffer.get(), buffer_size)))) {
+            continue_processing = fb(buffer.get(), len);
+        }
+
+        if (continue_processing) {
+            fb(buffer.get(), 0, true);
+        }
+
+        rc = true;
+    } catch (exception& e) {
+        err = e.what();
+    }
+    return rc;
+}
+
+void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string& file_name, const string& ext, const unzip* puz, string& inp)
 {
     inp.erase();
 
@@ -605,7 +637,7 @@ void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string&
 
     string book_file(cleanse(file_name));
 
-    string book_author, book_genres, book_sequence, book_sequence_num, book_rate;
+    string book_author, book_genres, book_sequence, book_sequence_num, book_rate, err;
 
     if (eFileExt == g_strict) {
         book_type = ext;
@@ -615,21 +647,30 @@ void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string&
     get_book_genres(mysql, book_id, book_genres);
     get_book_rate(mysql, book_id, book_rate);
 
+    fb2_parser      fb;
+    unz_file_info64 fi;
+
     if (g_fb2_preference == eReplaceFB2) {
-        book_sequence     = seq_name;
-        book_sequence_num = seq_num;
+	    if ((puz != NULL) && read_fb2(*puz, book_id, fb, fi, err)) {
+	    	book_sequence     = fb.m_seq_name;
+		    book_sequence_num = fb.m_seq;
+	    }
     } else {
         get_book_squence(mysql, book_id, book_sequence, book_sequence_num);
 
         if (g_fb2_preference == eMergeFB2) {
-            if (seq_name.size() > 0) {
-                book_sequence     = seq_name;
-                book_sequence_num = seq_num;
+            if ((puz != NULL) && read_fb2(*puz, book_id, fb, fi, err)) {
+                if (fb.m_seq_name.size() > 0) {
+                    book_sequence     = fb.m_seq_name;
+                    book_sequence_num = fb.m_seq;
+                }
             }
         } else if (g_fb2_preference == eComplementFB2) {
             if (book_sequence.size() == 0) {
-                book_sequence     = seq_name;
-                book_sequence_num = seq_num;
+                if ((puz != NULL) && read_fb2(*puz, book_id, fb, fi, err)) {
+                    book_sequence     = fb.m_seq_name;
+                    book_sequence_num = fb.m_seq;
+                }
             }
         }
     }
@@ -671,38 +712,6 @@ void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string&
         inp += sep;
     }
     inp += "\r\n";
-}
-
-bool read_fb2(const unzip& uz, const string& book_id, fb2_parser& fb, unz_file_info64& fi, string& err)
-{
-    bool rc = false;
-
-    DOUT("\n---------->Reading %s\n", book_id.c_str());
-
-    const int                 buffer_size = 4096;
-    boost::scoped_array<char> buffer(new char[buffer_size]);
-
-    try {
-        unzip_reader ur(uz);
-
-        uz.current(fi);
-
-        int  len                 = 0;
-        bool continue_processing = true;
-
-        while (continue_processing && (0 < (len = ur(buffer.get(), buffer_size)))) {
-            continue_processing = fb(buffer.get(), len);
-        }
-
-        if (continue_processing) {
-            fb(buffer.get(), 0, true);
-        }
-
-        rc = true;
-    } catch (exception& e) {
-        err = e.what();
-    }
-    return rc;
 }
 
 bool process_from_fb2(const unzip& uz, const string& book_id, string& inp, string& err)
@@ -904,19 +913,7 @@ void process_local_archives(const mysql_connection& mysql, const zip& zz, const 
                 mysql_results book(mysql);
 
                 if (record = book.fetch_row()) {
-                    string seq;
-                    string seq_num;
-
-                    if (eIgnoreFB2 != g_fb2_preference) {
-                        fb2_parser      fb;
-                        unz_file_info64 fi;
-
-                        if (read_fb2(uz, book_id, fb, fi, err)) {
-                            seq     = fb.m_seq_name;
-                            seq_num = fb.m_seq;
-                        }
-                    }
-                    process_book(mysql, record, book_id, ext, seq, seq_num, inp);
+                    process_book(mysql, record, book_id, ext, &uz, inp);
                 } else {
                     if (fb2 && ((eReadAll == g_read_fb2) || ((eReadLast == g_read_fb2) && is_after_last(book_id)))) {
                         if (!process_from_fb2(uz, book_id, inp, err)) {
@@ -1046,7 +1043,7 @@ void process_database(const mysql_connection& mysql, const zip& zz)
             }
         }
 
-        process_book(mysql, record, file_name, ext, "", "", inp);
+        process_book(mysql, record, file_name, ext, NULL, inp);
 
         if (0 != inp.size()) {
             ++records;
