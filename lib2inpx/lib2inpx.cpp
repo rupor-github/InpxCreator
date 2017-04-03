@@ -541,9 +541,9 @@ void get_book_squence(const mysql_connection& mysql, const string& book_id, stri
     } else {
         str = "SELECT `SeqId`,`SeqNumb` FROM libseq WHERE BookId=" + book_id;
         if (g_series_type == eAuthorST) {
-            str += " ORDER BY Type ASC";
+            str += " ORDER BY Type ASC, Level ASC";
         } else if (g_series_type == ePublisherST) {
-            str += " ORDER BY Type DESC";
+            str += " ORDER BY Type DESC, Level ASC";
         }
     }
 
