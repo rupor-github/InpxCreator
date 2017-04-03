@@ -74,7 +74,7 @@ static checking_type g_strict = eFileExt;
 enum fb2_parsing { eReadNone = 0, eReadLast, eReadAll };
 static fb2_parsing g_read_fb2 = eReadNone;
 
-enum fb2_preference { eIgnoreFB2 = 0, eMergeFB2, eReplaceFB2 };
+enum fb2_preference { eIgnoreFB2 = 0, eMergeFB2, eComplementFB2, eReplaceFB2 };
 static fb2_preference g_fb2_preference = eIgnoreFB2;
 
 enum processing_type { eFB2 = 0, eUSR, eAll };
@@ -535,14 +535,19 @@ void get_book_squence(const mysql_connection& mysql, const string& book_id, stri
     string str;
 
     if (e20100206 == g_format) {
-        str = "SELECT `sid`,`SeqNumb` FROM libseq WHERE bid=";
+        str = "SELECT `sid`,`SeqNumb` FROM libseq WHERE bid=" + book_id;
     } else if ((e20100317 == g_format) || (e20100411 == g_format) || (e20111106 == g_format)) {
-        str = "SELECT `sid`,`sn` FROM libseq WHERE bid=";
+        str = "SELECT `sid`,`sn` FROM libseq WHERE bid=" + book_id;
     } else {
-        str = "SELECT `SeqId`,`SeqNumb` FROM libseq WHERE BookId=";
+        str = "SELECT `SeqId`,`SeqNumb` FROM libseq WHERE BookId=" + book_id;
+        if (g_series_type == eAuthorST) {
+            str += " ORDER BY Type ASC";
+        } else if (g_series_type == ePublisherST) {
+            str += " ORDER BY Type DESC";
+        }
     }
 
-    mysql.query(str + book_id + ";");
+    mysql.query(str + ";");
 
     mysql_results seq(mysql);
 
@@ -618,6 +623,11 @@ void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string&
 
         if (g_fb2_preference == eMergeFB2) {
             if (seq_name.size() > 0) {
+                book_sequence     = seq_name;
+                book_sequence_num = seq_num;
+            }
+        } else if (g_fb2_preference == eComplementFB2) {
+            if (book_sequence.size() == 0) {
                 book_sequence     = seq_name;
                 book_sequence_num = seq_num;
             }
@@ -1111,8 +1121,8 @@ int main(int argc, char* argv[])
 		("db-name",     po::value< string >(), "Name of MYSQL database (default: flibusta)")
 		("archives",    po::value< string >(), "Path(s) to off-line archives. Multiple entries should be separated by ';'. Each path must be valid and must point to some archives, or processing would be aborted. (If not present - entire database is converted for online usage)")
 		("read-fb2",    po::value< string >(), "When archived book is not present in the database - try to parse fb2 in archive to get information. \"all\" - do it for all absent books, \"last\" - only process books with ids larger than last database id (If not present - no fb2 parsing)")
-		("prefer-fb2",  po::value< string >(), "Try to parse fb2 in archive to get information (default: ignore). \"ignore\" - ignore fb2 information, \"merge\" - always prefer book sequence info from fb2, \"replace\" - always use book sequence info from fb2")
-		("sequence",    po::value< string >(), "How to process sequence types from database (default: author). \"author\" - always select author's book sequence, \"publisher\" - always select publisher's book sequence, \"ignore\" - don't do any processing. Only relevant for librusec database format 2011-11-06")
+		("prefer-fb2",  po::value< string >(), "Parse fb2 in archive to get sequence information (default: ignore). \"ignore\" - ignore information from fb2, \"merge\" - prefer info from fb2, \"complement\" - prefer info from database, \"replace\" - always use info from fb2")
+		("sequence",    po::value< string >(), "How to process sequence types from database (default: ignore). \"ignore\" - don't do any processing. For librusec database format 2011-11-06: \"author\" - always select author's book sequence, \"publisher\" - always select publisher's book sequence. For flibusta: \"author\" - prefer author's book sequence, \"publisher\" - prefer publisher's book sequence")
 		("out-dir",     po::value< string >(), "Where to put resulting inpx file and temporary MySQL database (default: <program_path>)")
 		("inpx",        po::value< string >(), "Full name of output file (default: <program_path>/data/<db_name>_<db_dump_date>.inpx)")
 		("comment",     po::value< string >(), "File name of template (UTF-8) for INPX comment")
@@ -1194,6 +1204,8 @@ int main(int argc, char* argv[])
                 g_fb2_preference = eIgnoreFB2;
             } else if (0 == strcasecmp(opt.c_str(), "merge")) {
                 g_fb2_preference = eMergeFB2;
+            } else if (0 == strcasecmp(opt.c_str(), "complement")) {
+                g_fb2_preference = eComplementFB2;
             } else if (0 == strcasecmp(opt.c_str(), "replace")) {
                 g_fb2_preference = eReplaceFB2;
             } else {
