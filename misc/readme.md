@@ -4,7 +4,7 @@
 
 Примеры вызовов всех програм можно посмотреть в прилагающихся [PowerShell](https://github.com/rupor-github/InpxCreator/blob/master/scripts/fb2_flibusta.ps1) или [bash](https://github.com/rupor-github/InpxCreator/blob/master/scripts/fb2_flibusta.sh) скриптах. Все вместе утилиты позволяют накапливать библиотеки и создавать INPX индексы автоматически, практически без ручного вмешательста.
 
-**libget2** "загружает" index.html с flibusta (librusec), распарсывает его, анализирует уже имеющиеся архивы и грузит последние дампы базы данных и новые, не имеющиеся локально дневные обновления библиотек как напрямую, так и через socks proxy. Детальная конфигурация в файле libget2.conf. Пример работы:
+**libget2** "загружает" index.html с flibusta (librusec), распарсывает его, анализирует уже имеющиеся архивы и грузит последние дампы базы данных и новые, не имеющиеся локально дневные обновления библиотек как напрямую, так и через socks proxy. Детальная конфигурация в файле [libget2.conf](https://github.com/rupor-github/InpxCreator/blob/master/misc/libget2.conf). Пример работы:
 
 ```
 Downloading flibusta ...
