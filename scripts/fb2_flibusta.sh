@@ -15,7 +15,8 @@ fi
 
 name="flibusta"
 retries=10
-timeout=90
+timeout=300
+chunksize = 1
 
 # -----------------------------------------------------------------------------
 # Main body
@@ -40,6 +41,7 @@ ${mydir}/libget2 \
 	--library is_${name} \
 	--retry ${retries} \
 	--timeout ${timeout} \
+	--chunksize ${chunksize} \
 	--continue --to ${udir} \
 	--tosql ${wdir} \
 	--config ${mydir}/libget2.conf
@@ -79,6 +81,7 @@ ${mydir}/lib2inpx \
 	--db-name=${name} \
 	--process=fb2 \
 	--read-fb2=all \
+	--prefer-fb2=complement \
 	--out-dir=${odir} \
 	--quick-fix \
 	--clean-when-done \

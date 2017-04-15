@@ -287,7 +287,7 @@ func main() {
 		name := filepath.Join(u.dir, u.info.Name())
 		rc, err := zip.OpenReader(name)
 		if err != nil {
-			log.Print("\tError opening update file %s, skipping: %v", filepath.Join(u.dir, u.info.Name()), err)
+			log.Printf("\tError opening update file %s, skipping: %v", filepath.Join(u.dir, u.info.Name()), err)
 			continue
 		}
 		fmt.Printf("\tProcessing update: %s\n", filepath.Join(u.dir, u.info.Name()))

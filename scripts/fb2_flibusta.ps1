@@ -35,7 +35,8 @@ $host.UI.RawUI.BufferSize = new-object System.Management.Automation.Host.Size(51
 
 $name    = "flibusta"
 $retries = 10
-$timeout = 90
+$timeout = 300
+$chunksize = 1
 
 $mydir   = Get-ScriptDirectory
 $wdir    = Join-Path $archive_path ($name + (get-date -format "_yyyyMMdd_HHmmss"))
@@ -58,7 +59,7 @@ Wake-Synology
 
 Write-Output "Downloading $name ..."
 
-& $mydir/libget2 --verbose --library is_$name --retry $retries --timeout $timeout --continue --to $udir --tosql $wdir --config $mydir/libget2.conf 2>&1 | Write-Host
+& $mydir/libget2 --verbose --library is_$name --retry $retries --timeout $timeout --chunksize $chunksize --continue --to $udir --tosql $wdir --config $mydir/libget2.conf 2>&1 | Write-Host
 
 if( $LASTEXITCODE -eq 1 ) { Write-Error "LIBGET error!"; Power-Balanced; exit 0 }
 if( $LASTEXITCODE -eq 0 ) { Write-Output "No archive updates..."; Power-Balanced; exit 0 }

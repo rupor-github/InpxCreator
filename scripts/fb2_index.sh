@@ -35,6 +35,7 @@ ${mydir}/lib2inpx \
 	--db-name=${name} \
 	--process=fb2 \
 	--read-fb2=all \
+	--prefer-fb2=complement \
 	--out-dir=${odir} \
 	--quick-fix \
 	--clean-when-done \
