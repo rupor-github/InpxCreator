@@ -16,7 +16,7 @@ fi
 name="flibusta"
 retries=10
 timeout=300
-chunksize = 1
+chunksize=1
 
 # -----------------------------------------------------------------------------
 # Main body
