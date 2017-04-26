@@ -411,13 +411,15 @@ void get_book_author(const mysql_connection& mysql, const string& book_id, strin
 
     mysql.query(str);
 
-    mysql_results avtor_ids(mysql);
-    if ((e20100206 == g_format) || (e20100317 == g_format) || (e20100411 == g_format) || (e20111106 == g_format)) {
+    if ((e20100206 == g_format) || (e20100317 == g_format) || (e20100411 == g_format)) {
         str = "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE aid=";
+    } else if  (e20111106 == g_format) {
+        str = "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtors WHERE aid=";
     } else {
         str = "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE AvtorId=";
     }
 
+    mysql_results avtor_ids(mysql);
     while (record = avtor_ids.fetch_row()) {
         string good_author_id(record[0]);
 
@@ -554,7 +556,8 @@ void get_book_squence(const mysql_connection& mysql, const string& book_id, stri
     while (record = seq.fetch_row()) {
         string seq_id(record[0]);
 
-        seq_numb = record[1];
+        // Make sure this is integer
+        seq_numb = tmp_str("%d", (int)atof(record[1])).c_str();
 
         if ((e20100206 == g_format) || (e20100317 == g_format) || (e20100411 == g_format)) {
             str = "SELECT SeqName FROM libseqname WHERE sid=";
