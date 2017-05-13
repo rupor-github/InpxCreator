@@ -24,7 +24,7 @@
 # to the terms and conditions of the GPL as it is applied to
 # this software, see the FLOSS License Exception available on
 # mysql.com.
-if(WIN32)
+if(CMAKE_CROSSCOMPILING OR WIN32)
 	if($ENV{MSYSTEM} STREQUAL "MINGW32")
 		file(GLOB SEARCH_INCLUDES "${CMAKE_SOURCE_DIR}/mysql-*-win32/include" "$ENV{MYSQL_DIR}/include")
 		file(GLOB SEARCH_LIBS "${CMAKE_SOURCE_DIR}/mysql-*-win32/lib" "$ENV{MYSQL_DIR}/lib")
@@ -40,8 +40,8 @@ else()
 	file(GLOB SEARCH_LIBS "${CMAKE_SOURCE_DIR}/mysql-*-linux-glibc2.5-*/lib" "$ENV{MYSQL_DIR}/lib")
 endif()
 
-if(WIN32)
-    find_path(MYSQL_INCLUDE_DIR NAMES mysql.h PATHS ${SEARCH_INCLUDES})
+if(CMAKE_CROSSCOMPILING OR WIN32)
+    find_path(MYSQL_INCLUDE_DIR NAMES mysql.h PATHS ${SEARCH_INCLUDES} NO_CMAKE_FIND_ROOT_PATH)
 else()
     find_path(MYSQL_INCLUDE_DIR NAMES mysql.h
         PATHS ${SEARCH_INCLUDES}
@@ -55,8 +55,8 @@ else()
 		/usr/local/mysql/include/mysql)
 endif()
 
-if(WIN32)
-	find_library(MYSQL_LIBRARIES NAMES mysqld PATHS ${SEARCH_LIBS})
+if(CMAKE_CROSSCOMPILING OR WIN32)
+	find_library(MYSQL_LIBRARIES NAMES mysqld PATHS ${SEARCH_LIBS} NO_CMAKE_FIND_ROOT_PATH)
 else()
 	find_library(MYSQL_LIBRARIES NAMES mysqld
 		PATHS ${SEARCH_LIBS}
