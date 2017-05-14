@@ -81,11 +81,16 @@ for _mingw in ${ARCH_INSTALLS}; do
 		)
 
 		(
-			[ -f lib2inpx-${_arch}.7z ] && rm lib2inpx-${_arch}.7z
+			if [ -z ${_msystem} ]; then
+				[ -f lib2inpx-${_arch}.xz ] && rm lib2inpx-${_arch}.xz
 
-			cd ${_dist}
+				tar --directory ${_dist} --create --xz --file lib2inpx-${_arch}.tar.xz .
+			else
+				[ -f lib2inpx-${_arch}.7z ] && rm lib2inpx-${_arch}.7z
 
-			7z a -r ../lib2inpx-${_arch}
+				cd ${_dist}
+				7z a -r ../lib2inpx-${_arch}
+			fi
 		)
 	else
 		print_warning "You don't have installed mingw-w64 toolchain for ${_mingw}."
