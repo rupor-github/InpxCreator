@@ -18,6 +18,10 @@ set(PRJ_VERSION_MINOR 0)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
+if(WIN32 AND NOT DEFINED ENV{MSYSTEM})
+    message(FATAL_ERROR "Currently unsuppored environment. Use MINGW for Windows builds. CMake willl exit now.")
+endif()
+
 if(CMAKE_CROSSCOMPILING OR WIN32)
     # Cannot win here - libwinpthread-1.dll will still be required on run-time (unless somebody rebuilds mingw compilers in MSYS2 with win32 threads)
     if($ENV{MSYSTEM} STREQUAL "MINGW32")
@@ -104,6 +108,7 @@ find_package(Glide 0.12 REQUIRED)
 set(GO_PATH "${CMAKE_BINARY_DIR}/go")
 
 if(CMAKE_CROSSCOMPILING)
+    # Set Go target environments
     if($ENV{MSYSTEM} STREQUAL "MINGW32")
         set(CROSS_GOOS windows)
         set(CROSS_GOARCH 386)
@@ -128,7 +133,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX}
 	# setting up source tree
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libget2/ go/src/libget2
 	# Building
-    COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH} ${GO_EXECUTABLE} build libget2
+	COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH} ${GO_EXECUTABLE} build libget2
 	COMMENT "Building GO program - libget2")
 add_custom_target(libget2_exe ALL DEPENDS ${CMAKE_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX})
 install(PROGRAMS ${CMAKE_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
@@ -141,7 +146,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX}
 	# setting up source tree
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libmerge/ go/src/libmerge
 	# Building
-    COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH} ${GO_EXECUTABLE} build libmerge
+	COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH} ${GO_EXECUTABLE} build libmerge
 	COMMENT "Building GO program - libmerge")
 add_custom_target(libmerge_exe ALL DEPENDS ${CMAKE_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX})
 install(PROGRAMS ${CMAKE_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
