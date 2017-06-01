@@ -80,7 +80,7 @@ static fb2_preference g_fb2_preference = eIgnoreFB2;
 enum processing_type { eFB2 = 0, eUSR, eAll };
 static processing_type g_process = eFB2;
 
-enum database_format { eDefault = 0, e20100206, e20100317, e20100411, e20111106 };
+enum database_format { eDefault = 0, e20100206, e20100317, e20100411, e20111106, e20170531 };
 static database_format g_format = eDefault;
 
 enum inpx_format { e1X = 0, e2X, eRUKS };
@@ -400,20 +400,20 @@ void get_book_author(const mysql_connection& mysql, const string& book_id, strin
 
     string str;
 
-    if ((e20100206 == g_format) || (e20100317 == g_format) || (e20100411 == g_format) || (e20111106 == g_format)) {
+    if (eDefault != g_format) {
         str = "SELECT `aid` FROM `libavtor` WHERE bid=";
     } else {
         str = "SELECT `AvtorId` FROM `libavtor` WHERE BookId=";
     }
 
     str += book_id;
-    str += (e20100411 == g_format) || ((e20111106 == g_format)) ? " AND role=\"a\";" : ";";
+    str += ((e20100411 == g_format) || (e20111106 == g_format) || (e20170531 == g_format)) ? " AND role=\"a\";" : ";";
 
     mysql.query(str);
 
     if ((e20100206 == g_format) || (e20100317 == g_format) || (e20100411 == g_format)) {
         str = "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE aid=";
-    } else if  (e20111106 == g_format) {
+    } else if ((e20111106 == g_format) || (e20170531 == g_format)) {
         str = "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtors WHERE aid=";
     } else {
         str = "SELECT `FirstName`,`MiddleName`,`LastName` FROM libavtorname WHERE AvtorId=";
@@ -423,7 +423,7 @@ void get_book_author(const mysql_connection& mysql, const string& book_id, strin
     while (record = avtor_ids.fetch_row()) {
         string good_author_id(record[0]);
 
-        if (e20111106 == g_format) {
+        if ((e20111106 == g_format) || (e20170531 == g_format)) {
             mysql.query(string("SELECT `main` FROM libavtors WHERE aid=") + good_author_id + ";");
             {
                 mysql_results ids(mysql);
@@ -503,7 +503,7 @@ void get_book_genres(const mysql_connection& mysql, const string& book_id, strin
         str = "SELECT GenreCode FROM libgenrelist WHERE gid=";
     } else if (e20100411 == g_format) {
         str = "SELECT code FROM libgenrelist WHERE gid=";
-    } else if (e20111106 == g_format) {
+    } else if ((e20111106 == g_format) || (e20170531 == g_format)) {
         str = "SELECT code FROM libgenres WHERE gid=";
     } else {
         str = "SELECT GenreCode FROM libgenrelist WHERE GenreId=";
@@ -538,7 +538,7 @@ void get_book_squence(const mysql_connection& mysql, const string& book_id, stri
 
     if (e20100206 == g_format) {
         str = "SELECT `sid`,`SeqNumb` FROM libseq WHERE bid=" + book_id;
-    } else if ((e20100317 == g_format) || (e20100411 == g_format) || (e20111106 == g_format)) {
+    } else if ((e20100317 == g_format) || (e20100411 == g_format) || (e20111106 == g_format) || (e20170531 == g_format)) {
         str = "SELECT `sid`,`sn` FROM libseq WHERE bid=" + book_id;
     } else {
         str = "SELECT `SeqId`,`SeqNumb` FROM libseq WHERE BookId=" + book_id;
@@ -561,7 +561,7 @@ void get_book_squence(const mysql_connection& mysql, const string& book_id, stri
 
         if ((e20100206 == g_format) || (e20100317 == g_format) || (e20100411 == g_format)) {
             str = "SELECT SeqName FROM libseqname WHERE sid=";
-        } else if (e20111106 == g_format) {
+        } else if ((e20111106 == g_format) || (e20170531 == g_format)) {
             str = "SELECT SeqName FROM libseqs WHERE sid=";
         } else {
             str = "SELECT SeqName FROM libseqname WHERE SeqId=";
@@ -569,7 +569,7 @@ void get_book_squence(const mysql_connection& mysql, const string& book_id, stri
 
         str = str + seq_id;
 
-        if (e20111106 == g_format) {
+        if ((e20111106 == g_format) || (e20170531 == g_format)) {
             if (g_series_type == eAuthorST) {
                 str += " AND type='a'";
             } else if (g_series_type == ePublisherST) {
@@ -636,6 +636,10 @@ void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string&
     string book_md5;
     if ((g_inpx_format == eRUKS) && (record[8] != NULL)) {
         book_md5 = record[8];
+    }
+    string book_replaced;
+    if ((g_inpx_format == eRUKS) && (g_format == e20170531) && (record[9] != NULL)) {
+        book_replaced = record[9];
     }
 
     string book_file(cleanse(file_name));
@@ -712,6 +716,8 @@ void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string&
     inp += sep;
     if (g_inpx_format == eRUKS) {
         inp += book_md5;
+        inp += sep;
+        inp += book_replaced;
         inp += sep;
     }
     inp += "\r\n";
@@ -877,30 +883,54 @@ void process_local_archives(const mysql_connection& mysql, const zip& zz, const 
             if (fb2) {
                 if ((g_process == eAll) || ((g_process == eFB2))) {
                     name_to_bookid(uz.current(), book_id, ext);
-                    if ((e20100206 == g_format) || (e20100317 == g_format) || (e20100411 == g_format) || (e20111106 == g_format)) {
+                    if (eDefault != g_format) {
                         raw_stmt = "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords`%s FROM libbook WHERE bid=%s;";
                     } else {
                         raw_stmt = "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords`%s FROM libbook WHERE BookId=%s;";
                     }
-                    stmt = tmp_str(raw_stmt, (g_inpx_format == eRUKS) ? ",`md5`" : "", book_id.c_str());
+                    if (g_inpx_format != eRUKS) {
+                        stmt = tmp_str(raw_stmt, "", book_id.c_str());
+                    } else {
+                        if (e20170531 == g_format) {
+                            stmt = tmp_str(raw_stmt, ",`md5`,`ReplacedBy`", book_id.c_str());
+                        } else {
+                            stmt = tmp_str(raw_stmt, ",`md5`", book_id.c_str());
+                        }
+                    }
                 } else {
                     fdummy = true;
                 }
             } else {
                 if ((g_process == eAll) || ((g_process == eUSR))) {
                     name_to_bookid(uz.current(), book_id, ext);
-                    if (is_numeric(book_id) && ((e20100411 == g_format) || (e20111106 == g_format))) {
+                    if (is_numeric(book_id) && ((e20100411 == g_format) || (e20111106 == g_format) || (e20170531 == g_format))) {
                         raw_stmt = "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords`%s FROM libbook WHERE bid=%s;";
-                        stmt     = tmp_str(raw_stmt, (g_inpx_format == eRUKS) ? ",`md5`" : "", book_id.c_str());
+                        if (g_inpx_format != eRUKS) {
+                            stmt = tmp_str(raw_stmt, "", book_id.c_str());
+                        } else {
+                            if (e20170531 == g_format) {
+                                stmt = tmp_str(raw_stmt, ",`md5`,`ReplacedBy`", book_id.c_str());
+                            } else {
+                                stmt = tmp_str(raw_stmt, ",`md5`", book_id.c_str());
+                            }
+                        }
                     } else {
-                        if ((e20100206 == g_format) || (e20100317 == g_format) || (e20100411 == g_format) || (e20111106 == g_format)) {
+                        if (eDefault != g_format) {
                             raw_stmt = "SELECT B.bid, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, B.KeyWords%s "
                                        "FROM libbook B, libfilename F WHERE B.bid = F.bid AND F.FileName = \"%s\";";
                         } else {
                             raw_stmt = "SELECT B.BookId, B.Title, B.FileSize, B.FileType, B.Deleted, B.Time, B.Lang, "
                                        "B.KeyWords%s FROM libbook B, libfilename F WHERE B.BookId = F.BookID AND F.FileName = \"%s\";";
                         }
-                        stmt = tmp_str(raw_stmt, (g_inpx_format == eRUKS) ? ", B.md5" : "", uz.current().c_str());
+                        if (g_inpx_format != eRUKS) {
+                            stmt = tmp_str(raw_stmt, "", uz.current().c_str());
+                        } else {
+                            if (e20170531 == g_format) {
+                                stmt = tmp_str(raw_stmt, ", B.md5, B.ReplacedBy", uz.current().c_str());
+                            } else {
+                                stmt = tmp_str(raw_stmt, ", B.md5", uz.current().c_str());
+                            }
+                        }
                     }
                 } else {
                     fdummy = true;
@@ -997,10 +1027,10 @@ void process_database(const mysql_connection& mysql, const zip& zz)
     const char* raw_stmt = (eDefault == g_format) ? "SELECT `BookId`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords`%s FROM libbook %s ORDER BY BookId;"
                                                   : "SELECT `bid`,`Title`,`FileSize`,`FileType`,`Deleted`,`Time`,`Lang`,`keywords`%s FROM libbook %s ORDER BY bid;";
 
-    const char* md5   = (g_inpx_format == eRUKS) ? ",`md5`" : "";
+    const char* extra = (g_inpx_format == eRUKS) ? ((e20170531 == g_format) ? ",`md5`,`ReplacedBy`" : ",`md5`") : "";
     const char* where = (g_process == eFB2) ? "WHERE FileType = 'fb2'" : ((g_process == eUSR) ? "WHERE FileType != 'fb2'" : "");
 
-    stmt = tmp_str(raw_stmt, md5, where);
+    stmt = tmp_str(raw_stmt, extra, where);
 
     long       current = 0;
     long       records = 0;
@@ -1012,7 +1042,7 @@ void process_database(const mysql_connection& mysql, const zip& zz)
 
     long last_filename_id = -1;
 
-    if ((e20100411 == g_format) || (e20111106 == g_format)) {
+    if ((e20100411 == g_format) || (e20111106 == g_format) || (e20170531 == g_format)) {
         if (filenames_table_exist(mysql)) {
             last_filename_id = get_last_filename_id(mysql);
 
@@ -1034,7 +1064,7 @@ void process_database(const mysql_connection& mysql, const zip& zz)
         if (0 == strcasecmp(record[3], ext.c_str())) {
             file_name = record[0];
         } else {
-            if ((e20100411 == g_format) || (e20111106 == g_format)) {
+            if ((e20100411 == g_format) || (e20111106 == g_format) || (e20170531 == g_format)) {
                 if ((last_filename_id < 0) || (last_filename_id < atol(record[0]))) {
                     file_name = record[0];
                     ext       = record[3];
@@ -1127,7 +1157,7 @@ int main(int argc, char* argv[])
 		("inpx",        po::value< string >(), "Full name of output file (default: <program_path>/data/<db_name>_<db_dump_date>.inpx)")
 		("comment",     po::value< string >(), "File name of template (UTF-8) for INPX comment")
 		("update",      po::value< string >(), "Starting with \"<arg>.zip\" produce \"daily_update.zip\" (Works only for \"fb2\")")
-		("db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2011-11-06. (Default - old librusec format before 2010-02-06)")
+		("db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2011-11-06, 2017-05-31. (Default - old librusec format before 2010-02-06)")
 		("clean-authors",                      "Clean duplicate authors (librusec)")
 		("clean-aliases",                      "Fix libavtoraliase table (flibusta)")
 		("inpx-format", po::value< string >(), "INPX format, Supported: 1.x, 2.x, ruks (Default - new MyHomeLib format 2.x)")
@@ -1252,6 +1282,8 @@ int main(int argc, char* argv[])
                 g_format = e20100411;
             } else if (0 == strcasecmp(opt.c_str(), "2011-11-06")) {
                 g_format = e20111106;
+            } else if (0 == strcasecmp(opt.c_str(), "2017-05-31")) {
+                g_format = e20170531;
             } else {
                 wcout << endl << "Warning: unknown database format, will use default!" << endl << flush;
                 g_format = eDefault;
@@ -1300,7 +1332,7 @@ int main(int argc, char* argv[])
         }
 
         if (vm.count("clean-aliases"))
-            if (e20111106 != g_format) {
+            if ((e20111106 != g_format) && (e20170531 != g_format)) {
                 g_clean_aliases = true;
             }
 
@@ -1441,7 +1473,7 @@ int main(int argc, char* argv[])
         }
 
         {
-            string table_name = (e20111106 == g_format) ? "libavtors" : "libavtorname";
+            string table_name = ((e20111106 == g_format) || (e20170531 == g_format)) ? "libavtors" : "libavtorname";
 
             mysql_connection mysql(g_outdir.c_str(), g_db_name.c_str(), db_name.c_str());
 
@@ -1514,7 +1546,7 @@ int main(int argc, char* argv[])
             }
 
             // Starting from 03/19/2017 flibusta stopped exporting lib.libavtoraliase.sql
-            if (e20111106 != g_format) {
+            if ((e20111106 != g_format) && (e20170531 != g_format)) {
                 g_have_alias_table = authoraliases_table_exist(mysql);
                 if (!g_have_alias_table) {
                     wcout << endl << "Warning: absent \"lib.libavtoraliase.sql\"! For some authors names could be incorrect..." << endl << flush;
