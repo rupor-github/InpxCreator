@@ -83,7 +83,7 @@ static processing_type g_process = eFB2;
 enum database_format { eDefault = 0, e20100206, e20100317, e20100411, e20111106, e20170531 };
 static database_format g_format = eDefault;
 
-enum inpx_format { e1X = 0, e2X, eRUKS };
+enum inpx_format { e2X = 0, eRUKS };
 static inpx_format g_inpx_format = e2X;
 
 enum series_type { eIgnoreST = 0, eAuthorST, ePublisherST };
@@ -658,10 +658,10 @@ void process_book(const mysql_connection& mysql, MYSQL_ROW record, const string&
     unz_file_info64 fi;
 
     if (g_fb2_preference == eReplaceFB2) {
-	    if ((puz != NULL) && read_fb2(*puz, book_id, fb, fi, err)) {
-	    	book_sequence     = fb.m_seq_name;
-		    book_sequence_num = fb.m_seq;
-	    }
+        if ((puz != NULL) && read_fb2(*puz, book_id, fb, fi, err)) {
+            book_sequence     = fb.m_seq_name;
+            book_sequence_num = fb.m_seq;
+        }
     } else {
         get_book_squence(mysql, book_id, book_sequence, book_sequence_num);
 
@@ -1160,7 +1160,7 @@ int main(int argc, char* argv[])
 		("db-format",   po::value< string >(), "Database format, change date (YYYY-MM-DD). Supported: 2010-02-06, 2010-03-17, 2010-04-11, 2011-11-06, 2017-05-31. (Default - old librusec format before 2010-02-06)")
 		("clean-authors",                      "Clean duplicate authors (librusec)")
 		("clean-aliases",                      "Fix libavtoraliase table (flibusta)")
-		("inpx-format", po::value< string >(), "INPX format, Supported: 1.x, 2.x, ruks (Default - new MyHomeLib format 2.x)")
+		("inpx-format", po::value< string >(), "INPX format, Supported: 2.x, ruks (Default - MyHomeLib format 2.x)")
 		("quick-fix",                          "Enforce MyHomeLib database size limits, works with fix-config parameter. (default: MyHomeLib 1.6.2 constrains)")
 		("fix-config",  po::value< string >(), "Allows to specify configuration file with MyHomeLib database size constrains")
 		("verbose",                            "More output... (default: off)")
@@ -1292,9 +1292,7 @@ int main(int argc, char* argv[])
 
         if (vm.count("inpx-format")) {
             string opt = vm["inpx-format"].as<string>();
-            if (0 == strcasecmp(opt.c_str(), "1.x")) {
-                g_inpx_format = e1X;
-            } else if (0 == strcasecmp(opt.c_str(), "2.x")) {
+            if (0 == strcasecmp(opt.c_str(), "2.x")) {
                 g_inpx_format = e2X;
             } else if (0 == strcasecmp(opt.c_str(), "ruks")) {
                 g_inpx_format = eRUKS;
@@ -1419,8 +1417,8 @@ int main(int argc, char* argv[])
                         string new_dump_date = get_dump_date(path + x.path().filename().string());
 
                         if (dump_date != new_dump_date) {
-                            throw runtime_error(tmp_str("Source dump files do not have the same date (%s) \"%s\" (%s)",
-                                dump_date.c_str(), x.path().filename().string().c_str(), new_dump_date.c_str()));
+                            throw runtime_error(
+                                tmp_str("Source dump files do not have the same date (%s) \"%s\" (%s)", dump_date.c_str(), x.path().filename().string().c_str(), new_dump_date.c_str()));
                         }
                     }
                 }
@@ -1556,8 +1554,7 @@ int main(int argc, char* argv[])
             if (g_clean_authors) {
                 MYSQL_ROW record;
 
-                mysql.query(tmp_str("SELECT Firstname, Middlename, Lastname, Nickname FROM %s GROUP BY Firstname, Middlename, Lastname, Nickname HAVING COUNT(*) > 1",
-                    table_name.c_str()));
+                mysql.query(tmp_str("SELECT Firstname, Middlename, Lastname, Nickname FROM %s GROUP BY Firstname, Middlename, Lastname, Nickname HAVING COUNT(*) > 1", table_name.c_str()));
                 mysql_results dupes(mysql);
 
                 wcout << endl << "Processing duplicate authors" << endl << flush;
@@ -1660,20 +1657,16 @@ int main(int argc, char* argv[])
                 }
             }
 
-            if ((e2X == g_inpx_format) || (eRUKS == g_inpx_format)) {
+            {
                 zip_writer zw(zz, "collection.info");
                 zw(collection_comment);
                 zw.close();
-            } else {
-                zip_writer zw(zz, "structure.info");
-                zw("AUTHOR;GENRE;TITLE;SERIES;SERNO;FILE;SIZE;LIBID;DEL;EXT;DATE;LANG;LIBRATE;KEYWORDS;");
+            }
+            {
+                zip_writer zw(zz, "version.info");
+                zw(dump_date + "\r\n");
                 zw.close();
             }
-
-            zip_writer zw(zz, "version.info");
-            zw(dump_date + "\r\n");
-            zw.close();
-
             zz.close();
 
             wcout << endl << "Complete processing took " << utf8_to_wchar(td.passed()) << endl << endl << flush;
