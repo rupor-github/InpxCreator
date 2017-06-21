@@ -214,6 +214,15 @@ lib2inpx-linux_x86_64.tar.xz
 [Bb]in_linux_i686
 [Bb]in_linux_x86_64
 
+mariadb-??.?.?-linux-glibc_214-x86_64.tar.gz
+mariadb-??.?.?-linux-glibc_214-x86_64/**
+mariadb-??.?.?-linux-glibc_214-i686.tar.gz
+mariadb-??.?.?-linux-glibc_214-i686i/**
+mariadb-??.?.?-win32.zip
+mariadb-??.?.?-win32/**
+mariadb-??.?.?-winx64.zip
+mariadb-??.?.?-winx64/**
+
 mysql-?.?.??-linux-glibc2.5-x86_64.tar.gz
 mysql-?.?.??-linux-glibc2.5-x86_64/**
 mysql-?.?.??-linux-glibc2.5-i686.tar.gz

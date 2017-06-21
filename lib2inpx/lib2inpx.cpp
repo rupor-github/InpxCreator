@@ -11,6 +11,7 @@
 #include <limits.h>
 
 #include <mysql.h>
+#include <mysql_version.h>
 
 #include <algorithm>
 #include <string>
@@ -129,8 +130,8 @@ static const char* dummy = "dummy:"
                            "\x04"
                            "\r\n";
 
-static const char* options_pattern[] = {"%s", "--defaults-file=%s/mysql.ini", "--datadir=%s/data", "--language=%s/language", "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s",
-    "--innodb_log_group_home_dir=%s/data/dbtmp_%s", "--innodb_tmpdir=%s/data/dbtmp_%s", "--log_syslog=0", NULL};
+static const char* options_pattern[] = {"%s", "--defaults-file=%s/mysql.ini", "--datadir=%s/data", "--language=%s/language", "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s/",
+    "--innodb_log_group_home_dir=%s/data/dbtmp_%s/", "--innodb_tmpdir=%s/data/dbtmp_%s/", "--log_syslog=0", NULL};
 
 class mysql_connection : boost::noncopyable {
     enum { num_options = sizeof(options_pattern) / sizeof(char*) };
@@ -155,6 +156,7 @@ class mysql_connection : boost::noncopyable {
                     sprintf(mem, pattern, path, dbname);
                 }
                 m_options[ni] = mem;
+                printf("option %d : %s\n", ni, mem);
             }
             if (mysql_library_init(num_options - 1, m_options, NULL)) {
                 throw runtime_error(tmp_str("Could not initialize MySQL library (%s)", mysql_error(m_mysql)));
