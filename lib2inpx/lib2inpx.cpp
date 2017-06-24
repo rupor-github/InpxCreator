@@ -130,8 +130,13 @@ static const char* dummy = "dummy:"
                            "\x04"
                            "\r\n";
 
+#ifdef MARIADB_BASE_VERSION
+static const char* options_pattern[] = {"%s", "--defaults-file=%s/mysql.ini", "--datadir=%s/data", "--language=%s/language", "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s/",
+    "--innodb_log_group_home_dir=%s/data/dbtmp_%s/", "--innodb_tmpdir=%s/data/dbtmp_%s/", "--innodb_fast_shutdown=2", "--log-error=%s/data/errors.log", "--log_warnings=2", NULL};
+#else
 static const char* options_pattern[] = {"%s", "--defaults-file=%s/mysql.ini", "--datadir=%s/data", "--language=%s/language", "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s/",
     "--innodb_log_group_home_dir=%s/data/dbtmp_%s/", "--innodb_tmpdir=%s/data/dbtmp_%s/", "--log_syslog=0", NULL};
+#endif
 
 class mysql_connection : boost::noncopyable {
     enum { num_options = sizeof(options_pattern) / sizeof(char*) };
@@ -142,6 +147,11 @@ class mysql_connection : boost::noncopyable {
     mysql_connection(const char* path, const char* name, const char* dbname) : m_mysql(NULL)
     {
         if (0 == m_initialized) {
+
+            if (g_verbose) {
+                wcout << endl << "MySQL options: " << endl << flush;
+            }
+
             for (int ni = 0; ni < num_options; ++ni) {
                 const char* pattern = options_pattern[ni];
                 if (NULL == pattern) {
@@ -156,7 +166,9 @@ class mysql_connection : boost::noncopyable {
                     sprintf(mem, pattern, path, dbname);
                 }
                 m_options[ni] = mem;
-                printf("option %d : %s\n", ni, mem);
+                if (g_verbose) {
+                    wcout << "Option " << setw(4) << ni << ": " << utf8_to_wchar(mem) << endl << flush;
+                }
             }
             if (mysql_library_init(num_options - 1, m_options, NULL)) {
                 throw runtime_error(tmp_str("Could not initialize MySQL library (%s)", mysql_error(m_mysql)));
@@ -1685,6 +1697,15 @@ int main(int argc, char* argv[])
 
             string file_to_del = string(g_outdir) + "/data/auto.cnf";
             fs::remove(file_to_del);
+
+#ifdef MARIADB_BASE_VERSION
+            file_to_del.assign(data_dir + "/aria_log.00000001");
+            fs::remove(file_to_del);
+            file_to_del.assign(data_dir + "/aria_log_control");
+            fs::remove(file_to_del);
+            file_to_del.assign(data_dir + "/errors.log");
+            fs::remove(file_to_del);
+#endif
 
             if (fs::is_empty(data_dir)) {
                 fs::remove(data_dir);
