@@ -131,20 +131,20 @@ static const char* dummy = "dummy:"
                            "\r\n";
 
 #ifdef MARIADB_BASE_VERSION
-static const char* options_pattern[] = {"%s", "--defaults-file=%s/mysql.ini", "--datadir=%s/data", "--language=%s/language", "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s/",
-    "--innodb_log_group_home_dir=%s/data/dbtmp_%s/", "--innodb_tmpdir=%s/data/dbtmp_%s/", "--innodb_fast_shutdown=2", "--log-error=%s/data/errors.log", "--log_warnings=2", NULL};
+static const char* options_pattern[] = {"%s", "--defaults-file=%sdata/mysql.ini", "--language=%s/language", "--datadir=%sdata", "--skip-grant-tables", "--innodb_data_home_dir=%sdata/dbtmp_%s",
+    "--innodb_log_group_home_dir=%sdata/dbtmp_%s", "--innodb_tmpdir=%sdata/dbtmp_%s", "--log_warnings=2", NULL};
 #else
-static const char* options_pattern[] = {"%s", "--defaults-file=%s/mysql.ini", "--datadir=%s/data", "--language=%s/language", "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s/",
-    "--innodb_log_group_home_dir=%s/data/dbtmp_%s/", "--innodb_tmpdir=%s/data/dbtmp_%s/", "--log_syslog=0", NULL};
+static const char* options_pattern[] = {"%s", "--defaults-file=%sdata/mysql.ini", "--language=%s/language", "--datadir=%sdata", "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s",
+    "--innodb_log_group_home_dir=%sdata/dbtmp_%s", "--innodb_tmpdir=%sdata/dbtmp_%s", "--log_syslog=0", NULL};
 #endif
 
-class mysql_connection : boost::noncopyable {
+class mysql_connection {
     enum { num_options = sizeof(options_pattern) / sizeof(char*) };
 
     char* m_options[num_options];
 
   public:
-    mysql_connection(const char* path, const char* name, const char* dbname) : m_mysql(NULL)
+    mysql_connection(const char* module_path, const char* path, const char* name, const char* dbname) : m_mysql(NULL)
     {
         if (0 == m_initialized) {
 
@@ -162,6 +162,8 @@ class mysql_connection : boost::noncopyable {
 
                 if (0 == ni) {
                     sprintf(mem, pattern, name);
+                } else if (2 == ni) {
+                    sprintf(mem, pattern, module_path);
                 } else {
                     sprintf(mem, pattern, path, dbname);
                 }
@@ -238,7 +240,7 @@ class mysql_connection : boost::noncopyable {
 
 int mysql_connection::m_initialized = 0;
 
-class mysql_results : boost::noncopyable {
+class mysql_results {
   public:
     mysql_results(const mysql_connection& mysql) : m_mysql(mysql), m_results(NULL) { m_results = mysql_store_result(m_mysql); }
 
@@ -298,8 +300,12 @@ void prepare_mysql(const char* path, const string& dbname)
         fs::create_directories(path);
     }
 
-    string config = string(path) + "/mysql.ini";
+    string config = string(path) + "/data";
+    if (0 != access(config.c_str(), 6)) {
+        fs::create_directories(config.c_str());
+    }
 
+    config = string(path) + "/data/mysql.ini";
     if (0 != access(config.c_str(), 6)) {
         ofstream out(config.c_str());
 
@@ -312,12 +318,7 @@ void prepare_mysql(const char* path, const string& dbname)
         }
     }
 
-    config = string(path) + "/data";
-    if (0 != access(config.c_str(), 6)) {
-        fs::create_directories(config.c_str());
-    }
-
-    config += "/dbtmp_" + dbname;
+    config = string(path) + "/data/dbtmp_" + dbname;
     if (0 != access(config.c_str(), 6)) {
         fs::create_directories(config.c_str());
     }
@@ -1487,7 +1488,7 @@ int main(int argc, char* argv[])
         {
             string table_name = ((e20111106 == g_format) || (e20170531 == g_format)) ? "libavtors" : "libavtorname";
 
-            mysql_connection mysql(g_outdir.c_str(), g_db_name.c_str(), db_name.c_str());
+            mysql_connection mysql(module_path, g_outdir.c_str(), g_db_name.c_str(), db_name.c_str());
 
             if (!g_no_import) {
                 wcout << endl << "Creating MYSQL database \"" << utf8_to_wchar(db_name) << "\"" << endl << endl << flush;
@@ -1695,15 +1696,16 @@ int main(int argc, char* argv[])
             string db_dir = data_dir + db_name + "/";
             fs::remove_all(db_dir.c_str());
 
-            string file_to_del = string(g_outdir) + "/data/auto.cnf";
+            string file_to_del = data_dir + "/auto.cnf";
+            fs::remove(file_to_del);
+
+            file_to_del.assign(data_dir + "/mysql.ini");
             fs::remove(file_to_del);
 
 #ifdef MARIADB_BASE_VERSION
             file_to_del.assign(data_dir + "/aria_log.00000001");
             fs::remove(file_to_del);
             file_to_del.assign(data_dir + "/aria_log_control");
-            fs::remove(file_to_del);
-            file_to_del.assign(data_dir + "/errors.log");
             fs::remove(file_to_del);
 #endif
 
