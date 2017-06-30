@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
-ver_major=10.2
-ver_minor=6
+ver_major=10.1
+ver_minor=24
 
 from_url="https://downloads.mariadb.org/interstitial"
 

@@ -1,5 +1,3 @@
-# Copied form MySQL.cmake
-
 if(CMAKE_CROSSCOMPILING OR WIN32)
 	if($ENV{MSYSTEM} STREQUAL "MINGW32")
 		file(GLOB SEARCH_INCLUDES "${CMAKE_SOURCE_DIR}/mariadb-*-win32/include/mysql" "$ENV{MYSQL_DIR}/include")
@@ -17,9 +15,9 @@ else()
 endif()
 
 if(CMAKE_CROSSCOMPILING OR WIN32)
-    find_path(MYSQL_INCLUDE_DIR NAMES mysql.h PATHS ${SEARCH_INCLUDES} NO_CMAKE_FIND_ROOT_PATH)
+    find_path(MARIADB_INCLUDE_DIR NAMES mysql.h PATHS ${SEARCH_INCLUDES} NO_CMAKE_FIND_ROOT_PATH)
 else()
-    find_path(MYSQL_INCLUDE_DIR NAMES mysql.h
+    find_path(MARIADB_INCLUDE_DIR NAMES mysql.h
         PATHS ${SEARCH_INCLUDES}
 		/usr/include/mysql
 		/usr/local/include/mysql
@@ -32,9 +30,9 @@ else()
 endif()
 
 if(CMAKE_CROSSCOMPILING OR WIN32)
-	find_library(MYSQL_LIBRARIES NAMES mysqld PATHS ${SEARCH_LIBS} NO_CMAKE_FIND_ROOT_PATH)
+	find_library(MARIADB_LIBRARIES NAMES mysqld PATHS ${SEARCH_LIBS} NO_CMAKE_FIND_ROOT_PATH)
 else()
-	find_library(MYSQL_LIBRARIES NAMES mysqld
+	find_library(MARIADB_LIBRARIES NAMES mysqld
 		PATHS ${SEARCH_LIBS}
 		/usr/lib/mysql
 		/usr/local/lib/mysql
@@ -46,20 +44,25 @@ else()
 		/opt/mysql/lib/mysql)
 endif()
 
-if(MYSQL_INCLUDE_DIR)
-	file(READ "${MYSQL_INCLUDE_DIR}/mysql_version.h" _MYSQL_VERSION_CONTENTS)
-	if(_MYSQL_VERSION_CONTENTS)
-        string(REGEX REPLACE "^.*MYSQL_SERVER_VERSION[\t\ ]+\"([0-9.]+-MariaDB).*$" "\\1" MYSQL_VERSION "${_MYSQL_VERSION_CONTENTS}")
+if(MARIADB_INCLUDE_DIR)
+	file(READ "${MARIADB_INCLUDE_DIR}/mysql_version.h" _MARIADB_VERSION_CONTENTS)
+	if(_MARIADB_VERSION_CONTENTS)
+        	string(REGEX REPLACE "^.*MYSQL_SERVER_VERSION[\t\ ]+\"([0-9.]+)-MariaDB.*$" "\\1" MARIADB_VERSION "${_MARIADB_VERSION_CONTENTS}")
 	Endif()
-endif(MYSQL_INCLUDE_DIR)
+endif()
 
-if(MYSQL_LIBRARIES)
-	get_filename_component(MYSQL_LIB_DIR ${MYSQL_LIBRARIES} PATH)
-endif(MYSQL_LIBRARIES)
+if(MARIADB_LIBRARIES)
+	get_filename_component(MARIADB_LIB_DIR ${MARIADB_LIBRARIES} PATH)
+endif()
+mark_as_advanced(MARIADB_LIBRARIES)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(MySQL REQUIRED_VARS MYSQL_LIBRARIES MYSQL_INCLUDE_DIR VERSION_VAR MYSQL_VERSION)
+find_package_handle_standard_args(MariaDB FOUND_VAR MARIADB_FOUND REQUIRED_VARS MARIADB_LIBRARIES MARIADB_INCLUDE_DIR MARIADB_VERSION VERSION_VAR MARIADB_VERSION)
 
-if(MYSQL_FOUND)
-	include_directories(${MYSQL_INCLUDE_DIR})
+if(MARIADB_FOUND)
+	include_directories(${MARIADB_INCLUDE_DIR})
+    set(MYSQL_LIB_DIR "${MARIADB_LIB_DIR}")
+    set(MYSQL_LIBRARIES "${MARIADB_LIBRARIES}")
+    set(MYSQL_INCLUDE_DIR "${MARIADB_INCLUDE_DIR}")
+    set(MYSQL_FOUND 1)
 endif()
