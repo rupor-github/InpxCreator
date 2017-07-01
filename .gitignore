@@ -198,8 +198,8 @@ FakesAssemblies/
 
 lib2inpx-win32.7z
 lib2inpx-win64.7z
-lib2inpx-linux_i686.tar.xz
-lib2inpx-linux_x86_64.tar.xz
+lib2inpx-linux_i686-glibc_*.tar.xz
+lib2inpx-linux_x86_64-glibc_*.tar.xz
 
 [Bb]in_win32
 [Bb]in_win64

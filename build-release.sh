@@ -1,4 +1,4 @@
-#!/usr/bin/bash -e
+#!env bash
 
 # Standard preambule
 plain() {
@@ -51,6 +51,7 @@ for _mingw in ${ARCH_INSTALLS}; do
 			_gcc=x86_64-w64-mingw32-gcc
 		;;
 		linux)
+			_glibc=`ldd --version | head -n 1 | awk '{ print $5; }'`
 			_msystem=
 			_os=$(uname)
 			_arch=${_os,,}_$(uname -m)
@@ -84,7 +85,7 @@ for _mingw in ${ARCH_INSTALLS}; do
 			if [ -z ${_msystem} ]; then
 				[ -f lib2inpx-${_arch}.xz ] && rm lib2inpx-${_arch}.xz
 
-				tar --directory ${_dist} --create --xz --file lib2inpx-${_arch}.tar.xz .
+				tar --directory ${_dist} --create --xz --file lib2inpx-${_arch}-glibc_${_glibc}.tar.xz .
 			else
 				[ -f lib2inpx-${_arch}.7z ] && rm lib2inpx-${_arch}.7z
 

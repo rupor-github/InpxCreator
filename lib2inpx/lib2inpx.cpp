@@ -1149,7 +1149,7 @@ int main(int argc, char* argv[])
 #ifdef _WIN32
         GetModuleFileName(NULL, module_path, sizeof module_path);
 #else
-        readlink("/proc/self/exe", module_path, sizeof module_path);
+        ssize_t t = readlink("/proc/self/exe", module_path, sizeof module_path);
 #endif
 
         file_name = separate_file_name(module_path);
