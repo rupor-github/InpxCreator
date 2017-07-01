@@ -1,0 +1,51 @@
+Distributor ID: Ubuntu
+Description:    Ubuntu 17.04
+Release:        17.04
+Codename:       zesty
+
+---------- libexpat
+./configure --host=i686-w64-mingw32 --prefix=/usr/i686-w64-mingw32
+make
+sudo make install
+make clean
+
+./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32
+make
+sudo make install
+make clean
+
+---------- libiconv
+./configure --host=i686-w64-mingw32 --prefix=/usr/i686-w64-mingw32 --enable-static
+make
+sudo make install
+make clean
+
+./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --enable-static
+make
+sudo make install
+make clean
+
+sudo rm /usr/i686-w64-mingw32/lib/*.la
+sudo rm /usr/x86_64-w64-mingw32/lib/*.la
+
+---------- boost
+
+From https://github.com/Alexpux/MINGW-packages/tree/master/mingw-w64-boost
+
+patch -p1 -i boost-1.60.0-mingw-context.patch
+patch -p1 -i boost-1.61.0-fix-undefined-referense-to-codecvt.patch
+patch -p0 -i boost-include-intrin-h-on-mingw-w64.patch
+
+./bootstrap.sh
+
+echo "using gcc : 6.2.1 : x86_64-w64-mingw32-g++ ;" > user-config.jam
+./b2 --user-config=user-config.jam --debug-configuration toolset=gcc-6.2.1 link=shared,static target-os=windows address-model=64 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/x86_64-w64-mingw32 --layout=tagged --without-python --without-mpi -sICONV_PATH=/usr/x86_64-w64-mingw32 -sICONV_LINK="-L/usr/x86_64-w64-mingw32/lib -liconv" 2>&1 | tee all64.log
+sudo ./b2 --user-config=user-config.jam --debug-configuration toolset=gcc-6.2.1 link=shared,static target-os=windows address-model=64 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/x86_64-w64-mingw32 --layout=tagged --without-python --without-mpi -sICONV_PATH=/usr/x86_64-w64-mingw32 -sICONV_LINK="-L/usr/x86_64-w64-mingw32/lib -liconv" install
+./b2 --user-config=user-config.jam --debug-configuration toolset=gcc-6.2.1 link=shared,static target-os=windows address-model=64 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/x86_64-w64-mingw32 --layout=tagged --without-python --without-mpi -sICONV_PATH=/usr/x86_64-w64-mingw32 -sICONV_LINK="-L/usr/x86_64-w64-mingw32/lib -liconv" clean
+rm -rf bin.v2 stage
+
+echo "using gcc : 6.2.1 : i686-w64-mingw32-g++ ;" > user-config.jam
+./b2 --user-config=user-config.jam --debug-configuration toolset=gcc-6.2.1 link=shared,static target-os=windows address-model=32 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/i686-w64-mingw32 --layout=tagged --without-python --without-mpi -sICONV_PATH=/usr/i686-w64-mingw32 -sICONV_LINK="-L/usr/i686-w64-mingw32/lib -liconv" 2>&1 | tee all32.log
+sudo ./b2 --user-config=user-config.jam --debug-configuration toolset=gcc-6.2.1 link=shared,static target-os=windows address-model=32 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/i686-w64-mingw32 --layout=tagged --without-python --without-mpi -sICONV_PATH=/usr/i686-w64-mingw32 -sICONV_LINK="-L/usr/i686-w64-mingw32/lib -liconv" install
+./b2 --user-config=user-config.jam --debug-configuration toolset=gcc-6.2.1 link=shared,static target-os=windows address-model=32 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/i686-w64-mingw32 --layout=tagged --without-python --without-mpi -sICONV_PATH=/usr/i686-w64-mingw32 -sICONV_LINK="-L/usr/i686-w64-mingw32/lib -liconv" clean
+rm -rf bin.v2 stage
