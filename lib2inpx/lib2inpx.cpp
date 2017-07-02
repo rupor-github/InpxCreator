@@ -4,6 +4,7 @@
 #include <direct.h>
 #else
 #include <sys/io.h>
+#include <sys/stat.h>
 #endif
 #include <stdio.h>
 #include <fcntl.h>
@@ -69,6 +70,8 @@ static bool g_ignore_dump_date = false;
 static bool g_clean_when_done  = false;
 static bool g_verbose          = false;
 
+static bool g_mysql_cfg_created = false;
+
 enum checking_type { eFileExt = 0, eFileType, eIgnore };
 static checking_type g_strict = eFileExt;
 
@@ -131,10 +134,10 @@ static const char* dummy = "dummy:"
                            "\r\n";
 
 #ifdef MARIADB_BASE_VERSION
-static const char* options_pattern[] = {"%s", "--defaults-file=%sdata/mysql.ini", "--language=%s/language", "--datadir=%sdata", "--skip-grant-tables", "--innodb_data_home_dir=%sdata/dbtmp_%s",
+static const char* options_pattern[] = {"%s", "--defaults-file=%sdata/mysql.cfg", "--language=%s/language", "--datadir=%sdata", "--skip-grant-tables", "--innodb_data_home_dir=%sdata/dbtmp_%s",
     "--innodb_log_group_home_dir=%sdata/dbtmp_%s", "--innodb_tmpdir=%sdata/dbtmp_%s", "--log_warnings=2", NULL};
 #else
-static const char* options_pattern[] = {"%s", "--defaults-file=%sdata/mysql.ini", "--language=%s/language", "--datadir=%sdata", "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s",
+static const char* options_pattern[] = {"%s", "--defaults-file=%sdata/mysql.cfg", "--language=%s/language", "--datadir=%sdata", "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s",
     "--innodb_log_group_home_dir=%sdata/dbtmp_%s", "--innodb_tmpdir=%sdata/dbtmp_%s", "--log_syslog=0", NULL};
 #endif
 
@@ -305,7 +308,7 @@ void prepare_mysql(const char* path, const string& dbname)
         fs::create_directories(config.c_str());
     }
 
-    config = string(path) + "/data/mysql.ini";
+    config = string(path) + "/data/mysql.cfg";
     if (0 != access(config.c_str(), 6)) {
         ofstream out(config.c_str());
 
@@ -316,7 +319,14 @@ void prepare_mysql(const char* path, const string& dbname)
         } else {
             throw runtime_error(tmp_str("Unable to open file \"%s\"", config.c_str()));
         }
+        g_mysql_cfg_created = true;
     }
+
+ #ifndef _WIN32
+    if (g_mysql_cfg_created) {
+        chmod(config.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    }
+#endif
 
     config = string(path) + "/data/dbtmp_" + dbname;
     if (0 != access(config.c_str(), 6)) {
@@ -1699,8 +1709,10 @@ int main(int argc, char* argv[])
             string file_to_del = data_dir + "/auto.cnf";
             fs::remove(file_to_del);
 
-            file_to_del.assign(data_dir + "/mysql.ini");
-            fs::remove(file_to_del);
+            if (g_mysql_cfg_created) {
+                file_to_del.assign(data_dir + "/mysql.cfg");
+                fs::remove(file_to_del);
+            }
 
 #ifdef MARIADB_BASE_VERSION
             file_to_del.assign(data_dir + "/aria_log.00000001");

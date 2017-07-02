@@ -35,6 +35,11 @@ YELLOW='[38;5;03m'
 readonly ALL_OFF BOLD BLUE GREEN RED YELLOW
 ARCH_INSTALLS="${ARCH_INSTALLS:-win32 win64 linux}"
 
+if not command -v cmake >/dev/null 2>&1; then
+	print_error "No cmake found - please, install"
+	exit 1
+fi
+
 for _mingw in ${ARCH_INSTALLS}; do
 	
 	case ${_mingw} in
@@ -83,7 +88,7 @@ for _mingw in ${ARCH_INSTALLS}; do
 
 		(
 			if [ -z ${_msystem} ]; then
-				[ -f lib2inpx-${_arch}.xz ] && rm lib2inpx-${_arch}.xz
+				[ -f lib2inpx-${_arch}-glibc_${_glibc}.tar.xz ] && rm lib2inpx-${_arch}-glibc_${_glibc}.tar.xz
 
 				tar --directory ${_dist} --create --xz --file lib2inpx-${_arch}-glibc_${_glibc}.tar.xz .
 			else
