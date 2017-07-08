@@ -135,7 +135,7 @@ static const char* dummy = "dummy:"
 
 #ifdef MARIADB_BASE_VERSION
 static const char* options_pattern[] = {"%s", "--defaults-file=%sdata/mysql.cfg", "--language=%s/language", "--datadir=%sdata", "--skip-grant-tables", "--innodb_data_home_dir=%sdata/dbtmp_%s",
-    "--innodb_log_group_home_dir=%sdata/dbtmp_%s", "--innodb_tmpdir=%sdata/dbtmp_%s", "--log_warnings=2", NULL};
+    "--innodb_log_group_home_dir=%sdata/dbtmp_%s", "--innodb_tmpdir=%sdata/dbtmp_%s", "--innodb_stats_persistent=0", "--log_warnings=2", NULL};
 #else
 static const char* options_pattern[] = {"%s", "--defaults-file=%sdata/mysql.cfg", "--language=%s/language", "--datadir=%sdata", "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s",
     "--innodb_log_group_home_dir=%sdata/dbtmp_%s", "--innodb_tmpdir=%sdata/dbtmp_%s", "--log_syslog=0", NULL};
@@ -322,7 +322,7 @@ void prepare_mysql(const char* path, const string& dbname)
         g_mysql_cfg_created = true;
     }
 
- #ifndef _WIN32
+#ifndef _WIN32
     if (g_mysql_cfg_created) {
         chmod(config.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     }
