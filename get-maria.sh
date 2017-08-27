@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 ver_major=10.1
-ver_minor=24
+ver_minor=26
 
 declare -A checkmap
 
@@ -16,21 +16,21 @@ for _mingw in ${ARCH_INSTALLS}; do
 			file=mariadb-${ver_major}.${ver_minor}-${arch}.zip
 			prefix=i686
 			packagedir=${arch}-packages
-			checkmap[${arch}]="3f28aaece4cb00d57fb643873ca4a4b29546cf5852d956094517b36ba8eafba3"
+			checkmap[${arch}]="08b546950f448763459ac66f8f81e0097c8cd4378a3e0075b6e50275682bd7ed"
 		;;
 		win64)
 			arch=winx64
 			file=mariadb-${ver_major}.${ver_minor}-${arch}.zip
 			prefix=x86_64
 			packagedir=${arch}-packages
-			checkmap[${arch}]="cca8b38e640508cd8fa3ba28c872ccc79497d6a74164a1ae9cdd04aaef9ef6cd"
+			checkmap[${arch}]="ece635977ec4f1d1c192fb156cef02229cff1925bd76cab488a48e63d8cf97fc"
 		;;
 		linux)
 			arch=$(uname -m)
 			file=mariadb-${ver_major}.${ver_minor}-linux-glibc_214-${arch}.tar.gz
 			prefix=
 			packagedir=bintar-linux-glibc_214-${arch}
-			checkmap[${arch}]="04491b686a83ba994122f5609adb9f86cb5af6275f87bfa4ee6010e2e28db465"
+			checkmap[${arch}]="b993c521f283bacec18760ae72b7d768c3e032007a244e0a8b13032c0278508f"
 		;;
 		*)
 			echo "Unsupported environment!"

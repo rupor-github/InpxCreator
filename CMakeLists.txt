@@ -14,7 +14,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 # Project version number
 set(PRJ_VERSION_MAJOR 9)
-set(PRJ_VERSION_MINOR 4)
+set(PRJ_VERSION_MINOR 41)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -69,7 +69,7 @@ find_package(Threads)
 if(DEFINED ENV{MYSQL_PROPER})
     find_package(MySQL 5.7.17 REQUIRED EXACT)
 else()
-    find_package(MariaDB 10.1.24 REQUIRED)
+    find_package(MariaDB 10.1.26 REQUIRED)
 endif()
 find_package(ZLIB REQUIRED)
 find_package(EXPAT REQUIRED)
@@ -122,7 +122,7 @@ if(CMAKE_CROSSCOMPILING OR WIN32)
 endif()
 install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${PROJECT_BINARY_DIR}/language CONFIGURATIONS Release Debug)
 
-find_package(Go 1.8.1 REQUIRED)
+find_package(Go 1.9 REQUIRED)
 find_package(Glide 0.12.3 REQUIRED)
 # Proper go build structure will be here
 set(GO_PATH "${CMAKE_BINARY_DIR}/go")
