@@ -123,7 +123,42 @@ endif()
 install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${PROJECT_BINARY_DIR}/language CONFIGURATIONS Release Debug)
 
 find_package(Go 1.9 REQUIRED)
-find_package(Glide 0.12.3 REQUIRED)
+
+set(GLIDE_REQ_VER "0.13.0")
+find_package(Glide "${GLIDE_REQ_VER}")
+if(NOT GLIDE_FOUND)
+    set(G_TAG "v${GLIDE_REQ_VER}")
+
+    # Linux only
+    string(TOLOWER "linux-amd64" G_ARCH)
+    set(G_SHA256 "77680bbd9e51de9a5cbd212f4d0aab51abac49971695f0bc779b117f8cb188ff")
+
+    message(STATUS "Installing glide (ver ${G_TAG}) into ${PROJECT_BINARY_DIR}")
+    file(DOWNLOAD "https://github.com/Masterminds/glide/releases/download/${G_TAG}/glide-${G_TAG}-${G_ARCH}.tar.gz" ${PROJECT_BINARY_DIR}/glide-${G_TAG}-${G_ARCH}.tar.gz
+        INACTIVITY_TIMEOUT 60
+        STATUS DOWNLOAD_RES
+        EXPECTED_HASH SHA256=${G_SHA256})
+    list(GET DOWNLOAD_RES 0 RES)
+    list(GET DOWNLOAD_RES 1 MSG)
+    if(RES)
+        message(FATAL_ERROR, MSG)
+    endif()
+    if(EXISTS ${PROJECT_BINARY_DIR}/${G_ARCH})
+        execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory ${G_ARCH} WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
+    endif()
+    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf glide-${G_TAG}-${G_ARCH}.tar.gz glide WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E rename ${G_ARCH}/glide ${PROJECT_BINARY_DIR}/glide WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory ${G_ARCH} WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
+
+    if(EXISTS ${PROJECT_BINARY_DIR}/glide)
+        set(GLIDE_FOUND true)
+        set(GLIDE_EXECUTABLE ${PROJECT_BINARY_DIR}/glide)
+        set(GLIDE_VERSION ${GLIDE_VERSION_REQ})
+    else()
+        message(FATAL_ERROR "Unable to obtain and install requred version of glide. Exiting...")
+    endif()
+endif()
+
 # Proper go build structure will be here
 set(GO_PATH "${CMAKE_BINARY_DIR}/go")
 
