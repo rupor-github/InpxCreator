@@ -1,11 +1,12 @@
 #!/bin/bash -e
 
+echo "10.1.26 seems to be the last version supporting libmysqld.a"
+
 ver_major=10.1
 ver_minor=26
 
 declare -A checkmap
-
-from_url="https://downloads.mariadb.org/interstitial"
+from_url="https://downloads.mariadb.com/MariaDB"
 
 ARCH_INSTALLS="${ARCH_INSTALLS:-win32 win64 linux}"
 
@@ -40,6 +41,9 @@ for _mingw in ${ARCH_INSTALLS}; do
 
 	echo "Processing ${arch}..."
 	if [ ! -f ${file} ]; then
+		echo
+		echo "--> ${from_url}/mariadb-${ver_major}.${ver_minor}/${packagedir}/${file}"
+		echo
 		curl -L -O ${from_url}/mariadb-${ver_major}.${ver_minor}/${packagedir}/${file}
 	else
 		echo "Have ${file} locally."
@@ -65,7 +69,7 @@ for _mingw in ${ARCH_INSTALLS}; do
 			for dll in *.dll; do
 				echo "Creating Windows export library for ${dll}"
 				gendef -a ${dll}
-				dlltool -d ${dll%.*}.def -l ${dll}.a -k
+				${prefix}-w64-mingw32-dlltool -d ${dll%.*}.def -l ${dll}.a -k
 				rm ${dll%.*}.def
 			done
 		)
