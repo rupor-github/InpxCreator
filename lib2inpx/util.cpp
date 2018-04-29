@@ -151,6 +151,16 @@ string cleanse(const string& s)
     return str;
 }
 
+string cleanse_lang(const string& s)
+{
+    string str(s);
+    boost::algorithm::erase_all(str, "\r");
+    boost::algorithm::erase_all(str, "\n");
+    boost::algorithm::trim_right(str);
+    boost::algorithm::trim_left(str);
+    return str;
+}
+
 string duplicate_quote(const string& str) { return boost::algorithm::replace_all_copy(str, "\'", "\'\'"); }
 
 #endif // DO_NOT_INCLUDE_PARSER
@@ -622,7 +632,7 @@ void fb2_parser::on_book_title(const std::string& str, const attributes_t& attrs
 
 void fb2_parser::on_keywords(const std::string& str, const attributes_t& attrs) { m_keywords = fix_data(cleanse(str), g_limits.KeyWords); }
 
-void fb2_parser::on_lang(const std::string& str, const attributes_t& attrs) { m_language = str; }
+void fb2_parser::on_lang(const std::string& str, const attributes_t& attrs) { m_language = cleanse_lang(str); }
 
 void fb2_parser::on_sequence(const std::string& str, const attributes_t& attrs)
 {

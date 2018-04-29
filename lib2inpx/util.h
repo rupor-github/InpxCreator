@@ -25,6 +25,7 @@ extern bool      g_fix;
 void initialize_limits(const std::string& config);
 std::string fix_data(const std::string& str, size_t max_len);
 std::string cleanse(const std::string& s);
+std::string cleanse_lang(const std::string& s);
 
 #endif // DO_NOT_INCLUDE_PARSER
 
