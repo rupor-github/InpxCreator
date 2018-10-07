@@ -44,7 +44,7 @@ for _mingw in ${ARCH_INSTALLS}; do
 		echo
 		echo "--> ${from_url}/mariadb-${ver_major}.${ver_minor}/${packagedir}/${file}"
 		echo
-		curl -L -O ${from_url}/mariadb-${ver_major}.${ver_minor}/${packagedir}/${file}
+		curl -LO ${from_url}/mariadb-${ver_major}.${ver_minor}/${packagedir}/${file}
 	else
 		echo "Have ${file} locally."
 	fi
@@ -74,6 +74,7 @@ for _mingw in ${ARCH_INSTALLS}; do
 			done
 		)
 	fi
+        rm ${file}
 
 done
 

@@ -1,4 +1,4 @@
-#!env bash
+#!/bin/bash -e
 
 # Standard preambule
 plain() {

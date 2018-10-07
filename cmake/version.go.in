@@ -1,6 +1,6 @@
-package main
+package misc
 
-func getVersion() string {
+func GetVersion() string {
 	return "@PRJ_VERSION_MAJOR@.@PRJ_VERSION_MINOR@"
 }
 

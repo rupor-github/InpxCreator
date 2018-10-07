@@ -1,43 +1,17 @@
-# Copyright (C) 1995-2007 MySQL AB
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of version 2 of the GNU General Public License as
-# published by the Free Software Foundation.
-#
-# There are special exceptions to the terms and conditions of the GPL
-# as it is applied to this software. View the full text of the exception
-# in file LICENSE.exceptions in the top-level directory of this software
-# distribution.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-#
-# The MySQL Connector/ODBC is licensed under the terms of the
-# GPL, like most MySQL Connectors. There are special exceptions
-# to the terms and conditions of the GPL as it is applied to
-# this software, see the FLOSS License Exception available on
-# mysql.com.
 if(CMAKE_CROSSCOMPILING OR WIN32)
 	if($ENV{MSYSTEM} STREQUAL "MINGW32")
-		file(GLOB SEARCH_INCLUDES "${CMAKE_SOURCE_DIR}/mysql-*-win32/include" "$ENV{MYSQL_DIR}/include")
-		file(GLOB SEARCH_LIBS "${CMAKE_SOURCE_DIR}/mysql-*-win32/lib" "$ENV{MYSQL_DIR}/lib")
+		file(GLOB SEARCH_INCLUDES LIST_DIRECTORIES true "$ENV{HOME}/mysql-*-win32/include" "${CMAKE_SOURCE_DIR}/mysql-*-win32/include" "$ENV{MYSQL_DIR}/include")
+		file(GLOB SEARCH_LIBS LIST_DIRECTORIES true "$ENV{HOME}/mysql-*-win32/lib" "${CMAKE_SOURCE_DIR}/mysql-*-win32/lib" "$ENV{MYSQL_DIR}/lib")
 	elseif($ENV{MSYSTEM} STREQUAL "MINGW64")
-		file(GLOB SEARCH_INCLUDES "${CMAKE_SOURCE_DIR}/mysql-*-winx64/include" "$ENV{MYSQL_DIR}/include")
-		file(GLOB SEARCH_LIBS "${CMAKE_SOURCE_DIR}/mysql-*-winx64/lib" "$ENV{MYSQL_DIR}/lib")
+		file(GLOB SEARCH_INCLUDES LIST_DIRECTORIES true "$ENV{HOME}/mysql-*-winx64/include" "${CMAKE_SOURCE_DIR}/mysql-*-winx64/include" "$ENV{MYSQL_DIR}/include")
+		file(GLOB SEARCH_LIBS LIST_DIRECTORIES true "$ENV{HOME}/mysql-*-winx64/lib" "${CMAKE_SOURCE_DIR}/mysql-*-winx64/lib" "$ENV{MYSQL_DIR}/lib")
 	else()
-		file(GLOB SEARCH_INCLUDES "$ENV{MYSQL_DIR}/include")
-		file(GLOB SEARCH_LIBS "$ENV{MYSQL_DIR}/lib")
+		file(GLOB SEARCH_INCLUDES LIST_DIRECTORIES true "$ENV{MYSQL_DIR}/include")
+		file(GLOB SEARCH_LIBS LIST_DIRECTORIES true "$ENV{MYSQL_DIR}/lib")
 	endif()
 else()
-	file(GLOB SEARCH_INCLUDES "${CMAKE_SOURCE_DIR}/mysql-*-linux-glibc2.5-*/include" "$ENV{MYSQL_DIR}/include")
-	file(GLOB SEARCH_LIBS "${CMAKE_SOURCE_DIR}/mysql-*-linux-glibc2.5-*/lib" "$ENV{MYSQL_DIR}/lib")
+	file(GLOB SEARCH_INCLUDES LIST_DIRECTORIES true "$ENV{HOME}/mysql-*-linux-glibc2.5-*/include" "${CMAKE_SOURCE_DIR}/mysql-*-linux-glibc2.5-*/include" "$ENV{MYSQL_DIR}/include")
+	file(GLOB SEARCH_LIBS LIST_DIRECTORIES true "$ENV{HOME}/mysql-*-linux-glibc2.5-*/lib" "${CMAKE_SOURCE_DIR}/mysql-*-linux-glibc2.5-*/lib" "$ENV{MYSQL_DIR}/lib")
 endif()
 
 if(CMAKE_CROSSCOMPILING OR WIN32)

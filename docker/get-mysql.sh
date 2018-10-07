@@ -58,6 +58,7 @@ for _mingw in ${ARCH_INSTALLS}; do
 			done
 		)
 	fi
+        rm ${file}
 
 done
 

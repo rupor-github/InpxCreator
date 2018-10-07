@@ -1,0 +1,86 @@
+FROM ubuntu:16.04
+
+RUN apt-get -qqy update &&\
+apt-get -qqy install wget curl build-essential git git-extras automake pkg-config zlib1g-dev libaio-dev libboost-all-dev p7zip-full gdb mingw-w64 binutils-mingw-w64 mingw-w64-tools libz-mingw-w64-dev
+
+WORKDIR /root/
+
+# ---------- We either patch cmake to support up to date boost (/usr/share/cmake-3.5/Modules/FindBoost.cmake) or build fresh one
+RUN curl -LO https://cmake.org/files/v3.12/cmake-3.12.2.tar.gz \
+    && tar -xvf cmake-3.12.2.tar.gz \
+    && cd cmake-3.12.2 \
+    && ./bootstrap \
+    && make install \
+    && cd .. \
+    && rm -rf cmake-3.12.2.tar.gz cmake-3.12.2
+
+# ---------- mingw does not have expat
+RUN git clone https://github.com/libexpat/libexpat.git \
+    && cd libexpat \
+    && git checkout R_2_2_6 \
+    && cd expat \
+    && ./buildconf.sh \
+    && ./configure --host=i686-w64-mingw32 --prefix=/usr/i686-w64-mingw32 --without-xmlwf --without-docbook \
+    && make install \
+    && make clean \
+    && ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --without-xmlwf --without-docbook \
+    && make install \
+    && cd ../.. \
+    && rm -rf libexpat \
+    && rm /usr/i686-w64-mingw32/lib/*.la \
+    && rm /usr/x86_64-w64-mingw32/lib/*.la
+
+# ---------- mingw does not have static iconv
+RUN curl -LO https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.15.tar.gz \
+    && tar -xvf libiconv-1.15.tar.gz \
+    && cd libiconv-1.15 \
+    && ./configure --host=i686-w64-mingw32 --prefix=/usr/i686-w64-mingw32 --enable-static \
+    && make install \
+    && make clean \
+    && ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --enable-static \
+    && make install \
+    && cd .. \
+    && rm -rf libiconv-1.15.tar.gz libiconv-1.15 \
+    && rm /usr/i686-w64-mingw32/lib/*.la \
+    && rm /usr/x86_64-w64-mingw32/lib/*.la
+
+# ---------- mingw does not have boost (and we cannot cross build anything older than 1.63)
+RUN ln -s /usr/bin/x86_64-w64-mingw32-windres /usr/bin/windres \
+    && curl -LO http://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz \
+    && tar -xvf boost_1_63_0.tar.gz \
+    && cd boost_1_63_0 \
+    \
+# From https://github.com/Alexpux/MINGW-packages/tree/master/mingw-w64-boost
+    \
+    && curl -O https://raw.githubusercontent.com/Alexpux/MINGW-packages/master/mingw-w64-boost/boost-1.60.0-mingw-context.patch \
+    && curl -O https://raw.githubusercontent.com/Alexpux/MINGW-packages/master/mingw-w64-boost/boost-1.61.0-fix-undefined-referense-to-codecvt.patch \
+    && curl -O https://raw.githubusercontent.com/Alexpux/MINGW-packages/master/mingw-w64-boost/boost-include-intrin-h-on-mingw-w64.patch \
+    && patch -p1 -i boost-1.60.0-mingw-context.patch \
+    && patch -p1 -i boost-1.61.0-fix-undefined-referense-to-codecvt.patch \
+    && patch -p0 -i boost-include-intrin-h-on-mingw-w64.patch \
+    \
+    && ./bootstrap.sh \
+    && echo "using gcc : 5.3.1 : x86_64-w64-mingw32-g++ ;" > user-config.jam \
+    && ./b2 --without-python --without-serialization --user-config=user-config.jam --debug-configuration toolset=gcc-5.3.1 link=shared,static target-os=windows address-model=64 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/x86_64-w64-mingw32 --layout=tagged --without-python --without-mpi -sICONV_PATH=/usr/x86_64-w64-mingw32 -sICONV_LINK="-L/usr/x86_64-w64-mingw32/lib -liconv" install \
+    && ./b2 --without-python --without-serialization --user-config=user-config.jam --debug-configuration toolset=gcc-5.3.1 link=shared,static target-os=windows address-model=64 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/x86_64-w64-mingw32 --layout=tagged --without-python --without-mpi -sICONV_PATH=/usr/x86_64-w64-mingw32 -sICONV_LINK="-L/usr/x86_64-w64-mingw32/lib -liconv" clean \
+    && rm -rf bin.v2 stage \
+    && echo "using gcc : 5.3.1 : i686-w64-mingw32-g++ ;" > user-config.jam \
+    && ./b2 --user-config=user-config.jam --debug-configuration toolset=gcc-5.3.1 link=shared,static target-os=windows address-model=32 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/i686-w64-mingw32 --layout=tagged --without-python --without-mpi --without-serialization -sICONV_PATH=/usr/i686-w64-mingw32 -sICONV_LINK="-L/usr/i686-w64-mingw32/lib -liconv" install \
+    && ./b2 --user-config=user-config.jam --debug-configuration toolset=gcc-5.3.1 link=shared,static target-os=windows address-model=32 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/i686-w64-mingw32 --layout=tagged --without-python --without-mpi --without-serialization -sICONV_PATH=/usr/i686-w64-mingw32 -sICONV_LINK="-L/usr/i686-w64-mingw32/lib -liconv" clean \
+    && cd .. \
+    && rm -rf boost_1_63_0.tar.gz boost_1_63_0
+
+# ---------- we need proper version of mariadb or mysql
+COPY get-maria.sh .
+RUN ./get-maria.sh
+
+#  ---------- download golang
+
+RUN curl -LO https://dl.google.com/go/go1.11.1.linux-amd64.tar.gz \
+   && tar -xvf go1.11.1.linux-amd64.tar.gz \
+   && rm go1.11.1.linux-amd64.tar.gz \
+   && sed -i -e '$a export PATH=$PATH:/root/go/bin' .bashrc \
+   && sed -i -e '$a export GOROOT=/root/go' .bashrc
+
+COPY bootstrap.sh .
+CMD ["/bin/bash"]

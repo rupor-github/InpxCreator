@@ -13,7 +13,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"libmerge/internal/zip"
+
+	"inpxcreator/internal/zip"
+	"inpxcreator/misc"
 )
 
 var size int
@@ -21,6 +23,9 @@ var sizeBytes int64
 var verbose bool
 var keepUpdates bool
 var dest string
+
+// LastGitCommit is used during build to inject git sha
+var LastGitCommit string
 
 func name2id(name string) int {
 	base := strings.TrimSuffix(name, filepath.Ext(name))
@@ -153,7 +158,7 @@ func main() {
 	var code int
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "\nTool to merge library updates\nVersion %s\n\n", getVersion())
+		fmt.Fprintf(os.Stderr, "\nTool to merge library updates\nVersion %s %s\n\n", misc.GetVersion(), LastGitCommit)
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}

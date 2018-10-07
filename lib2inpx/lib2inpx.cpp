@@ -1208,7 +1208,7 @@ int main(int argc, char* argv[])
         if (vm.count("help") || !vm.count("dump-dir")) {
             wcout << endl;
             wcout << "Import file (INPX) preparation tool for MyHomeLib" << endl;
-            wcout << "Version " << PRJ_VERSION_MAJOR << "." << PRJ_VERSION_MINOR << " (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
+            wcout << "Version " << PRJ_VERSION_MAJOR << "." << PRJ_VERSION_MINOR << " " << PRJ_GIT_HASH << " (MYSQL " << MYSQL_SERVER_VERSION << ")" << endl;
             wcout << endl;
             wcout << "Usage: " << file_name << " [options] <path to SQL dump files>" << endl << endl;
             wcout << options << endl << flush;

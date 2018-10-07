@@ -1,47 +1,51 @@
 if(CMAKE_CROSSCOMPILING OR WIN32)
 	if($ENV{MSYSTEM} STREQUAL "MINGW32")
-		file(GLOB SEARCH_INCLUDES "${CMAKE_SOURCE_DIR}/mariadb-*-win32/include/mysql" "$ENV{MYSQL_DIR}/include")
-		file(GLOB SEARCH_LIBS "${CMAKE_SOURCE_DIR}/mariadb-*-win32/lib" "$ENV{MYSQL_DIR}/lib")
+		file(GLOB SEARCH_INCLUDES LIST_DIRECTORIES true "$ENV{HOME}/mariadb-*-win32/include/mysql" "${CMAKE_SOURCE_DIR}/mariadb-*-win32/include/mysql" "$ENV{MYSQL_DIR}/include")
+		file(GLOB SEARCH_LIBS LIST_DIRECTORIES true "$ENV{HOME}/mariadb-*-win32/lib" "${CMAKE_SOURCE_DIR}/mariadb-*-win32/lib" "$ENV{MYSQL_DIR}/lib")
 	elseif($ENV{MSYSTEM} STREQUAL "MINGW64")
-		file(GLOB SEARCH_INCLUDES "${CMAKE_SOURCE_DIR}/mariadb-*-winx64/include/mysql" "$ENV{MYSQL_DIR}/include")
-		file(GLOB SEARCH_LIBS "${CMAKE_SOURCE_DIR}/mariadb-*-winx64/lib" "$ENV{MYSQL_DIR}/lib")
+		file(GLOB SEARCH_INCLUDES LIST_DIRECTORIES true "$ENV{HOME}/mariadb-*-winx64/include/mysql" "${CMAKE_SOURCE_DIR}/mariadb-*-winx64/include/mysql" "$ENV{MYSQL_DIR}/include")
+		file(GLOB SEARCH_LIBS LIST_DIRECTORIES true "$ENV{HOME}/mariadb-*-winx64/lib" "${CMAKE_SOURCE_DIR}/mariadb-*-winx64/lib" "$ENV{MYSQL_DIR}/lib")
 	else()
-		file(GLOB SEARCH_INCLUDES "$ENV{MYSQL_DIR}/include")
-		file(GLOB SEARCH_LIBS "$ENV{MYSQL_DIR}/lib")
+		file(GLOB SEARCH_INCLUDES LIST_DIRECTORIES true "$ENV{MYSQL_DIR}/include")
+		file(GLOB SEARCH_LIBS LIST_DIRECTORIES true "$ENV{MYSQL_DIR}/lib")
 	endif()
 else()
-	file(GLOB SEARCH_INCLUDES "${CMAKE_SOURCE_DIR}/mariadb-*-linux-glibc*/include/mysql" "$ENV{MYSQL_DIR}/include")
-	file(GLOB SEARCH_LIBS "${CMAKE_SOURCE_DIR}/mariadb-*-linux-glibc*/lib" "$ENV{MYSQL_DIR}/lib")
+	file(GLOB SEARCH_INCLUDES LIST_DIRECTORIES true "$ENV{HOME}/mariadb-*-linux-glibc*/include/mysql" "${CMAKE_SOURCE_DIR}/mariadb-*-linux-glibc*/include/mysql" "$ENV{MYSQL_DIR}/include")
+	file(GLOB SEARCH_LIBS LIST_DIRECTORIES true "$ENV{HOME}/mariadb-*-linux-glibc*/lib" "${CMAKE_SOURCE_DIR}/mariadb-*-linux-glibc*/lib" "$ENV{MYSQL_DIR}/lib")
 endif()
 
 if(CMAKE_CROSSCOMPILING OR WIN32)
-    find_path(MARIADB_INCLUDE_DIR NAMES mysql.h PATHS ${SEARCH_INCLUDES} NO_CMAKE_FIND_ROOT_PATH)
+	find_path(MARIADB_INCLUDE_DIR NAMES mysql.h 
+		PATHS ${SEARCH_INCLUDES} NO_DEFAULT_PATH)
 else()
-    find_path(MARIADB_INCLUDE_DIR NAMES mysql.h
-        PATHS ${SEARCH_INCLUDES}
-		/usr/include/mysql
-		/usr/local/include/mysql
-		/opt/mysql/mysql/include
-		/opt/mysql/mysql/include/mysql
-		/opt/mysql/include
-		/opt/local/include/mysql5
-		/usr/local/mysql/include
-		/usr/local/mysql/include/mysql)
+	find_path(MARIADB_INCLUDE_DIR NAMES mysql.h
+		PATHS ${SEARCH_INCLUDES}
+			/usr/include/mysql
+			/usr/local/include/mysql
+			/opt/mysql/mysql/include
+			/opt/mysql/mysql/include/mysql
+			/opt/mysql/include
+			/opt/local/include/mysql5
+			/usr/local/mysql/include
+			/usr/local/mysql/include/mysql
+			NO_DEFAULT_PATH)
 endif()
 
 if(CMAKE_CROSSCOMPILING OR WIN32)
-	find_library(MARIADB_LIBRARIES NAMES mysqld PATHS ${SEARCH_LIBS} NO_CMAKE_FIND_ROOT_PATH)
+	find_library(MARIADB_LIBRARIES NAMES mysqld
+		PATHS ${SEARCH_LIBS} NO_CMAKE_FIND_ROOT_PATH)
 else()
 	find_library(MARIADB_LIBRARIES NAMES mysqld
-		PATHS ${SEARCH_LIBS}
-		/usr/lib/mysql
-		/usr/local/lib/mysql
-		/usr/local/mysql/lib
-		/usr/local/mysql/lib/mysql
-		/opt/local/mysql5/lib
-		/opt/local/lib/mysql5/mysql
-		/opt/mysql/mysql/lib/mysql
-		/opt/mysql/lib/mysql)
+        	PATHS ${SEARCH_LIBS}
+			/usr/lib/mysql
+			/usr/local/lib/mysql
+			/usr/local/mysql/lib
+			/usr/local/mysql/lib/mysql
+			/opt/local/mysql5/lib
+			/opt/local/lib/mysql5/mysql
+			/opt/mysql/mysql/lib/mysql
+			/opt/mysql/lib/mysql
+			NO_DEFAULT_PATH)
 endif()
 
 if(MARIADB_INCLUDE_DIR)

@@ -17,6 +17,8 @@ import (
 
 	"github.com/pkg/errors"
 	"golang.org/x/net/proxy"
+
+	"inpxcreator/misc"
 )
 
 const emptyString = ""
@@ -37,6 +39,9 @@ var reNumbers *regexp.Regexp
 var reMerge *regexp.Regexp
 var lastBook int
 var proxyUrl *url.URL
+
+// LastGitCommit is used during build to inject git sha
+var LastGitCommit string
 
 func init() {
 	pwd, err := os.Getwd()
@@ -170,7 +175,7 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, e
 	req.Cancel = c
 
 	req.Header.Set("Referer", hostAddr)
-	req.Header.Set("User-Agent", fmt.Sprintf("libget2/%s", getVersion()))
+	req.Header.Set("User-Agent", fmt.Sprintf("libget2/%s", misc.GetVersion()))
 	req.Header.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	req.Header.Set("Pragma", "no-cache")
 	req.Header.Set("Expires", "0")
@@ -435,7 +440,7 @@ func main() {
 	log.SetPrefix("\n*** ")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "\nTool to download library updates\nVersion %s\n\n", getVersion())
+		fmt.Fprintf(os.Stderr, "\nTool to download library updates\nVersion %s %s\n\n", misc.GetVersion(), LastGitCommit)
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}

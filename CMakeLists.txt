@@ -15,8 +15,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 # Project version number
 set(PRJ_VERSION_MAJOR 9)
 set(PRJ_VERSION_MINOR 43)
-configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
-include_directories("${PROJECT_BINARY_DIR}")
 
 if(WIN32 AND NOT DEFINED ENV{MSYSTEM})
     message(FATAL_ERROR "Currently unsuppored environment. Use MINGW for Windows builds. CMake willl exit now.")
@@ -61,6 +59,25 @@ endif()
 
 find_package(Git REQUIRED)
 
+if (EXISTS "${PROJECT_SOURCE_DIR}/.git" AND IS_DIRECTORY "${PROJECT_SOURCE_DIR}/.git")
+    # if we can - get current state of the project
+    add_custom_target(inpxc_git_ver
+        COMMAND ${GIT_EXECUTABLE} rev-list -1 HEAD >${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp
+        COMMAND sh -c 'test -n \"\$\(shell ${GIT_EXECUTABLE} diff --shortstat 2> /dev/null | tail -n1\)\" && echo \"*\" >>${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp || true'
+        COMMAND tr -d '\\n' <${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp >${PROJECT_BINARY_DIR}/inpxc_git_ver
+        COMMAND ${CMAKE_COMMAND} -E remove -f ${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp
+        COMMAND sed -i '/define PRJ_GIT_HASH/ s/ \".*\"/ \"\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)\"/' ${PROJECT_BINARY_DIR}/version.h
+        COMMENT "Checking git status..."
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+else()
+    # when BOB git repository is removed to save space before we run
+    add_custom_target(inpxc_git_ver
+        COMMAND sh -c 'echo -n no-git-repo >${PROJECT_BINARY_DIR}/inpxc_git_ver'
+        COMMAND sed -i '/define PRJ_GIT_HASH/ s/ \".*\"/ \"\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)\"/' ${PROJECT_BINARY_DIR}/version.h
+        COMMENT "Checking git status..."
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+endif()
+
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 find_package(Boost 1.58.0 REQUIRED COMPONENTS "date_time" "program_options" "filesystem")
@@ -76,6 +93,8 @@ find_package(Iconv REQUIRED)
 
 get_filename_component(MYSQL_NAME ${MYSQL_LIBRARIES} NAME_WE)
 
+configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
+
 # Prepare history file
 execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} changelog --final-tag ${PRJ_VERSION_MAJOR}.${PRJ_VERSION_MINOR} --stdout OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
 
@@ -84,11 +103,15 @@ if(CMAKE_CROSSCOMPILING OR WIN32)
 else()
     set(SRCS_MINIZIP minizip/ioapi.c minizip/ioapi.c minizip/unzip.c minizip/zip.c)
 endif()
+
 include_directories("${PROJECT_SOURCE_DIR}")
+include_directories("${PROJECT_BINARY_DIR}")
+
 add_library(minizip ${SRCS_MINIZIP})
 
 set(SRCS_LIB2INPX lib2inpx/util.cpp lib2inpx/lib2inpx.cpp)
 add_executable(lib2inpx ${SRCS_LIB2INPX})
+add_dependencies(lib2inpx inpxc_git_ver)
 if(UNIX)
     set(ADD_LIBS "${CMAKE_THREAD_LIBS_INIT} -lm -lrt -ldl -lcrypt -laio")
     if(ICONV_LIBRARIES MATCHES "libc")
@@ -122,45 +145,52 @@ if(CMAKE_CROSSCOMPILING OR WIN32)
 endif()
 install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${PROJECT_BINARY_DIR}/language CONFIGURATIONS Release Debug)
 
-find_package(Go 1.9 REQUIRED)
+########################################################################################################
+# go targets are always out of date, "go build" will figure it out
+########################################################################################################
 
-set(GLIDE_REQ_VER "0.13.0")
-find_package(Glide "${GLIDE_REQ_VER}")
-if(NOT GLIDE_FOUND)
-    set(G_TAG "v${GLIDE_REQ_VER}")
+find_package(Go 1.11 REQUIRED)
 
-    # Linux only
-    string(TOLOWER "linux-amd64" G_ARCH)
-    set(G_SHA256 "77680bbd9e51de9a5cbd212f4d0aab51abac49971695f0bc779b117f8cb188ff")
+set(GODEP_REQ_VER "0.5.0")
+find_package(Godep "${GODEP_REQ_VER}")
+if(NOT GODEP_FOUND)
+    set(G_TAG "v${GODEP_REQ_VER}")
+    string(TOLOWER "${CMAKE_SYSTEM_NAME}-amd64" G_ARCH)
 
-    message(STATUS "Installing glide (ver ${G_TAG}) into ${PROJECT_BINARY_DIR}")
-    file(DOWNLOAD "https://github.com/Masterminds/glide/releases/download/${G_TAG}/glide-${G_TAG}-${G_ARCH}.tar.gz" ${PROJECT_BINARY_DIR}/glide-${G_TAG}-${G_ARCH}.tar.gz
+    if("${G_ARCH}" STREQUAL "linux-amd64")
+        set(G_SHA256 "287b08291e14f1fae8ba44374b26a2b12eb941af3497ed0ca649253e21ba2f83")
+    else()
+        message(FATAL_ERROR "Unsupported platform ${G_ARCH}")
+    endif()
+
+    message(STATUS "Installing godep (ver ${G_TAG}) into ${PROJECT_BINARY_DIR}")
+    file(DOWNLOAD "https://github.com/golang/dep/releases/download/${G_TAG}/dep-${G_ARCH}" ${PROJECT_BINARY_DIR}/dep
         INACTIVITY_TIMEOUT 60
+        TIMEOUT 300
         STATUS DOWNLOAD_RES
         EXPECTED_HASH SHA256=${G_SHA256})
     list(GET DOWNLOAD_RES 0 RES)
     list(GET DOWNLOAD_RES 1 MSG)
     if(RES)
-        message(FATAL_ERROR, MSG)
+        message(FATAL_ERROR, "${MSG}")
     endif()
-    if(EXISTS ${PROJECT_BINARY_DIR}/${G_ARCH})
-        execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory ${G_ARCH} WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
-    endif()
-    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf glide-${G_TAG}-${G_ARCH}.tar.gz glide WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
-    execute_process(COMMAND ${CMAKE_COMMAND} -E rename ${G_ARCH}/glide ${PROJECT_BINARY_DIR}/glide WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
-    execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory ${G_ARCH} WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
+    execute_process(COMMAND sh -c "chmod +x ${PROJECT_BINARY_DIR}/dep" WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
-    if(EXISTS ${PROJECT_BINARY_DIR}/glide)
-        set(GLIDE_FOUND true)
-        set(GLIDE_EXECUTABLE ${PROJECT_BINARY_DIR}/glide)
-        set(GLIDE_VERSION ${GLIDE_VERSION_REQ})
-    else()
-        message(FATAL_ERROR "Unable to obtain and install requred version of glide. Exiting...")
+    if(EXISTS ${PROJECT_BINARY_DIR}/dep)
+        set(GODEP_FOUND true)
+        set(GODEP_EXECUTABLE ${PROJECT_BINARY_DIR}/dep)
+        set(GODEP_VERSION ${GODEP_REQ_VER})
+     else()
+        message(FATAL_ERROR "Unable to obtain and install requred version of go dep. Exiting...")
+     endif()
+
+    message(STATUS "Vendoring for go")
+    set(ENV{GOPATH} ${PROJECT_SOURCE_DIR})
+    if(NOT EXISTS ${PROJECT_SOURCE_DIR}/src/inpxcreator/Gopkg.toml)
+        message(FATAL_ERROR "Unable to find Gopkg.toml. Exiting...")
     endif()
+    execute_process(COMMAND ${GODEP_EXECUTABLE} ensure -vendor-only WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
 endif()
-
-# Proper go build structure will be here
-set(GO_PATH "${CMAKE_BINARY_DIR}/go")
 
 if(CMAKE_CROSSCOMPILING)
     # Set Go target environments
@@ -173,41 +203,24 @@ if(CMAKE_CROSSCOMPILING)
     endif()
 endif()
 
-message(STATUS "Vendoring for go")
-execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory go/src)
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/glide.yaml go/src/.)
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/glide.lock go/src/.)
-set(ENV{GOPATH} ${GO_PATH})
-execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GLIDE_EXECUTABLE} install WORKING_DIRECTORY go/src)
+configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${PROJECT_SOURCE_DIR}/src/inpxcreator/misc/version.go")
 
-configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libget2/version.go")
-file(GLOB SRCS_LIBGET2 RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libget2/*.go)
+add_custom_target(bin_libget2 ALL
+    COMMAND GOPATH=${PROJECT_SOURCE_DIR}
+        ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libget2
+        -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
+        inpxcreator/cmd/libget2
+    COMMENT "Building libget2..."
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
+add_dependencies(bin_libget2 inpxc_git_ver)
+install(PROGRAMS ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX}
-	DEPENDS ${SRCS_LIBGET2} "${GO_PATH}/src/libget2/version.go"
-	# setting up source tree
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libget2/ go/src/libget2
-	# Building
-	COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH} ${GO_EXECUTABLE} build libget2
-	COMMENT "Building GO program - libget2")
-add_custom_target(libget2_exe ALL DEPENDS ${CMAKE_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX})
-install(PROGRAMS ${CMAKE_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
-
-configure_file ("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${GO_PATH}/src/libmerge/version.go")
-file(GLOB SRCS_LIBMERGE RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/libmerge/*.go)
-
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX}
-	DEPENDS ${SRCS_LIBMERGE} "${GO_PATH}/src/libget2/version.go"
-	# setting up source tree
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/libmerge/ go/src/libmerge
-	# Building
-	COMMAND ${CMAKE_COMMAND} -E env GOROOT=${GO_ROOT} GOPATH=${GO_PATH} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH} ${GO_EXECUTABLE} build libmerge
-	COMMENT "Building GO program - libmerge")
-add_custom_target(libmerge_exe ALL DEPENDS ${CMAKE_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX})
-install(PROGRAMS ${CMAKE_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
-
-add_custom_target(update DEPENDS ${GLIDE_EXECUTABLE}
-	SOURCES go/src/glide.yaml
-	COMMAND ${GLIDE_EXECUTABLE} update
-	WORKING_DIRECTORY "go/src"
-	VERBATIM)
+add_custom_target(bin_libmerge ALL
+    COMMAND GOPATH=${PROJECT_SOURCE_DIR}
+        ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libmerge
+        -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
+        inpxcreator/cmd/libmerge
+    COMMENT "Building libmerge..."
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
+add_dependencies(bin_libmerge inpxc_git_ver)
+install(PROGRAMS ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
