@@ -35,6 +35,11 @@ YELLOW='[38;5;03m'
 readonly ALL_OFF BOLD BLUE GREEN RED YELLOW
 ARCH_INSTALLS="${ARCH_INSTALLS:-win32 win64 linux}"
 
+if [ ! -d ${HOME}/result ]; then
+	print_error "directory for the result is not available. Exiting..."
+	exit 1
+fi
+
 if not command -v cmake >/dev/null 2>&1; then
 	print_error "No cmake found - please, install"
 	exit 1
@@ -88,14 +93,14 @@ for _mingw in ${ARCH_INSTALLS}; do
 
 		(
 			if [ -z ${_msystem} ]; then
-				[ -f lib2inpx-${_arch}-glibc_${_glibc}.tar.xz ] && rm lib2inpx-${_arch}-glibc_${_glibc}.tar.xz
+				[ -f ${HOME}/result/lib2inpx-${_arch}-glibc_${_glibc}.tar.xz ] && rm ${HOME}/result/lib2inpx-${_arch}-glibc_${_glibc}.tar.xz
 
-				tar --directory ${_dist} --create --xz --file lib2inpx-${_arch}-glibc_${_glibc}.tar.xz .
+				tar --directory ${_dist} --create --xz --file ${HOME}/result/lib2inpx-${_arch}-glibc_${_glibc}.tar.xz .
 			else
-				[ -f lib2inpx-${_arch}.7z ] && rm lib2inpx-${_arch}.7z
+				[ -f ${HOME}/result/lib2inpx-${_arch}.7z ] && rm ${HOME}/result/lib2inpx-${_arch}.7z
 
 				cd ${_dist}
-				7z a -r ../lib2inpx-${_arch}
+				7z a -r ${HOME}/result/lib2inpx-${_arch}
 			fi
 		)
 	else

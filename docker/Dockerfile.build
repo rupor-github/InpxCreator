@@ -1,7 +1,7 @@
 FROM ubuntu:16.04
 
 RUN apt-get -qqy update &&\
-apt-get -qqy install wget curl build-essential git git-extras automake pkg-config zlib1g-dev libaio-dev libboost-all-dev p7zip-full gdb mingw-w64 binutils-mingw-w64 mingw-w64-tools libz-mingw-w64-dev
+apt-get -qqy install wget curl build-essential git git-extras automake pkg-config libcurl4-openssl-dev zlib1g-dev libaio-dev libboost-all-dev p7zip-full gdb mingw-w64 binutils-mingw-w64 mingw-w64-tools libz-mingw-w64-dev
 
 WORKDIR /root/
 
@@ -9,7 +9,7 @@ WORKDIR /root/
 RUN curl -LO https://cmake.org/files/v3.12/cmake-3.12.2.tar.gz \
     && tar -xvf cmake-3.12.2.tar.gz \
     && cd cmake-3.12.2 \
-    && ./bootstrap \
+    && ./bootstrap --system-curl \
     && make install \
     && cd .. \
     && rm -rf cmake-3.12.2.tar.gz cmake-3.12.2
