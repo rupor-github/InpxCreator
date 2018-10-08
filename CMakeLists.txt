@@ -45,9 +45,6 @@ message(STATUS "Destination directory: ${DEST_DIR}")
 set(BUILD_SHARED_LIBS OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
-# if(UNIX)
-#     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
-# endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "** Debug mode")
@@ -61,22 +58,23 @@ find_package(Git REQUIRED)
 
 if (EXISTS "${PROJECT_SOURCE_DIR}/.git" AND IS_DIRECTORY "${PROJECT_SOURCE_DIR}/.git")
     # if we can - get current state of the project
-    add_custom_target(inpxc_git_ver
+    add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/inpxc_git_ver
         COMMAND ${GIT_EXECUTABLE} rev-list -1 HEAD >${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp
         COMMAND sh -c 'test -n \"\$\(shell ${GIT_EXECUTABLE} diff --shortstat 2> /dev/null | tail -n1\)\" && echo \"*\" >>${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp || true'
         COMMAND tr -d '\\n' <${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp >${PROJECT_BINARY_DIR}/inpxc_git_ver
         COMMAND ${CMAKE_COMMAND} -E remove -f ${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp
-        COMMAND sed -i '/define PRJ_GIT_HASH/ s/ \".*\"/ \"\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)\"/' ${PROJECT_BINARY_DIR}/version.h
         COMMENT "Checking git status..."
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
 else()
-    # when BOB git repository is removed to save space before we run
-    add_custom_target(inpxc_git_ver
+    add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/inpxc_git_ver
         COMMAND sh -c 'echo -n no-git-repo >${PROJECT_BINARY_DIR}/inpxc_git_ver'
-        COMMAND sed -i '/define PRJ_GIT_HASH/ s/ \".*\"/ \"\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)\"/' ${PROJECT_BINARY_DIR}/version.h
         COMMENT "Checking git status..."
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
 endif()
+add_custom_target(gen_git_ver 
+        COMMAND sed -i '/define PRJ_GIT_HASH/ s/ \".*\"/ \"\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)\"/' ${PROJECT_BINARY_DIR}/version.h     
+        COMMENT "Patching version.h"
+        DEPENDS ${PROJECT_BINARY_DIR}/inpxc_git_ver)
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
@@ -111,7 +109,7 @@ add_library(minizip ${SRCS_MINIZIP})
 
 set(SRCS_LIB2INPX lib2inpx/util.cpp lib2inpx/lib2inpx.cpp)
 add_executable(lib2inpx ${SRCS_LIB2INPX})
-add_dependencies(lib2inpx inpxc_git_ver)
+add_dependencies(lib2inpx gen_git_ver)
 if(UNIX)
     set(ADD_LIBS "${CMAKE_THREAD_LIBS_INIT} -lm -lrt -ldl -lcrypt -laio")
     if(ICONV_LIBRARIES MATCHES "libc")
@@ -155,13 +153,8 @@ set(GODEP_REQ_VER "0.5.0")
 find_package(Godep "${GODEP_REQ_VER}")
 if(NOT GODEP_FOUND)
     set(G_TAG "v${GODEP_REQ_VER}")
-    string(TOLOWER "${CMAKE_SYSTEM_NAME}-amd64" G_ARCH)
-
-    if("${G_ARCH}" STREQUAL "linux-amd64")
-        set(G_SHA256 "287b08291e14f1fae8ba44374b26a2b12eb941af3497ed0ca649253e21ba2f83")
-    else()
-        message(FATAL_ERROR "Unsupported platform ${G_ARCH}")
-    endif()
+    set(G_ARCH "linux-amd64")
+    set(G_SHA256 "287b08291e14f1fae8ba44374b26a2b12eb941af3497ed0ca649253e21ba2f83")
 
     message(STATUS "Installing godep (ver ${G_TAG}) into ${PROJECT_BINARY_DIR}")
     file(DOWNLOAD "https://github.com/golang/dep/releases/download/${G_TAG}/dep-${G_ARCH}" ${PROJECT_BINARY_DIR}/dep
@@ -206,21 +199,21 @@ endif()
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${PROJECT_SOURCE_DIR}/src/inpxcreator/misc/version.go")
 
 add_custom_target(bin_libget2 ALL
-    COMMAND GOPATH=${PROJECT_SOURCE_DIR}
-        ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libget2
+    DEPENDS ${PROJECT_BINARY_DIR}/inpxc_git_ver
+    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
+        ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX}
         -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
         inpxcreator/cmd/libget2
     COMMENT "Building libget2..."
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
-add_dependencies(bin_libget2 inpxc_git_ver)
 install(PROGRAMS ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
 add_custom_target(bin_libmerge ALL
-    COMMAND GOPATH=${PROJECT_SOURCE_DIR}
-        ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libmerge
+    DEPENDS ${PROJECT_BINARY_DIR}/inpxc_git_ver
+    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
+        ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX}
         -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
         inpxcreator/cmd/libmerge
     COMMENT "Building libmerge..."
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
-add_dependencies(bin_libmerge inpxc_git_ver)
 install(PROGRAMS ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)

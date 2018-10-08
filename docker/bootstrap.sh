@@ -1,3 +1,3 @@
 #!/bin/bash
 git clone https://github.com/rupor-github/InpxCreator.git
-cd /root/InpxCreator/
+echo "Ready. 'cd InpxCreator && ./build-release.sh'"
