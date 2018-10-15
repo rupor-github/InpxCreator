@@ -202,7 +202,6 @@ endif()
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${PROJECT_SOURCE_DIR}/src/inpxcreator/misc/version.go")
 
 add_custom_target(bin_libget2 ALL
-    # DEPENDS ${PROJECT_BINARY_DIR}/inpxc_git_ver
     DEPENDS gen_git_ver
     COMMAND GOPATH=${PROJECT_SOURCE_DIR} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
         ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX}
@@ -213,7 +212,6 @@ add_custom_target(bin_libget2 ALL
 install(PROGRAMS ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
 add_custom_target(bin_libmerge ALL
-    # DEPENDS ${PROJECT_BINARY_DIR}/inpxc_git_ver
     DEPENDS gen_git_ver
     COMMAND GOPATH=${PROJECT_SOURCE_DIR} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
         ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX}
