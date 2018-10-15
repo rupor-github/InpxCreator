@@ -3,7 +3,6 @@ message(STATUS "Running cmake version ${CMAKE_VERSION}")
 
 project(InpxCreator)
 
-message(STATUS "Running cmake version ${CMAKE_VERSION}")
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "default to release build type" FORCE)
@@ -58,23 +57,29 @@ find_package(Git REQUIRED)
 
 if (EXISTS "${PROJECT_SOURCE_DIR}/.git" AND IS_DIRECTORY "${PROJECT_SOURCE_DIR}/.git")
     # if we can - get current state of the project
-    add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/inpxc_git_ver
+    add_custom_target(gen_git_ver
+        BYPRODUCTS ${PROJECT_BINARY_DIR}/inpxc_git_ver
         COMMAND ${GIT_EXECUTABLE} rev-list -1 HEAD >${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp
         COMMAND sh -c 'test -n \"\$\(shell ${GIT_EXECUTABLE} diff --shortstat 2> /dev/null | tail -n1\)\" && echo \"*\" >>${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp || true'
-        COMMAND tr -d '\\n' <${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp >${PROJECT_BINARY_DIR}/inpxc_git_ver
+        COMMAND tr -d '\\n' <${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp >${PROJECT_BINARY_DIR}/inpxc_git_ver.new
         COMMAND ${CMAKE_COMMAND} -E remove -f ${PROJECT_BINARY_DIR}/inpxc_git_ver.tmp
+        COMMAND sh -c 'if diff -q ${PROJECT_BINARY_DIR}/inpxc_git_ver ${PROJECT_BINARY_DIR}/inpxc_git_ver.new >/dev/null 2>&1\; then { rm ${PROJECT_BINARY_DIR}/inpxc_git_ver.new >/dev/null 2>&1\; }\; else { rm ${PROJECT_BINARY_DIR}/inpxc_git_ver >/dev/null 2>&1\; mv ${PROJECT_BINARY_DIR}/inpxc_git_ver.new ${PROJECT_BINARY_DIR}/inpxc_git_ver\; }\; fi' 
         COMMENT "Checking git status..."
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
 else()
-    add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/inpxc_git_ver
-        COMMAND sh -c 'echo -n no-git-repo >${PROJECT_BINARY_DIR}/inpxc_git_ver'
+    add_custom_target(gen_git_ver
+        BYPRODUCTS ${PROJECT_BINARY_DIR}/inpxc_git_ver
+        COMMAND sh -c 'echo -n no-git-repo >${PROJECT_BINARY_DIR}/inpxc_git_ver.new'
+        COMMAND sh -c 'if diff -q ${PROJECT_BINARY_DIR}/inpxc_git_ver ${PROJECT_BINARY_DIR}/inpxc_git_ver.new >/dev/null 2>&1\; then { rm ${PROJECT_BINARY_DIR}/inpxc_git_ver.new >/dev/null 2>&1\; }\; else { rm ${PROJECT_BINARY_DIR}/inpxc_git_ver >/dev/null 2>&1\; mv ${PROJECT_BINARY_DIR}/inpxc_git_ver.new ${PROJECT_BINARY_DIR}/inpxc_git_ver\; }\; fi' 
         COMMENT "Checking git status..."
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
 endif()
-add_custom_target(gen_git_ver 
+add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/version.h
         COMMAND sed -i '/define PRJ_GIT_HASH/ s/ \".*\"/ \"\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)\"/' ${PROJECT_BINARY_DIR}/version.h     
         COMMENT "Patching version.h"
         DEPENDS ${PROJECT_BINARY_DIR}/inpxc_git_ver)
+execute_process(COMMAND ${CMAKE_COMMAND} -E remove -f ${PROJECT_BINARY_DIR}/inpxc_git_ver ERROR_QUIET)
+configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
@@ -91,8 +96,6 @@ find_package(Iconv REQUIRED)
 
 get_filename_component(MYSQL_NAME ${MYSQL_LIBRARIES} NAME_WE)
 
-configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
-
 # Prepare history file
 execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} changelog --final-tag ${PRJ_VERSION_MAJOR}.${PRJ_VERSION_MINOR} --stdout OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
 
@@ -107,7 +110,7 @@ include_directories("${PROJECT_BINARY_DIR}")
 
 add_library(minizip ${SRCS_MINIZIP})
 
-set(SRCS_LIB2INPX lib2inpx/util.cpp lib2inpx/lib2inpx.cpp)
+set(SRCS_LIB2INPX lib2inpx/util.cpp lib2inpx/lib2inpx.cpp ${PROJECT_BINARY_DIR}/version.h)
 add_executable(lib2inpx ${SRCS_LIB2INPX})
 add_dependencies(lib2inpx gen_git_ver)
 if(UNIX)
@@ -199,7 +202,8 @@ endif()
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${PROJECT_SOURCE_DIR}/src/inpxcreator/misc/version.go")
 
 add_custom_target(bin_libget2 ALL
-    DEPENDS ${PROJECT_BINARY_DIR}/inpxc_git_ver
+    # DEPENDS ${PROJECT_BINARY_DIR}/inpxc_git_ver
+    DEPENDS gen_git_ver
     COMMAND GOPATH=${PROJECT_SOURCE_DIR} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
         ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX}
         -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
@@ -209,7 +213,8 @@ add_custom_target(bin_libget2 ALL
 install(PROGRAMS ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
 add_custom_target(bin_libmerge ALL
-    DEPENDS ${PROJECT_BINARY_DIR}/inpxc_git_ver
+    # DEPENDS ${PROJECT_BINARY_DIR}/inpxc_git_ver
+    DEPENDS gen_git_ver
     COMMAND GOPATH=${PROJECT_SOURCE_DIR} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
         ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX}
         -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
