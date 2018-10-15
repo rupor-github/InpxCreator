@@ -82,5 +82,5 @@ RUN curl -LO https://dl.google.com/go/go1.11.1.linux-amd64.tar.gz \
    && sed -i -e '$a export PATH=$PATH:/root/go/bin' .bashrc \
    && sed -i -e '$a export GOROOT=/root/go' .bashrc
 
-COPY bootstrap.sh .
-CMD ["/bin/bash"]
+COPY build.sh .
+CMD ["./build.sh"]
