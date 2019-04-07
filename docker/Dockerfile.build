@@ -52,9 +52,9 @@ RUN ln -s /usr/bin/x86_64-w64-mingw32-windres /usr/bin/windres \
     \
 # From https://github.com/Alexpux/MINGW-packages/tree/master/mingw-w64-boost
     \
-    && curl -O https://raw.githubusercontent.com/Alexpux/MINGW-packages/master/mingw-w64-boost/boost-1.60.0-mingw-context.patch \
-    && curl -O https://raw.githubusercontent.com/Alexpux/MINGW-packages/master/mingw-w64-boost/boost-1.61.0-fix-undefined-referense-to-codecvt.patch \
-    && curl -O https://raw.githubusercontent.com/Alexpux/MINGW-packages/master/mingw-w64-boost/boost-include-intrin-h-on-mingw-w64.patch \
+    && curl -O https://raw.githubusercontent.com/Alexpux/MINGW-packages/dfb2f8118061f79d493c5106e9b51e019916cacf/mingw-w64-boost/boost-1.60.0-mingw-context.patch \
+    && curl -O https://raw.githubusercontent.com/Alexpux/MINGW-packages/dfb2f8118061f79d493c5106e9b51e019916cacf/mingw-w64-boost/boost-1.61.0-fix-undefined-referense-to-codecvt.patch \
+    && curl -O https://raw.githubusercontent.com/Alexpux/MINGW-packages/dfb2f8118061f79d493c5106e9b51e019916cacf/mingw-w64-boost/boost-include-intrin-h-on-mingw-w64.patch \
     && patch -p1 -i boost-1.60.0-mingw-context.patch \
     && patch -p1 -i boost-1.61.0-fix-undefined-referense-to-codecvt.patch \
     && patch -p0 -i boost-include-intrin-h-on-mingw-w64.patch \
@@ -76,9 +76,9 @@ RUN ./get-maria.sh
 
 #  ---------- download golang
 
-RUN curl -LO https://dl.google.com/go/go1.11.1.linux-amd64.tar.gz \
-   && tar -xvf go1.11.1.linux-amd64.tar.gz \
-   && rm go1.11.1.linux-amd64.tar.gz \
+RUN curl -LO https://dl.google.com/go/go1.12.2.linux-amd64.tar.gz \
+   && tar -xvf go1.12.2.linux-amd64.tar.gz \
+   && rm go1.12.2.linux-amd64.tar.gz \
    && sed -i -e '$a export PATH=$PATH:/root/go/bin' .bashrc \
    && sed -i -e '$a export GOROOT=/root/go' .bashrc
 
