@@ -1,7 +1,7 @@
 FROM ubuntu:16.04
 
 RUN apt-get -qqy update &&\
-apt-get -qqy install wget curl build-essential git git-extras automake pkg-config libcurl4-openssl-dev zlib1g-dev libaio-dev libboost-all-dev p7zip-full gdb mingw-w64 binutils-mingw-w64 mingw-w64-tools libz-mingw-w64-dev
+apt-get -qqy install tzdata wget curl build-essential git git-extras automake pkg-config libcurl4-openssl-dev zlib1g-dev libaio-dev libboost-all-dev p7zip-full gdb mingw-w64 binutils-mingw-w64 mingw-w64-tools libz-mingw-w64-dev
 
 WORKDIR /root/
 
@@ -76,9 +76,9 @@ RUN ./get-maria.sh
 
 #  ---------- download golang
 
-RUN curl -LO https://dl.google.com/go/go1.12.2.linux-amd64.tar.gz \
-   && tar -xvf go1.12.2.linux-amd64.tar.gz \
-   && rm go1.12.2.linux-amd64.tar.gz \
+RUN curl -LO https://dl.google.com/go/go1.13.1.linux-amd64.tar.gz \
+   && tar -xvf go1.13.1.linux-amd64.tar.gz \
+   && rm go1.13.1.linux-amd64.tar.gz \
    && sed -i -e '$a export PATH=$PATH:/root/go/bin' .bashrc \
    && sed -i -e '$a export GOROOT=/root/go' .bashrc
 

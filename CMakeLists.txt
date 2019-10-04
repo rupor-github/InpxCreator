@@ -13,7 +13,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 # Project version number
 set(PRJ_VERSION_MAJOR 9)
-set(PRJ_VERSION_MINOR 44)
+set(PRJ_VERSION_MINOR 45)
 
 if(WIN32 AND NOT DEFINED ENV{MSYSTEM})
     message(FATAL_ERROR "Currently unsuppored environment. Use MINGW for Windows builds. CMake willl exit now.")
@@ -48,9 +48,11 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-lib
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "** Debug mode")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -D_XML_DEBUG")
+    set(TEST_RUN_ARGS "-v")
 else()
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -s")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
+    set(GO_MOD_ARGS "-mod=vendor")
 endif()
 
 find_package(Git REQUIRED)
@@ -150,43 +152,7 @@ install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${PROJECT
 # go targets are always out of date, "go build" will figure it out
 ########################################################################################################
 
-find_package(Go 1.11 REQUIRED)
-
-set(GODEP_REQ_VER "0.5.0")
-find_package(Godep "${GODEP_REQ_VER}")
-if(NOT GODEP_FOUND)
-    set(G_TAG "v${GODEP_REQ_VER}")
-    set(G_ARCH "linux-amd64")
-    set(G_SHA256 "287b08291e14f1fae8ba44374b26a2b12eb941af3497ed0ca649253e21ba2f83")
-
-    message(STATUS "Installing godep (ver ${G_TAG}) into ${PROJECT_BINARY_DIR}")
-    file(DOWNLOAD "https://github.com/golang/dep/releases/download/${G_TAG}/dep-${G_ARCH}" ${PROJECT_BINARY_DIR}/dep
-        INACTIVITY_TIMEOUT 60
-        TIMEOUT 300
-        STATUS DOWNLOAD_RES
-        EXPECTED_HASH SHA256=${G_SHA256})
-    list(GET DOWNLOAD_RES 0 RES)
-    list(GET DOWNLOAD_RES 1 MSG)
-    if(RES)
-        message(FATAL_ERROR, "${MSG}")
-    endif()
-    execute_process(COMMAND sh -c "chmod +x ${PROJECT_BINARY_DIR}/dep" WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
-
-    if(EXISTS ${PROJECT_BINARY_DIR}/dep)
-        set(GODEP_FOUND true)
-        set(GODEP_EXECUTABLE ${PROJECT_BINARY_DIR}/dep)
-        set(GODEP_VERSION ${GODEP_REQ_VER})
-     else()
-        message(FATAL_ERROR "Unable to obtain and install requred version of go dep. Exiting...")
-     endif()
-
-    message(STATUS "Vendoring for go")
-    set(ENV{GOPATH} ${PROJECT_SOURCE_DIR})
-    if(NOT EXISTS ${PROJECT_SOURCE_DIR}/src/inpxcreator/Gopkg.toml)
-        message(FATAL_ERROR "Unable to find Gopkg.toml. Exiting...")
-    endif()
-    execute_process(COMMAND ${GODEP_EXECUTABLE} ensure -vendor-only WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
-endif()
+find_package(Go 1.13 REQUIRED)
 
 if(CMAKE_CROSSCOMPILING)
     # Set Go target environments
@@ -203,9 +169,10 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${PROJECT_SOURCE_DIR
 
 add_custom_target(bin_libget2 ALL
     DEPENDS gen_git_ver
-    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
+    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
         ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX}
         -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
+        ${GO_MOD_ARGS}
         inpxcreator/cmd/libget2
     COMMENT "Building libget2..."
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
@@ -213,10 +180,43 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX} DESTINA
 
 add_custom_target(bin_libmerge ALL
     DEPENDS gen_git_ver
-    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
+    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
         ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX}
         -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
+        ${GO_MOD_ARGS}
         inpxcreator/cmd/libmerge
     COMMENT "Building libmerge..."
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
 install(PROGRAMS ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
+
+########################################################################################################
+# Go dependency management
+########################################################################################################
+
+add_custom_target(deps_print
+    SOURCES ${PROJECT_SOURCE_DIR}/src/inpxcreator/go.mod
+    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on ${GO_EXECUTABLE} mod graph
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator"
+    COMMENT "Printing dependencies (go mod graph)"
+    VERBATIM)
+
+add_custom_target(deps_tidy
+    SOURCES ${PROJECT_SOURCE_DIR}/src/inpxcreator/go.mod
+    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on ${GO_EXECUTABLE} mod tidy
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator"
+    COMMENT "Cleaning dependencies (go mod tidy)"
+    VERBATIM)
+
+add_custom_target(deps_verify
+    SOURCES ${PROJECT_SOURCE_DIR}/src/inpxcreator/go.mod
+    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on ${GO_EXECUTABLE} mod verify
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator"
+    COMMENT "Verifying dependencies (go mod verify)"
+    VERBATIM)
+
+add_custom_target(deps_vendor
+    SOURCES ${PROJECT_SOURCE_DIR}/src/inpxcreator/go.mod
+    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on ${GO_EXECUTABLE} mod vendor
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator"
+    COMMENT "Creating vendor directory (go mod vendor)"
+    VERBATIM)

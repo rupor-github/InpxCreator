@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -440,7 +441,7 @@ func main() {
 	log.SetPrefix("\n*** ")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "\nTool to download library updates\nVersion %s %s\n\n", misc.GetVersion(), LastGitCommit)
+		fmt.Fprintf(os.Stderr, "\nTool to download library updates\nVersion %s (%s) %s\n\n", misc.GetVersion(), runtime.Version(), LastGitCommit)
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}

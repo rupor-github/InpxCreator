@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -158,7 +159,7 @@ func main() {
 	var code int
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "\nTool to merge library updates\nVersion %s %s\n\n", misc.GetVersion(), LastGitCommit)
+		fmt.Fprintf(os.Stderr, "\nTool to merge library updates\nVersion %s (%s) %s\n\n", misc.GetVersion(), runtime.Version(), LastGitCommit)
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}
@@ -218,7 +219,11 @@ func main() {
 	} else {
 		merge.begin, merge.end = last.begin, last.end
 		if verbose {
-			fmt.Printf("Merge archive: %s - from %d to %d size %d\n", "**new**", merge.begin, merge.end, last.info.Size())
+			var sz int64
+			if last.info != nil {
+				sz = last.info.Size()
+			}
+			fmt.Printf("Merge archive: %s - from %d to %d size %d\n", "**new**", merge.begin, merge.end, sz)
 		}
 	}
 
