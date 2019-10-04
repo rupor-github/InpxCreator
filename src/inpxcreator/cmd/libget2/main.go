@@ -28,10 +28,10 @@ var library string
 var retry int
 var timeout int
 var chunkSize int
-var noSql bool
+var noSQL bool
 var noRedirect bool
 var dest string
-var destSql string
+var destSQL string
 var configPath string
 var verbose bool
 var ranges bool
@@ -39,7 +39,7 @@ var ranges bool
 var reNumbers *regexp.Regexp
 var reMerge *regexp.Regexp
 var lastBook int
-var proxyUrl *url.URL
+var proxyURL *url.URL
 
 // LastGitCommit is used during build to inject git sha
 var LastGitCommit string
@@ -53,12 +53,12 @@ func init() {
 	flag.IntVar(&retry, "retry", 3, "number of re-tries")
 	flag.IntVar(&timeout, "timeout", 20, "communication timeout in seconds")
 	flag.IntVar(&chunkSize, "chunksize", 10, "Size of the chunk (megabytes) to be received in timeout time")
-	flag.BoolVar(&noSql, "nosql", false, "do not download database")
+	flag.BoolVar(&noSQL, "nosql", false, "do not download database")
 	flag.BoolVar(&noRedirect, "sticky", false, "(hack) ignore http redirects, stick with original host address")
 	flag.BoolVar(&verbose, "verbose", false, "print detailed information")
 	flag.BoolVar(&ranges, "continue", false, "continue getting a partially-downloaded file (until retry limit is reached)")
 	flag.StringVar(&dest, "to", pwd, "destination directory for archives")
-	flag.StringVar(&destSql, "tosql", emptyString, "destination directory for database files")
+	flag.StringVar(&destSQL, "tosql", emptyString, "destination directory for database files")
 	flag.StringVar(&configPath, "config", filepath.Join(pwd, "libget2.conf"), "configuration file")
 	if reNumbers, err = regexp.Compile("(?i)\\s*([0-9]+)-([0-9]+).zip"); err != nil {
 		log.Fatal(err)
@@ -113,7 +113,7 @@ func getLastBook(path string) (int, error) {
 
 func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, error) {
 
-	hostUrl, err := url.Parse(hostAddr)
+	hostURL, err := url.Parse(hostAddr)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "httpReq")
 	}
@@ -124,13 +124,13 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, e
 			return errors.New("httpReq: stopped after 10 redirects")
 		}
 		if verbose {
-			fmt.Printf("Detected redirect from \"%s\" to \"%s\"", hostUrl.Host, req.URL.Host)
+			fmt.Printf("Detected redirect from \"%s\" to \"%s\"", hostURL.Host, req.URL.Host)
 		}
 		if noRedirect {
 			if verbose {
 				fmt.Printf("\t...Ignoring")
 			}
-			req.URL.Host = hostUrl.Host
+			req.URL.Host = hostURL.Host
 		}
 		if verbose {
 			fmt.Println()
@@ -140,15 +140,15 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, e
 
 	var transport *http.Transport
 
-	if proxyUrl != nil {
-		switch proxyUrl.Scheme {
+	if proxyURL != nil {
+		switch proxyURL.Scheme {
 		case "socks5":
 			var a *proxy.Auth
-			if proxyUrl.User != nil && len(proxyUrl.User.Username()) > 0 {
-				p, _ := proxyUrl.User.Password()
-				a = &proxy.Auth{User: proxyUrl.User.Username(), Password: p}
+			if proxyURL.User != nil && len(proxyURL.User.Username()) > 0 {
+				p, _ := proxyURL.User.Password()
+				a = &proxy.Auth{User: proxyURL.User.Username(), Password: p}
 			}
-			p, err := proxy.SOCKS5("tcp4", proxyUrl.Host, a, proxy.Direct)
+			p, err := proxy.SOCKS5("tcp4", proxyURL.Host, a, proxy.Direct)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "httpReq")
 			}
@@ -156,7 +156,7 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, e
 		case "http":
 			transport = &http.Transport{DisableKeepAlives: true}
 		default:
-			return nil, nil, errors.New("httpReq: Unsupported proxy scheme: " + proxyUrl.Scheme)
+			return nil, nil, errors.New("httpReq: Unsupported proxy scheme: " + proxyURL.Scheme)
 		}
 	} else {
 		transport = &http.Transport{DisableKeepAlives: true}
@@ -264,7 +264,7 @@ func getLinks(url, pattern string) ([]string, error) {
 	return links, err
 }
 
-func getSqlLinks(url, pattern string) ([]string, error) {
+func getSQLLinks(url, pattern string) ([]string, error) {
 
 	var err error
 	var links []string
@@ -285,7 +285,7 @@ func getSqlLinks(url, pattern string) ([]string, error) {
 
 	var re *regexp.Regexp
 	if re, err = regexp.Compile(pattern); err != nil {
-		return nil, errors.Wrap(err, "getSqlLinks")
+		return nil, errors.Wrap(err, "getSQLLinks")
 	}
 
 	if m := re.FindAllStringSubmatch(body, -1); m != nil {
@@ -294,7 +294,7 @@ func getSqlLinks(url, pattern string) ([]string, error) {
 			links[ni] = v[1]
 		}
 	} else {
-		err = errors.New("getSqlLinks: No sutable links found for SQL tables")
+		err = errors.New("getSQLLinks: No sutable links found for SQL tables")
 	}
 
 	return links, err
@@ -393,15 +393,15 @@ func getFiles(files []string, url, dest string) error {
 
 		var start int64
 		var tmp string
-		var with_ranges bool
+		var withRanges bool
 
 		for ni := 1; ni <= retry; ni++ {
 			if ranges && start > 0 {
 				for nj := 1; nj <= retry; nj++ {
-					with_ranges, err = acceptsRanges(joinUrl(url, f))
+					withRanges, err = acceptsRanges(joinUrl(url, f))
 					if err == nil {
 						if verbose {
-							if with_ranges {
+							if withRanges {
 								fmt.Print("   ...Server supports ranges")
 							} else {
 								fmt.Print("   ...Server does not support ranges")
@@ -411,7 +411,7 @@ func getFiles(files []string, url, dest string) error {
 					}
 				}
 			}
-			if !with_ranges {
+			if !withRanges {
 				start = 0
 			}
 			fmt.Printf("\nDownloading file %-35.35s (%-3d:%012d) ", f, ni, start)
@@ -470,10 +470,10 @@ func main() {
 	if dest, err = filepath.Abs(dest); err != nil {
 		log.Fatal(err)
 	}
-	if len(destSql) == 0 {
-		destSql = libName + "_" + time.Now().UTC().Format("20060102_150405")
+	if len(destSQL) == 0 {
+		destSQL = libName + "_" + time.Now().UTC().Format("20060102_150405")
 	}
-	if destSql, err = filepath.Abs(destSql); err != nil {
+	if destSQL, err = filepath.Abs(destSQL); err != nil {
 		log.Fatal(err)
 	}
 
@@ -485,12 +485,12 @@ func main() {
 	}
 
 	if len(lib.Proxy) > 0 {
-		if proxyUrl, err = url.Parse(lib.Proxy); err != nil {
+		if proxyURL, err = url.Parse(lib.Proxy); err != nil {
 			log.Fatal(err)
 		}
 		if verbose {
 			// Hide user:password if any
-			u := &url.URL{Scheme: proxyUrl.Scheme, Host: proxyUrl.Host}
+			u := &url.URL{Scheme: proxyURL.Scheme, Host: proxyURL.Host}
 			fmt.Printf("Using proxy: \"%s\"\n", u.String())
 		}
 	}
@@ -515,18 +515,18 @@ func main() {
 	} else {
 		fmt.Printf("\nProcessed no new archive(s)\n")
 	}
-	if noSql {
+	if noSQL {
 		fmt.Println("\nDone...")
 		os.Exit(code)
 	}
 
-	if links, err = getSqlLinks(lib.UrlSQL, lib.PatternSQL); err != nil {
+	if links, err = getSQLLinks(lib.UrlSQL, lib.PatternSQL); err != nil {
 		log.Fatal(err)
 	}
-	if err = os.MkdirAll(destSql, 0777); err != nil {
+	if err = os.MkdirAll(destSQL, 0777); err != nil {
 		log.Fatal(err)
 	}
-	if err = getFiles(links, lib.UrlSQL, destSql); err != nil {
+	if err = getFiles(links, lib.UrlSQL, destSQL); err != nil {
 		log.Fatal(err)
 	}
 	if len(links) > 0 {

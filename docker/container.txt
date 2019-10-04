@@ -4,3 +4,4 @@ docker save -o ../../inpxc.tar inpxc
 docker load -i ../../inpxc.tar
 
 docker run --name inpxcreator -v E:/projects/books/InpxCreator:/root/result -it inpxc:latest
+docker run -e TZ=America/New_York --name inpxcreator -v E:/projects/books/InpxCreator:/root/result -it inpxc:latest /bin/bash

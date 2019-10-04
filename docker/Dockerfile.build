@@ -6,13 +6,13 @@ apt-get -qqy install tzdata wget curl build-essential git git-extras automake pk
 WORKDIR /root/
 
 # ---------- We either patch cmake to support up to date boost (/usr/share/cmake-3.5/Modules/FindBoost.cmake) or build fresh one
-RUN curl -LO https://cmake.org/files/v3.12/cmake-3.12.2.tar.gz \
-    && tar -xvf cmake-3.12.2.tar.gz \
-    && cd cmake-3.12.2 \
+RUN curl -LO https://cmake.org/files/v3.15/cmake-3.15.4.tar.gz \
+    && tar -xvf cmake-3.15.4.tar.gz \
+    && cd cmake-3.15.4 \
     && ./bootstrap --system-curl \
     && make install \
     && cd .. \
-    && rm -rf cmake-3.12.2.tar.gz cmake-3.12.2
+    && rm -rf cmake-3.15.4.tar.gz cmake-3.15.4
 
 # ---------- mingw does not have expat
 RUN git clone https://github.com/libexpat/libexpat.git \
