@@ -76,9 +76,9 @@ RUN ./get-maria.sh
 
 #  ---------- download golang
 
-RUN curl -LO https://dl.google.com/go/go1.13.1.linux-amd64.tar.gz \
-   && tar -xvf go1.13.1.linux-amd64.tar.gz \
-   && rm go1.13.1.linux-amd64.tar.gz \
+RUN curl -LO https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz \
+   && tar -xvf go1.14.2.linux-amd64.tar.gz \
+   && rm go1.14.2.linux-amd64.tar.gz \
    && sed -i -e '$a export PATH=$PATH:/root/go/bin' .bashrc \
    && sed -i -e '$a export GOROOT=/root/go' .bashrc
 
