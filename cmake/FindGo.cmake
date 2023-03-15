@@ -13,7 +13,7 @@
 # Example usage:
 #   find_package(Go 1.2 REQUIRED)
 
-find_program(GO_EXECUTABLE go PATHS ENV GOROOT GOPATH PATH_SUFFIXES bin)
+find_program(GO_EXECUTABLE go PATHS $ENV{HOME}/go ENV GOROOT GOPATH PATH_SUFFIXES bin)
 if(GO_EXECUTABLE)
 	execute_process(COMMAND ${GO_EXECUTABLE} version OUTPUT_VARIABLE GO_VERSION_OUTPUT OUTPUT_STRIP_TRAILING_WHITESPACE)
     if(GO_VERSION_OUTPUT MATCHES "go version go([0-9]+\\.[0-9]+\\.?[0-9]*)[a-zA-Z0-9]* ([^/]+)/(.*)")
