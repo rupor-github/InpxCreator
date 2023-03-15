@@ -1,8 +1,5 @@
 module inpxcreator
 
-go 1.13
+go 1.20
 
-require (
-	github.com/pkg/errors v0.8.1
-	golang.org/x/net v0.0.0-20191003171128-d98b1b443823
-)
+require golang.org/x/net v0.8.0

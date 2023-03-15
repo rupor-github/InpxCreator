@@ -11,45 +11,22 @@
 *.log
 *.svg
 
-*.[568vq]
-[568vq].out
-
-.undodir/
-.glide/
-.idea/
-.vscode/
-build/
-bin/
-_obj/
-_test/
-
 # build specific
 src/*/misc/version.go
 
-pkg/
-!src/**/pkg/
+lib2inpx-*.7z
+lib2inpx-*.zip
+lib2inpx-*.xz
+lib2inpx-*.gz
 
-*.cgo1.go
-*.cgo2.c
-_cgo_defun.c
-_cgo_gotypes.go
-_cgo_export.*
-_testmain.go
-.session.vim
-.set-project-env
-conf/mmb_*
+bin/
+build/
+[Bb]in_*/
+[Dd]ebug*/
+[Rr]elease*/
 
-# Our staff
-
-lib2inpx-win32.7z
-lib2inpx-win64.7z
-lib2inpx-linux_i686-glibc_*.tar.xz
-lib2inpx-linux_x86_64-glibc_*.tar.xz
-
-[Bb]in_win32
-[Bb]in_win64
-[Bb]in_linux_i686
-[Bb]in_linux_x86_64
+mariadb-??.?.*-linux-glibc_*-x86_64.tar.gz
+lib2inpx-*.tar.xz
 
 mariadb-??.?.*-linux-glibc_*-x86_64.tar.gz
 mariadb-??.?.*-linux-glibc_*-x86_64/**
@@ -68,16 +45,3 @@ mysql-?.?.*-win32.zip
 mysql-?.?.*-win32/**
 mysql-?.?.*-winx64.zip
 mysql-?.?.*-winx64/**
-
-[Dd]ebug32/
-[Dd]ebug64/
-[Dd]ebug_win32/
-[Dd]ebug_win64/
-[Rr]elease32/
-[Rr]elease64/
-[Rr]elease_win32/
-[Rr]elease_win64/
-[Dd]ebug_linux_i686/
-[Dd]ebug_linux_x86_64/
-[Rr]elease_linux_i686/
-[Rr]elease_linux_x86_64/

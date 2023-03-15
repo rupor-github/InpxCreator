@@ -1,10 +1,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"golang.org/x/net/proxy"
 
 	"inpxcreator/misc"
@@ -70,9 +69,9 @@ func init() {
 
 func getLastBook(path string) (int, error) {
 
-	archives, err := ioutil.ReadDir(path)
+	archives, err := os.ReadDir(path)
 	if err != nil {
-		return 0, errors.Wrap(err, "getLastBook")
+		return 0, fmt.Errorf("getLastBook: %w", err)
 	}
 
 	var lastBegin, lastEnd, mergeBegin, mergeEnd int
@@ -85,7 +84,7 @@ func getLastBook(path string) (int, error) {
 				lastEnd = snd
 			}
 		} else if err != nil {
-			return 0, errors.Wrap(err, "geLastBook")
+			return 0, fmt.Errorf("getLastBook: %w", err)
 		}
 	}
 
@@ -97,7 +96,7 @@ func getLastBook(path string) (int, error) {
 			mergeEnd = snd
 			count++
 		} else if err != nil {
-			return 0, errors.Wrap(err, "getLastBook")
+			return 0, fmt.Errorf("getLastBook: %w", err)
 		}
 	}
 	if count > 1 {
@@ -105,7 +104,7 @@ func getLastBook(path string) (int, error) {
 	} else if count == 0 {
 		return lastEnd, nil
 	} else if mergeBegin < lastBegin || mergeBegin > lastBegin && mergeBegin <= lastEnd || mergeEnd < lastEnd {
-		return 0, errors.Errorf("getLastBook: merge (%d:%d) and last (%d:%d) archive do not match", mergeBegin, mergeEnd, lastBegin, lastEnd)
+		return 0, fmt.Errorf("getLastBook: merge (%d:%d) and last (%d:%d) archive do not match", mergeBegin, mergeEnd, lastBegin, lastEnd)
 	} else {
 		return mergeEnd, nil
 	}
@@ -115,7 +114,7 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, e
 
 	hostURL, err := url.Parse(hostAddr)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "httpReq")
+		return nil, nil, fmt.Errorf("httpReq: %w", err)
 	}
 
 	var redirect = func(req *http.Request, via []*http.Request) error {
@@ -150,7 +149,7 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, e
 			}
 			p, err := proxy.SOCKS5("tcp4", proxyURL.Host, a, proxy.Direct)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "httpReq")
+				return nil, nil, fmt.Errorf("httpReq: %w", err)
 			}
 			transport = &http.Transport{Dial: p.Dial, DisableKeepAlives: true}
 		case "http":
@@ -171,7 +170,7 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, e
 	req, err := http.NewRequest(verb, hostAddr, nil)
 	if err != nil {
 		timer.Stop()
-		return nil, nil, errors.Wrap(err, "httpReq")
+		return nil, nil, fmt.Errorf("httpReq: %w", err)
 	}
 	req.Cancel = c
 
@@ -187,7 +186,7 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, e
 	resp, err := client.Do(req)
 	if err != nil {
 		timer.Stop()
-		return nil, nil, errors.Wrap(err, "httpReq")
+		return nil, nil, fmt.Errorf("httpReq: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		timer.Stop()
@@ -200,13 +199,13 @@ func acceptsRanges(url string) (bool, error) {
 
 	resp, _, err := httpReq(url, "HEAD", 1)
 	if err != nil {
-		return false, errors.Wrap(err, "acceptsRanges")
+		return false, fmt.Errorf("acceptsRanges: %w", err)
 	}
 	defer resp.Body.Close()
 
-	_, err = ioutil.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return false, errors.Wrap(err, "acceptsRanges")
+		return false, fmt.Errorf("acceptsRanges: %w", err)
 	}
 
 	return resp.StatusCode == http.StatusPartialContent, nil
@@ -216,13 +215,13 @@ func fetchString(url string) (string, error) {
 
 	resp, _, err := httpReq(url, "GET", 0)
 	if err != nil {
-		return emptyString, errors.Wrap(err, "fetchString")
+		return emptyString, fmt.Errorf("fetchString: %w", err)
 	}
 	defer resp.Body.Close()
 
-	bodyb, err := ioutil.ReadAll(resp.Body)
+	bodyb, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return emptyString, errors.Wrap(err, "fetchString")
+		return emptyString, fmt.Errorf("fetchString: %w", err)
 	}
 	return string(bodyb), nil
 }
@@ -243,12 +242,12 @@ func getLinks(url, pattern string) ([]string, error) {
 	}
 
 	if err != nil {
-		return nil, errors.Wrap(err, "Unable to get index html for new archives")
+		return nil, fmt.Errorf("unable to get index html for new archives: %w", err)
 	}
 
 	var re *regexp.Regexp
 	if re, err = regexp.Compile(pattern); err != nil {
-		return nil, errors.Wrap(err, "getLinks")
+		return nil, fmt.Errorf("getLinks: %w", err)
 	}
 
 	if m := re.FindAllStringSubmatch(body, -1); m != nil {
@@ -280,12 +279,12 @@ func getSQLLinks(url, pattern string) ([]string, error) {
 	}
 
 	if err != nil {
-		return nil, errors.Wrap(err, "Unable to get index html for SQL tables")
+		return nil, fmt.Errorf("unable to get index html for SQL tables: %w", err)
 	}
 
 	var re *regexp.Regexp
 	if re, err = regexp.Compile(pattern); err != nil {
-		return nil, errors.Wrap(err, "getSQLLinks")
+		return nil, fmt.Errorf("getSQLLinks: %w", err)
 	}
 
 	if m := re.FindAllStringSubmatch(body, -1); m != nil {
@@ -311,25 +310,25 @@ func fetchFile(url, tmpIn string, start int64) (tmpOut string, size int64, err e
 		if start > 0 {
 			out, err = os.OpenFile(tmpIn, os.O_RDWR|os.O_APPEND, 0666)
 			if err != nil {
-				err = errors.Wrap(err, "fetchFile")
+				err = fmt.Errorf("fetchFile: %w", err)
 				return
 			}
 			_, err = out.Seek(start, os.SEEK_SET)
 			if err != nil {
-				err = errors.Wrap(err, "fetchFile")
+				err = fmt.Errorf("fetchFile: %w", err)
 				return
 			}
 		} else {
 			out, err = os.Create(tmpIn)
 			if err != nil {
-				err = errors.Wrap(err, "fetchFile")
+				err = fmt.Errorf("fetchFile: %w", err)
 				return
 			}
 		}
 	} else {
-		out, err = ioutil.TempFile("", "libget")
+		out, err = os.CreateTemp("", "libget")
 		if err != nil {
-			err = errors.Wrap(err, "fetchFile")
+			err = fmt.Errorf("fetchFile: %w", err)
 			return
 		}
 		tmpOut = out.Name()
@@ -338,7 +337,7 @@ func fetchFile(url, tmpIn string, start int64) (tmpOut string, size int64, err e
 
 	resp, timer, err := httpReq(url, "GET", start)
 	if err != nil {
-		err = errors.Wrap(err, "fetchFile")
+		err = fmt.Errorf("fetchFile: %w", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -354,11 +353,10 @@ func fetchFile(url, tmpIn string, start int64) (tmpOut string, size int64, err e
 		if e == io.EOF {
 			break
 		} else {
-			err = errors.Wrap(e, "fetchFile")
+			err = fmt.Errorf("fetchFile: %w", e)
 			break
 		}
 	}
-
 	return
 }
 
@@ -379,7 +377,7 @@ func processFile(tmp, file string) error {
 	}
 
 	if err != nil {
-		return errors.Wrap(err, "processFile")
+		return fmt.Errorf("processFile: %w", err)
 	}
 
 	return nil
@@ -424,7 +422,7 @@ func getFiles(files []string, url, dest string) error {
 		defer os.Remove(tmp)
 
 		if err != nil {
-			return errors.Wrap(err, "Unable to download files")
+			return fmt.Errorf("unable to download files: %w", err)
 		}
 
 		if err = processFile(tmp, filepath.Join(dest, f)); err != nil {

@@ -1669,8 +1669,13 @@ int main(int argc, char* argv[])
                 comment = tmp_str(comment.c_str(), inpx_name.c_str());
             }
 
+            // Make sure we always have single UTF-8 BOM
             collection_comment = "\xEF\xBB\xBF";
-            collection_comment += comment;
+            if (comment.rfind(collection_comment, 0) == 0) {
+                collection_comment = comment;
+            } else {
+                collection_comment += comment;
+            }
 
             zip zz(inpx, tmp_str("%s - %s", g_db_name.c_str(), full_date.c_str()));
 

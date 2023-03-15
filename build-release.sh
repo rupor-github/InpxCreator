@@ -33,7 +33,7 @@ RED='[38;5;01m'
 YELLOW='[38;5;03m'
 
 readonly ALL_OFF BOLD BLUE GREEN RED YELLOW
-ARCH_INSTALLS="${ARCH_INSTALLS:-win32 win64 linux}"
+ARCH_INSTALLS="${ARCH_INSTALLS:-win64 linux}"
 
 if [ ! -d ${HOME}/result ]; then
 	print_error "directory for the result is not available. Exiting..."

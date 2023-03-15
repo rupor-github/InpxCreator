@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 )
 
@@ -53,7 +52,7 @@ func (c *Config) Find(name string) (lib *Library) {
 func ReadLibraries(path string) (*Config, error) {
 	f, err := os.Open(path)
 	if err != nil && os.IsNotExist(err) {
-		err = ioutil.WriteFile(path, []byte(defconfig), os.ModePerm)
+		err = os.WriteFile(path, []byte(defconfig), os.ModePerm)
 		if err != nil {
 			return nil, err
 		}

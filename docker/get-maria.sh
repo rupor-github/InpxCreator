@@ -8,7 +8,7 @@ ver_minor=26
 declare -A checkmap
 from_url="https://downloads.mariadb.com/MariaDB"
 
-ARCH_INSTALLS="${ARCH_INSTALLS:-win32 win64 linux}"
+ARCH_INSTALLS="${ARCH_INSTALLS:-win64 linux}"
 
 for _mingw in ${ARCH_INSTALLS}; do
 	case ${_mingw} in

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -12,8 +13,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"inpxcreator/internal/zip"
 	"inpxcreator/misc"
@@ -49,9 +48,9 @@ func (f *filter) dissectName(name string) (bool, int, int, error) {
 	m := f.re.FindStringSubmatch(name)
 	if ok = (m != nil); ok {
 		if fst, err = strconv.Atoi(m[1]); err != nil {
-			err = errors.Wrapf(err, "dissecting %s", name)
+			err = fmt.Errorf("dissecting %s: %w", name, err)
 		} else if snd, err = strconv.Atoi(m[2]); err != nil {
-			err = errors.Wrapf(err, "dissecting %s", name)
+			err = fmt.Errorf("dissecting %s: %w", name, err)
 		}
 	}
 	return ok, fst, snd, err
@@ -87,7 +86,7 @@ func getLastArchive(files []archive) (archive, error) {
 				a.dir = f.dir
 			}
 		} else if err != nil {
-			return a, errors.Wrap(err, "getLastArchive")
+			return a, fmt.Errorf("getLastArchive: %w", err)
 		}
 	}
 	return a, nil
@@ -106,13 +105,13 @@ func getMergeArchive(files []archive) (archive, error) {
 			a.dir = f.dir
 			count++
 		} else if err != nil {
-			return a, errors.Wrap(err, "getMergeArchive")
+			return a, fmt.Errorf("getMergeArchive: %w", err)
 		}
 	}
 	if count <= 1 {
 		return a, nil
 	}
-	return a, errors.Errorf("getMergeArchive: there could only be single merge archive")
+	return a, errors.New("getMergeArchive: there could only be single merge archive")
 }
 
 func getUpdates(files []archive, last int) ([]archive, error) {
@@ -126,7 +125,7 @@ func getUpdates(files []archive, last int) ([]archive, error) {
 				updates = append(updates, archive{begin: fst, end: snd, info: f.info, dir: f.dir})
 			}
 		} else if err != nil {
-			return updates, errors.Wrap(err, "getUpdates")
+			return updates, fmt.Errorf("getUpdates: %w", err)
 		}
 	}
 	return updates, err

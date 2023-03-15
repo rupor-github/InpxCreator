@@ -1,47 +1,41 @@
 FROM ubuntu:16.04
 
+# Synology is still running very old glibc - 2.5 as of v7. So I have to use old verion of Ubuntu for linux build...
+
 RUN apt-get -qqy update &&\
 apt-get -qqy install tzdata wget curl build-essential git git-extras automake pkg-config libcurl4-openssl-dev zlib1g-dev libaio-dev libboost-all-dev p7zip-full gdb mingw-w64 binutils-mingw-w64 mingw-w64-tools libz-mingw-w64-dev
 
 WORKDIR /root/
 
 # ---------- We either patch cmake to support up to date boost (/usr/share/cmake-3.5/Modules/FindBoost.cmake) or build fresh one
-RUN curl -LO https://cmake.org/files/v3.15/cmake-3.15.4.tar.gz \
-    && tar -xvf cmake-3.15.4.tar.gz \
-    && cd cmake-3.15.4 \
+RUN curl -LO https://cmake.org/files/v3.25/cmake-3.25.3.tar.gz \
+    && tar -xvf cmake-3.25.3.tar.gz \
+    && cd cmake-3.25.3 \
     && ./bootstrap --system-curl \
     && make install \
     && cd .. \
-    && rm -rf cmake-3.15.4.tar.gz cmake-3.15.4
+    && rm -rf cmake-3.25.3.tar.gz cmake-3.25.3
 
 # ---------- mingw does not have expat
 RUN git clone https://github.com/libexpat/libexpat.git \
     && cd libexpat \
-    && git checkout R_2_2_6 \
+    && git checkout R_2_5_0 \
     && cd expat \
     && ./buildconf.sh \
-    && ./configure --host=i686-w64-mingw32 --prefix=/usr/i686-w64-mingw32 --without-xmlwf --without-docbook \
-    && make install \
-    && make clean \
     && ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --without-xmlwf --without-docbook \
     && make install \
     && cd ../.. \
     && rm -rf libexpat \
-    && rm /usr/i686-w64-mingw32/lib/*.la \
     && rm /usr/x86_64-w64-mingw32/lib/*.la
 
 # ---------- mingw does not have static iconv
-RUN curl -LO https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.15.tar.gz \
-    && tar -xvf libiconv-1.15.tar.gz \
-    && cd libiconv-1.15 \
-    && ./configure --host=i686-w64-mingw32 --prefix=/usr/i686-w64-mingw32 --enable-static \
-    && make install \
-    && make clean \
+RUN curl -LO https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.17.tar.gz \
+    && tar -xvf libiconv-1.17.tar.gz \
+    && cd libiconv-1.17 \
     && ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --enable-static \
     && make install \
     && cd .. \
-    && rm -rf libiconv-1.15.tar.gz libiconv-1.15 \
-    && rm /usr/i686-w64-mingw32/lib/*.la \
+    && rm -rf libiconv-1.17.tar.gz libiconv-1.17 \
     && rm /usr/x86_64-w64-mingw32/lib/*.la
 
 # ---------- mingw does not have boost (and we cannot cross build anything older than 1.63)
@@ -64,9 +58,6 @@ RUN ln -s /usr/bin/x86_64-w64-mingw32-windres /usr/bin/windres \
     && ./b2 --without-python --without-serialization --user-config=user-config.jam --debug-configuration toolset=gcc-5.3.1 link=shared,static target-os=windows address-model=64 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/x86_64-w64-mingw32 --layout=tagged --without-python --without-mpi -sICONV_PATH=/usr/x86_64-w64-mingw32 -sICONV_LINK="-L/usr/x86_64-w64-mingw32/lib -liconv" install \
     && ./b2 --without-python --without-serialization --user-config=user-config.jam --debug-configuration toolset=gcc-5.3.1 link=shared,static target-os=windows address-model=64 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/x86_64-w64-mingw32 --layout=tagged --without-python --without-mpi -sICONV_PATH=/usr/x86_64-w64-mingw32 -sICONV_LINK="-L/usr/x86_64-w64-mingw32/lib -liconv" clean \
     && rm -rf bin.v2 stage \
-    && echo "using gcc : 5.3.1 : i686-w64-mingw32-g++ ;" > user-config.jam \
-    && ./b2 --user-config=user-config.jam --debug-configuration toolset=gcc-5.3.1 link=shared,static target-os=windows address-model=32 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/i686-w64-mingw32 --layout=tagged --without-python --without-mpi --without-serialization -sICONV_PATH=/usr/i686-w64-mingw32 -sICONV_LINK="-L/usr/i686-w64-mingw32/lib -liconv" install \
-    && ./b2 --user-config=user-config.jam --debug-configuration toolset=gcc-5.3.1 link=shared,static target-os=windows address-model=32 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/i686-w64-mingw32 --layout=tagged --without-python --without-mpi --without-serialization -sICONV_PATH=/usr/i686-w64-mingw32 -sICONV_LINK="-L/usr/i686-w64-mingw32/lib -liconv" clean \
     && cd .. \
     && rm -rf boost_1_63_0.tar.gz boost_1_63_0
 
@@ -76,9 +67,9 @@ RUN ./get-maria.sh
 
 #  ---------- download golang
 
-RUN curl -LO https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz \
-   && tar -xvf go1.14.2.linux-amd64.tar.gz \
-   && rm go1.14.2.linux-amd64.tar.gz \
+RUN curl -LO https://go.dev/dl/go1.20.2.linux-amd64.tar.gz \
+   && tar -xvf go1.20.2.linux-amd64.tar.gz \
+   && rm go1.20.2.linux-amd64.tar.gz \
    && sed -i -e '$a export PATH=$PATH:/root/go/bin' .bashrc \
    && sed -i -e '$a export GOROOT=/root/go' .bashrc
 

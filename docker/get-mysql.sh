@@ -6,7 +6,7 @@ ver_minor=17
 # from_url="http://mysql.mirrors.pair.com/Downloads"
 from_url="http://dev.mysql.com/get/Downloads"
 
-ARCH_INSTALLS="${ARCH_INSTALLS:-win32 win64 linux}"
+ARCH_INSTALLS="${ARCH_INSTALLS:-win64 linux}"
 
 for _mingw in ${ARCH_INSTALLS}; do
 	case ${_mingw} in

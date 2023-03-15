@@ -13,7 +13,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 # Project version number
 set(PRJ_VERSION_MAJOR 9)
-set(PRJ_VERSION_MINOR 45)
+set(PRJ_VERSION_MINOR 46)
 
 if(WIN32 AND NOT DEFINED ENV{MSYSTEM})
     message(FATAL_ERROR "Currently unsuppored environment. Use MINGW for Windows builds. CMake willl exit now.")
@@ -49,6 +49,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "** Debug mode")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -D_XML_DEBUG")
     set(TEST_RUN_ARGS "-v")
+    set(GO_MOD_ARGS "-mod=mod")
 else()
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -s")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
@@ -84,7 +85,8 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E remove -f ${PROJECT_BINARY_DIR}/inpx
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 
 set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME ON)
+# set(Boost_USE_STATIC_RUNTIME ON)
+
 find_package(Boost 1.58.0 REQUIRED COMPONENTS "date_time" "program_options" "filesystem")
 find_package(Threads)
 if(DEFINED ENV{MYSQL_PROPER})
@@ -152,7 +154,7 @@ install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${PROJECT
 # go targets are always out of date, "go build" will figure it out
 ########################################################################################################
 
-find_package(Go 1.13 REQUIRED)
+find_package(Go 1.20 REQUIRED)
 
 if(CMAKE_CROSSCOMPILING)
     # Set Go target environments
@@ -165,11 +167,20 @@ if(CMAKE_CROSSCOMPILING)
     endif()
 endif()
 
+# Make sure we setup go properly
+if (DEFINED ENV{GOPATH})
+    set(GO_PATH "$ENV{GOPATH}")
+else()
+    set(GO_PATH "/tmp/gopkg_${CMAKE_PROJECT_NAME}")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${GO_PATH})
+endif()
+message(STATUS "Using go modules with GOPATH=${GO_PATH}")
+
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${PROJECT_SOURCE_DIR}/src/inpxcreator/misc/version.go")
 
 add_custom_target(bin_libget2 ALL
     DEPENDS gen_git_ver
-    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
+    COMMAND GOPATH=${GO_PATH} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH} CGO_ENABLED=0
         ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX}
         -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
         ${GO_MOD_ARGS}
@@ -180,7 +191,7 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX} DESTINA
 
 add_custom_target(bin_libmerge ALL
     DEPENDS gen_git_ver
-    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH}
+    COMMAND GOPATH=${GO_PATH} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH} CGO_ENABLED=0
         ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX}
         -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
         ${GO_MOD_ARGS}
@@ -193,30 +204,16 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX} DESTIN
 # Go dependency management
 ########################################################################################################
 
-add_custom_target(deps_print
-    SOURCES ${PROJECT_SOURCE_DIR}/src/inpxcreator/go.mod
-    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on ${GO_EXECUTABLE} mod graph
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator"
-    COMMENT "Printing dependencies (go mod graph)"
-    VERBATIM)
-
 add_custom_target(deps_tidy
     SOURCES ${PROJECT_SOURCE_DIR}/src/inpxcreator/go.mod
-    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on ${GO_EXECUTABLE} mod tidy
+    COMMAND GOPATH=${GO_PATH} ${GO_EXECUTABLE} mod tidy -go=${GO_LANG_VERSION}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator"
     COMMENT "Cleaning dependencies (go mod tidy)"
     VERBATIM)
 
-add_custom_target(deps_verify
-    SOURCES ${PROJECT_SOURCE_DIR}/src/inpxcreator/go.mod
-    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on ${GO_EXECUTABLE} mod verify
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator"
-    COMMENT "Verifying dependencies (go mod verify)"
-    VERBATIM)
-
 add_custom_target(deps_vendor
     SOURCES ${PROJECT_SOURCE_DIR}/src/inpxcreator/go.mod
-    COMMAND GOPATH=${PROJECT_SOURCE_DIR} GO111MODULE=on ${GO_EXECUTABLE} mod vendor
+    COMMAND GOPATH=${GO_PATH} ${GO_EXECUTABLE} mod vendor
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator"
     COMMENT "Creating vendor directory (go mod vendor)"
     VERBATIM)

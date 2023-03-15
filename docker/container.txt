@@ -1,14 +1,4 @@
-docker build --squash -t inpxc:latest . -f ./Dockerfile.build
-
-docker save -o ../../inpxc.tar inpxc
-docker load -i ../../inpxc.tar
-
-docker run --name inpxcreator -v E:/projects/books/InpxCreator:/root/result -it inpxc:latest
-docker run -e TZ=America/New_York --name inpxcreator -v E:/projects/books/InpxCreator:/root/result -it inpxc:latest /bin/bash
-
---------------------------------------
-
 podman build -t inpxc:latest . -f ./Dockerfile.build
 
-podman run -it --name inpxcreator -v /mnt/e/projects/books/InpxCreator:/root/result --rm inpxc:latest
-podman run -it -e TZ=America/New_York --name inpxcreator -v /mnt/e/projects/books/InpxCreator:/root/result inpxc:latest /bin/bash
+podman run -it --network host -v ~/projects/github.com/rupor-github:/root/result --rm inpxc:latest
+podman run -it --network host -e TZ=America/New_York -v  ~/projects/github.com/rupor-github/InpxCreator:/root/result inpxc:latest /bin/bash
