@@ -200,6 +200,17 @@ add_custom_target(bin_libmerge ALL
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
 install(PROGRAMS ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
+add_custom_target(bin_libclean ALL
+    DEPENDS gen_git_ver
+    COMMAND GOPATH=${GO_PATH} GOOS=${CROSS_GOOS} GOARCH=${CROSS_GOARCH} CGO_ENABLED=0
+        ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libclean${CMAKE_EXECUTABLE_SUFFIX}
+        -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
+        ${GO_MOD_ARGS}
+        inpxcreator/cmd/libclean
+    COMMENT "Building libclean..."
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
+install(PROGRAMS ${PROJECT_BINARY_DIR}/libclean${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
+
 ########################################################################################################
 # Go dependency management
 ########################################################################################################
