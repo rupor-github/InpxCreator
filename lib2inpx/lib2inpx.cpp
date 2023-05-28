@@ -627,6 +627,10 @@ bool read_fb2(const unzip& uz, const string& book_id, fb2_parser& fb, unz_file_i
 
         uz.current(fi);
 
+        if (fi.uncompressed_size == 0) {
+            throw runtime_error("Empty fb2 file");
+        }
+
         int  len                 = 0;
         bool continue_processing = true;
 

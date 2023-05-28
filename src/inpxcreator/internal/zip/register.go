@@ -8,7 +8,6 @@ import (
 	"compress/flate"
 	"errors"
 	"io"
-	"io/ioutil"
 	"sync"
 )
 
@@ -64,52 +63,85 @@ func (w *pooledFlateWriter) Close() error {
 	return err
 }
 
+var flateReaderPool sync.Pool
+
+func newFlateReader(r io.Reader) io.ReadCloser {
+	fr, ok := flateReaderPool.Get().(io.ReadCloser)
+	if ok {
+		fr.(flate.Resetter).Reset(r, nil)
+	} else {
+		fr = flate.NewReader(r)
+	}
+	return &pooledFlateReader{fr: fr}
+}
+
+type pooledFlateReader struct {
+	mu sync.Mutex // guards Close and Read
+	fr io.ReadCloser
+}
+
+func (r *pooledFlateReader) Read(p []byte) (n int, err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.fr == nil {
+		return 0, errors.New("Read after Close")
+	}
+	return r.fr.Read(p)
+}
+
+func (r *pooledFlateReader) Close() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var err error
+	if r.fr != nil {
+		err = r.fr.Close()
+		flateReaderPool.Put(r.fr)
+		r.fr = nil
+	}
+	return err
+}
+
 var (
-	mu sync.RWMutex // guards compressor and decompressor maps
-
-	compressors = map[uint16]Compressor{
-		Store:   func(w io.Writer) (io.WriteCloser, error) { return &nopCloser{w}, nil },
-		Deflate: func(w io.Writer) (io.WriteCloser, error) { return newFlateWriter(w), nil },
-	}
-
-	decompressors = map[uint16]Decompressor{
-		Store:   ioutil.NopCloser,
-		Deflate: flate.NewReader,
-	}
+	compressors   sync.Map // map[uint16]Compressor
+	decompressors sync.Map // map[uint16]Decompressor
 )
+
+func init() {
+	compressors.Store(Store, Compressor(func(w io.Writer) (io.WriteCloser, error) { return &nopCloser{w}, nil }))
+	compressors.Store(Deflate, Compressor(func(w io.Writer) (io.WriteCloser, error) { return newFlateWriter(w), nil }))
+
+	decompressors.Store(Store, Decompressor(io.NopCloser))
+	decompressors.Store(Deflate, Decompressor(newFlateReader))
+}
 
 // RegisterDecompressor allows custom decompressors for a specified method ID.
 // The common methods Store and Deflate are built in.
 func RegisterDecompressor(method uint16, dcomp Decompressor) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, ok := decompressors[method]; ok {
+	if _, dup := decompressors.LoadOrStore(method, dcomp); dup {
 		panic("decompressor already registered")
 	}
-	decompressors[method] = dcomp
 }
 
 // RegisterCompressor registers custom compressors for a specified method ID.
 // The common methods Store and Deflate are built in.
 func RegisterCompressor(method uint16, comp Compressor) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, ok := compressors[method]; ok {
+	if _, dup := compressors.LoadOrStore(method, comp); dup {
 		panic("compressor already registered")
 	}
-	compressors[method] = comp
 }
 
 func compressor(method uint16) Compressor {
-	mu.RLock()
-	defer mu.RUnlock()
-	return compressors[method]
+	ci, ok := compressors.Load(method)
+	if !ok {
+		return nil
+	}
+	return ci.(Compressor)
 }
 
 func decompressor(method uint16) Decompressor {
-	mu.RLock()
-	defer mu.RUnlock()
-	return decompressors[method]
+	di, ok := decompressors.Load(method)
+	if !ok {
+		return nil
+	}
+	return di.(Decompressor)
 }

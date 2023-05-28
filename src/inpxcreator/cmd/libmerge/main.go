@@ -259,7 +259,7 @@ func main() {
 		tmpOut = f.Name()
 		w = zip.NewWriter(f)
 
-		if (sizeBytes - last.info.Size()) > 0 {
+		if last.info != nil && (sizeBytes-last.info.Size()) > 0 {
 			fmt.Printf("Merging last archive, possibly fist time processing: %s\n", filepath.Join(last.dir, last.info.Name()))
 			skipFirst = true
 			tmp := make([]archive, len(updates)+1, len(updates)+1)
@@ -301,60 +301,66 @@ func main() {
 		}
 		fmt.Printf("\tProcessing update: %s\n", filepath.Join(u.dir, u.info.Name()))
 		for _, file := range rc.File {
-			if id := name2id(file.Name); id > 0 {
 
-				if firstBook == 0 {
-					firstBook = id
-				}
-				lastBook = id
+			if file.FileInfo().Size() == 0 {
+				log.Printf("\t\tWrong book size - %d, skipping: \"%s\"\n", file.FileInfo().Size(), file.FileInfo().Name())
+				continue
+			}
+			id := int(0)
+			if id = name2id(file.FileInfo().Name()); id <= 0 {
+				log.Printf("\t\tWrong book name, skipping: \"%s\"\n", file.FileInfo().Name())
+				continue
+			}
 
-				// I know this is wrong, leftBytes could already be negative, but to repeat what libsplit did
-				// always copy first file...
+			if firstBook == 0 {
+				firstBook = id
+			}
+			lastBook = id
 
-				if err := w.Copy(file); err != nil {
-					log.Printf("Error copying from %s (%s): %v", name, file.Name, err)
-				} else {
+			// I know this is wrong, leftBytes could already be negative, but to repeat what libsplit did
+			// always copy first file...
 
-					leftBytes -= int64(file.CompressedSize64)
-
-					if leftBytes <= 0 {
-						if err := w.Close(); err != nil {
-							log.Fatalf("Finishing zip file: %v", err)
-						}
-						if err := f.Close(); err != nil {
-							log.Fatalf("Finishing zip file: %v", err)
-						}
-						newName := fmt.Sprintf("fb2-%06d-%06d.zip", firstBook, lastBook)
-						fmt.Printf("\t--> Finalizing archive: %s\n", newName)
-
-						newName = filepath.Join(last.dir, newName)
-						if err := os.Rename(tmpOut, newName); err != nil {
-							log.Fatalf("Renaming archive: %v", err)
-						}
-
-						last.info, err = os.Stat(newName)
-						if err != nil {
-							log.Fatalf("Stat failed: %v", err)
-						}
-						last.begin = firstBook
-						last.end = lastBook
-						fmt.Printf("\t--> New last archive: %s\n", newName)
-
-						// We may want to rebuild inpx - have new "last" archive ready
-						code = 2
-
-						f, err = ioutil.TempFile(last.dir, "merge-")
-						if err != nil {
-							log.Fatalf("Unable to create temp file: %v", err)
-						}
-						tmpOut = f.Name()
-						w = zip.NewWriter(f)
-						leftBytes = sizeBytes
-						firstBook = 0
-					}
-				}
+			if err := w.Copy(file); err != nil {
+				log.Printf("Error copying from %s (%s): %v", name, file.FileInfo().Name(), err)
 			} else {
-				log.Printf("\t\tWrong book name, skipping: \"%s\"\n", file.Name)
+
+				leftBytes -= int64(file.CompressedSize64)
+
+				if leftBytes <= 0 {
+					if err := w.Close(); err != nil {
+						log.Fatalf("Finishing zip file: %v", err)
+					}
+					if err := f.Close(); err != nil {
+						log.Fatalf("Finishing zip file: %v", err)
+					}
+					newName := fmt.Sprintf("fb2-%06d-%06d.zip", firstBook, lastBook)
+					fmt.Printf("\t--> Finalizing archive: %s\n", newName)
+
+					newName = filepath.Join(last.dir, newName)
+					if err := os.Rename(tmpOut, newName); err != nil {
+						log.Fatalf("Renaming archive: %v", err)
+					}
+
+					last.info, err = os.Stat(newName)
+					if err != nil {
+						log.Fatalf("Stat failed: %v", err)
+					}
+					last.begin = firstBook
+					last.end = lastBook
+					fmt.Printf("\t--> New last archive: %s\n", newName)
+
+					// We may want to rebuild inpx - have new "last" archive ready
+					code = 2
+
+					f, err = ioutil.TempFile(last.dir, "merge-")
+					if err != nil {
+						log.Fatalf("Unable to create temp file: %v", err)
+					}
+					tmpOut = f.Name()
+					w = zip.NewWriter(f)
+					leftBytes = sizeBytes
+					firstBook = 0
+				}
 			}
 		}
 		if err := rc.Close(); err != nil {
