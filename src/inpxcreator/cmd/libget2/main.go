@@ -230,7 +230,7 @@ func getLinks(url, pattern string) ([]string, error) {
 	var body string
 
 	for ni := 1; ni <= retry; ni++ {
-		fmt.Printf("\nDownloading index for %-30.30s (%d) ", url, ni)
+		fmt.Printf("\nDownloading index for %-35.35s (%-3d) ", url, ni)
 		body, err = fetchString(url)
 		if err == nil {
 			break
@@ -268,7 +268,7 @@ func getSQLLinks(url, pattern string) ([]string, error) {
 
 	for ni := 1; ni <= retry; ni++ {
 
-		fmt.Printf("\nDownloading SQL tables for %-30.30s (%d) ", url, ni)
+		fmt.Printf("\nDownloading SQL tables for %-30.30s (%-3d) ", url, ni)
 		if body, err = fetchString(url); err == nil {
 			break
 		}
@@ -409,7 +409,7 @@ func getFiles(files []string, url, dest string) error {
 			if !withRanges {
 				start = 0
 			}
-			fmt.Printf("\nDownloading file %-35.35s (%-3d:%012d) ", f, ni, start)
+			fmt.Printf("\nDownloading file %-40.40s (%-3d:%012d) ", f, ni, start)
 			tmp, start, err = fetchFile(joinUrl(url, f), tmp, start)
 			if err == nil {
 				break
