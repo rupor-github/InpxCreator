@@ -119,20 +119,17 @@ func httpReq(hostAddr, verb string, start int64) (*http.Response, *time.Timer, e
 
 	var redirect = func(req *http.Request, via []*http.Request) error {
 
-		if len(via) >= 10 {
-			return errors.New("httpReq: stopped after 10 redirects")
+		if len(via) >= 5 {
+			return errors.New("httpReq: stopped after 5 redirects")
 		}
 		if verbose {
-			fmt.Printf("Detected redirect from \"%s\" to \"%s\"", hostURL.Host, req.URL.Host)
+			fmt.Printf("Detected redirect from \"%s\" to \"%s\" ", hostURL.String(), req.URL.String())
 		}
 		if noRedirect {
 			if verbose {
-				fmt.Printf("\t...Ignoring")
+				fmt.Printf(" ..Ignoring ")
 			}
-			req.URL.Host = hostURL.Host
-		}
-		if verbose {
-			fmt.Println()
+			return http.ErrUseLastResponse
 		}
 		return nil
 	}
@@ -313,7 +310,7 @@ func fetchFile(url, tmpIn string, start int64) (tmpOut string, size int64, err e
 				err = fmt.Errorf("fetchFile: %w", err)
 				return
 			}
-			_, err = out.Seek(start, os.SEEK_SET)
+			_, err = out.Seek(start, io.SeekStart)
 			if err != nil {
 				err = fmt.Errorf("fetchFile: %w", err)
 				return

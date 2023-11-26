@@ -25,13 +25,16 @@ build/
 [Dd]ebug*/
 [Rr]elease*/
 
-mariadb-??.?.*-linux-glibc_*-x86_64.tar.gz
 lib2inpx-*.tar.xz
 
+mariadb-??.?.*-linux-systemd-x86_64.tar.gz
+mariadb-??.?.*-linux-systemd-x86_64/**
+mariadb-??.?.*-linux-systemd-x86.tar.gz
+mariadb-??.?.*-linux-systemd-x86/**
 mariadb-??.?.*-linux-glibc_*-x86_64.tar.gz
 mariadb-??.?.*-linux-glibc_*-x86_64/**
-mariadb-??.?.*-linux-glibc_*-i686.tar.gz
-mariadb-??.?.*-linux-glibc_*-i686i/**
+mariadb-??.?.*-linux-glibc_*-x86.tar.gz
+mariadb-??.?.*-linux-glibc_*-x86/**
 mariadb-??.?.*-win32.zip
 mariadb-??.?.*-win32/**
 mariadb-??.?.*-winx64.zip

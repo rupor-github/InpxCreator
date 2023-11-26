@@ -13,7 +13,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 # Project version number
 set(PRJ_VERSION_MAJOR 9)
-set(PRJ_VERSION_MINOR 47)
+set(PRJ_VERSION_MINOR 48)
 
 if(WIN32 AND NOT DEFINED ENV{MSYSTEM})
     message(FATAL_ERROR "Currently unsuppored environment. Use MINGW for Windows builds. CMake willl exit now.")
@@ -100,6 +100,10 @@ find_package(Iconv REQUIRED)
 
 get_filename_component(MYSQL_NAME ${MYSQL_LIBRARIES} NAME_WE)
 
+if(Threads_FOUND AND "${CMAKE_THREAD_LIBS_INIT}" STREQUAL "")
+    message(FATAL_ERROR "We are using old version of database library which requires libpthread - not compatible with newer GLIBC")
+endif()
+
 # Prepare history file
 execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} changelog --final-tag ${PRJ_VERSION_MAJOR}.${PRJ_VERSION_MINOR} --stdout OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
 
@@ -119,6 +123,7 @@ add_executable(lib2inpx ${SRCS_LIB2INPX})
 add_dependencies(lib2inpx gen_git_ver)
 if(UNIX)
     set(ADD_LIBS "${CMAKE_THREAD_LIBS_INIT} -lm -lrt -ldl -lcrypt -laio")
+    string(STRIP ${ADD_LIBS} ADD_LIBS)
     if(ICONV_LIBRARIES MATCHES "libc")
         target_link_libraries(lib2inpx minizip ${Boost_LIBRARIES} ${MYSQL_LIBRARIES} ${ZLIB_LIBRARIES} ${EXPAT_LIBRARIES} ${ADD_LIBS})
     else()

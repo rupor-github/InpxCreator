@@ -8,13 +8,13 @@ apt-get -qqy install tzdata wget curl build-essential git git-extras automake pk
 WORKDIR /root/
 
 # ---------- We either patch cmake to support up to date boost (/usr/share/cmake-3.5/Modules/FindBoost.cmake) or build fresh one
-RUN curl -LO https://cmake.org/files/v3.25/cmake-3.25.3.tar.gz \
-    && tar -xvf cmake-3.25.3.tar.gz \
-    && cd cmake-3.25.3 \
+RUN curl -LO https://cmake.org/files/v3.27/cmake-3.27.8.tar.gz \
+    && tar -xvf cmake-3.27.8.tar.gz \
+    && cd cmake-3.27.8 \
     && ./bootstrap --system-curl \
     && make install \
     && cd .. \
-    && rm -rf cmake-3.25.3.tar.gz cmake-3.25.3
+    && rm -rf cmake-3.27.8.tar.gz cmake-3.27.8
 
 # ---------- mingw does not have expat
 RUN git clone https://github.com/libexpat/libexpat.git \
@@ -66,9 +66,9 @@ COPY get-maria.sh .
 RUN ./get-maria.sh
 
 #  ---------- download golang
-RUN curl -LO https://go.dev/dl/go1.20.4.linux-amd64.tar.gz \
-   && tar -xvf go1.20.4.linux-amd64.tar.gz \
-   && rm go1.20.4.linux-amd64.tar.gz \
+RUN curl -LO https://go.dev/dl/go1.21.4.linux-amd64.tar.gz \
+   && tar -xvf go1.21.4.linux-amd64.tar.gz \
+   && rm go1.21.4.linux-amd64.tar.gz \
    && sed -i -e '$a export PATH=$PATH:/root/go/bin' .bashrc \
    && sed -i -e '$a export GOROOT=/root/go' .bashrc
 
