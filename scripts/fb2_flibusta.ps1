@@ -71,7 +71,7 @@ Get-ChildItem $old_dbs | Where-Object {$_.PSIsContainer -eq $True} | sort Creati
 $new_full_archives = 0
 $before_dir = @(Join-path $adir "fb2-*.zip" | dir)
 
-& $mydir/libmerge --verbose --keep-updates --destination ($adir + ";" + $udir) 2>&1 | Write-Host
+& $mydir/libmerge --verbose --full --keep-updates --destination ($adir + ";" + $udir) 2>&1 | Write-Host
 
 if( $LASTEXITCODE -eq 1 ) { Write-Error "LIBMERGE error!"; Power-Balanced; exit 0 }
 

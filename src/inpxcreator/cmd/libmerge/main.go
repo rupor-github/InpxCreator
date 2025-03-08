@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,14 +17,12 @@ import (
 	"inpxcreator/misc"
 )
 
-var size int
-var sizeBytes int64
-var verbose bool
-var keepUpdates bool
-var dest string
-
-// LastGitCommit is used during build to inject git sha
-var LastGitCommit string
+var (
+	size                          int
+	sizeBytes                     int64
+	verbose, keepUpdates, newMode bool
+	dest, LastGitCommit           string
+)
 
 func name2id(name string) int {
 	base := strings.TrimSuffix(name, filepath.Ext(name))
@@ -56,9 +53,7 @@ func (f *filter) dissectName(name string) (bool, int, int, error) {
 	return ok, fst, snd, err
 }
 
-var archivesFilt filter
-var mergeFilt filter
-var updatesFilt filter
+var archivesFilt, mergeFilt, updatesFilt filter
 
 type archive struct {
 	dir   string
@@ -69,8 +64,10 @@ type archive struct {
 
 type byName []archive
 
-func (a byName) Len() int           { return len(a) }
-func (a byName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byName) Len() int { return len(a) }
+
+func (a byName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
 func (a byName) Less(i, j int) bool { return a[i].info.Name() < a[j].info.Name() }
 
 func getLastArchive(files []archive) (archive, error) {
@@ -141,6 +138,7 @@ func init() {
 	flag.BoolVar(&verbose, "verbose", false, "print detailed information")
 	flag.BoolVar(&keepUpdates, "keep-updates", false, "Keep merged updates")
 	flag.StringVar(&dest, "destination", pwd, "path to archives and updates (separated by \";\", merge archive will be created where \"last\" archive is)")
+	flag.BoolVar(&newMode, "full", false, "Use full integer length in file names (by default id numbers in file names limited to 6 positions")
 
 	if archivesFilt.re, err = regexp.Compile("(?i)\\s*fb2-([0-9]+)-([0-9]+).zip"); err != nil {
 		log.Fatal(err)
@@ -167,6 +165,11 @@ func main() {
 		os.Exit(code)
 	}
 
+	format := "fb2-%06d-%06d"
+	if newMode {
+		format = "fb2-%010d-%010d"
+	}
+
 	fmt.Printf("\nProcessing archives from \"%s\"\n", dest)
 
 	var sizeBytes int64 = int64(size) * 1000 * 1000
@@ -181,13 +184,17 @@ func main() {
 			log.Fatalf("Problem with path: %v", err)
 		}
 
-		var files []os.FileInfo
-		if files, err = ioutil.ReadDir(path); err != nil {
+		var files []os.DirEntry
+		if files, err = os.ReadDir(path); err != nil {
 			log.Fatalf("Unable to read directory: %v", err)
 		}
 
 		for _, file := range files {
-			archives = append(archives, archive{info: file, dir: path})
+			if info, err := file.Info(); err != nil {
+				log.Fatalf("Unable to get file info: %v", err)
+			} else {
+				archives = append(archives, archive{info: info, dir: path})
+			}
 		}
 	}
 	sort.Sort(byName(archives))
@@ -252,7 +259,7 @@ func main() {
 
 	if merge.info == nil {
 
-		f, err = ioutil.TempFile(last.dir, "merge-")
+		f, err = os.CreateTemp(last.dir, "merge-")
 		if err != nil {
 			log.Fatalf("Unable to create temp file: %v", err)
 		}
@@ -333,7 +340,8 @@ func main() {
 					if err := f.Close(); err != nil {
 						log.Fatalf("Finishing zip file: %v", err)
 					}
-					newName := fmt.Sprintf("fb2-%06d-%06d.zip", firstBook, lastBook)
+
+					newName := fmt.Sprintf(format+".zip", firstBook, lastBook)
 					fmt.Printf("\t--> Finalizing archive: %s\n", newName)
 
 					newName = filepath.Join(last.dir, newName)
@@ -352,7 +360,7 @@ func main() {
 					// We may want to rebuild inpx - have new "last" archive ready
 					code = 2
 
-					f, err = ioutil.TempFile(last.dir, "merge-")
+					f, err = os.CreateTemp(last.dir, "merge-")
 					if err != nil {
 						log.Fatalf("Unable to create temp file: %v", err)
 					}
@@ -383,7 +391,7 @@ func main() {
 
 	} else {
 
-		newName := fmt.Sprintf("fb2-%06d-%06d.merging", firstBook, lastBook)
+		newName := fmt.Sprintf(format+".merging", firstBook, lastBook)
 		fmt.Printf("\t--> Finalizing archive: %s\n", newName)
 
 		newName = filepath.Join(last.dir, newName)

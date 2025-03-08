@@ -1,7 +1,5 @@
 module inpxcreator
 
-go 1.21
+go 1.24.1
 
-toolchain go1.21.4
-
-require golang.org/x/net v0.18.0
+require golang.org/x/net v0.37.0

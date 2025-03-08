@@ -60,6 +60,7 @@ find $1 -maxdepth 1 -type d -name "flibusta_*" | sort -nr | tail -n +6 | xargs -
 
 ${mydir}/libmerge \
 	--verbose \
+    --full \
 	--keep-updates \
 	--destination "${adir};${udir}"
 

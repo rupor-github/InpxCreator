@@ -13,7 +13,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 # Project version number
 set(PRJ_VERSION_MAJOR 9)
-set(PRJ_VERSION_MINOR 48)
+set(PRJ_VERSION_MINOR 49)
 
 if(WIN32 AND NOT DEFINED ENV{MSYSTEM})
     message(FATAL_ERROR "Currently unsuppored environment. Use MINGW for Windows builds. CMake willl exit now.")
@@ -159,7 +159,7 @@ install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${PROJECT
 # go targets are always out of date, "go build" will figure it out
 ########################################################################################################
 
-find_package(Go 1.20 REQUIRED)
+find_package(Go 1.24 REQUIRED)
 
 if(CMAKE_CROSSCOMPILING)
     # Set Go target environments

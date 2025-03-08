@@ -30,6 +30,7 @@ exec 1>${glog} 2>&1
 
 ${mydir}/libclean \
 	--verbose \
+    --full \
 	--destination "${adir}"
 
 res=$?

@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,12 +17,10 @@ import (
 	"inpxcreator/misc"
 )
 
-var verbose bool
-var deleteOriginal bool
-var dest string
-
-// LastGitCommit is used during build to inject git sha
-var LastGitCommit string
+var (
+	verbose, newMode, deleteOriginal bool
+	dest, LastGitCommit              string
+)
 
 func name2id(name string) int {
 	base := strings.TrimSuffix(name, filepath.Ext(name))
@@ -65,8 +62,10 @@ type archive struct {
 
 type byName []archive
 
-func (a byName) Len() int           { return len(a) }
-func (a byName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byName) Len() int { return len(a) }
+
+func (a byName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
 func (a byName) Less(i, j int) bool { return a[i].info.Name() < a[j].info.Name() }
 
 func getUpdates(files []archive) ([]archive, error) {
@@ -93,6 +92,7 @@ func init() {
 	flag.BoolVar(&verbose, "verbose", false, "print detailed information")
 	flag.BoolVar(&deleteOriginal, "delete-original", false, "Do not create backup copies of original files")
 	flag.StringVar(&dest, "destination", pwd, "path to archives (separated by \";\", updated archive will be created where original archive is)")
+	flag.BoolVar(&newMode, "full", false, "Use full integer length in file names (by default id numbers in file names limited to 6 positions")
 
 	if updatesFilt.re, err = regexp.Compile("(?i)\\s*fb2-([0-9]+)-([0-9]+).zip"); err != nil {
 		log.Fatal(err)
@@ -125,13 +125,17 @@ func main() {
 			log.Fatalf("Problem with path: %v", err)
 		}
 
-		var files []os.FileInfo
-		if files, err = ioutil.ReadDir(path); err != nil {
+		var files []os.DirEntry
+		if files, err = os.ReadDir(path); err != nil {
 			log.Fatalf("Unable to read directory: %v", err)
 		}
 
 		for _, file := range files {
-			archives = append(archives, archive{info: file, dir: path})
+			if info, err := file.Info(); err != nil {
+				log.Fatalf("Unable to get file info: %v", err)
+			} else {
+				archives = append(archives, archive{info: info, dir: path})
+			}
 		}
 	}
 	sort.Sort(byName(archives))
@@ -183,7 +187,7 @@ func main() {
 
 		fmt.Printf("\tProcessing archive: %s\n", name)
 
-		f, err := ioutil.TempFile(u.dir, "clean-")
+		f, err := os.CreateTemp(u.dir, "clean-")
 		if err != nil {
 			log.Fatalf("Unable to create temp file: %v", err)
 		}
@@ -248,7 +252,11 @@ func main() {
 					log.Fatalf("Renaming original archive: %v", err)
 				}
 			}
-			newName := fmt.Sprintf("fb2-%06d-%06d.zip", firstBook, lastBook)
+			format := "fb2-%06d-%06d.zip"
+			if newMode {
+				format = "fb2-%010d-%010d.zip"
+			}
+			newName := fmt.Sprintf(format, firstBook, lastBook)
 			fmt.Printf("\t\t--> Updating archive: %s (elapsed %s)\n", newName, time.Since(start))
 			newName = filepath.Join(u.dir, newName)
 			if err := os.Rename(tmpOut, newName); err != nil {
