@@ -138,7 +138,7 @@ func init() {
 	flag.BoolVar(&verbose, "verbose", false, "print detailed information")
 	flag.BoolVar(&keepUpdates, "keep-updates", false, "Keep merged updates")
 	flag.StringVar(&dest, "destination", pwd, "path to archives and updates (separated by \";\", merge archive will be created where \"last\" archive is)")
-	flag.BoolVar(&newMode, "full", false, "Use full integer length in file names (by default id numbers in file names limited to 6 positions")
+	flag.BoolVar(&newMode, "full", false, "Use full integer length in file names (by default id numbers in file names limited to 6 positions)")
 
 	if archivesFilt.re, err = regexp.Compile("(?i)\\s*fb2-([0-9]+)-([0-9]+).zip"); err != nil {
 		log.Fatal(err)
