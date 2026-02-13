@@ -626,7 +626,13 @@ void fb2_parser::on_author_middle_name(const std::string& str, const attributes_
 
 void fb2_parser::on_author_last_name(const std::string& str, const attributes_t& attrs) { m_l = fix_data(cleanse(str), g_limits.A_Family); }
 
-void fb2_parser::on_author(const std::string& str, const attributes_t& attrs) { m_authors.push_back(m_l + "," + m_f + "," + m_m); }
+void fb2_parser::on_author(const std::string& str, const attributes_t& attrs)
+{
+    m_authors.push_back(m_l + "," + m_f + "," + m_m);
+    m_l.clear();
+    m_f.clear();
+    m_m.clear();
+}
 
 void fb2_parser::on_book_title(const std::string& str, const attributes_t& attrs) { m_title = fix_data(cleanse(str), g_limits.Title); }
 
