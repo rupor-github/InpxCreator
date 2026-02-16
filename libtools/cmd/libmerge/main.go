@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	"inpxcreator/internal/zip"
-	"inpxcreator/misc"
+	"libtools/internal/zip"
+	"libtools/misc"
 )
 
 var (

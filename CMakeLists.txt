@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.7)
+cmake_minimum_required(VERSION 3.10)
 message(STATUS "Running cmake version ${CMAKE_VERSION}")
 
 project(InpxCreator)
@@ -85,7 +85,6 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E remove -f ${PROJECT_BINARY_DIR}/inpx
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}/version.h")
 
 set(Boost_USE_STATIC_LIBS ON)
-# set(Boost_USE_STATIC_RUNTIME ON)
 
 find_package(Boost 1.58.0 REQUIRED COMPONENTS "date_time" "program_options" "filesystem")
 find_package(Threads)
@@ -159,7 +158,7 @@ install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${PROJECT
 # go targets are always out of date, "go build" will figure it out
 ########################################################################################################
 
-find_package(Go 1.24 REQUIRED)
+find_package(Go 1.26 REQUIRED)
 
 if(CMAKE_CROSSCOMPILING)
     # Set Go target environments
@@ -181,7 +180,7 @@ else()
 endif()
 message(STATUS "Using go modules with GOPATH=${GO_PATH}")
 
-configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${PROJECT_SOURCE_DIR}/src/inpxcreator/misc/version.go")
+configure_file("${PROJECT_SOURCE_DIR}/cmake/version.go.in" "${PROJECT_SOURCE_DIR}/libtools/misc/version.go")
 
 add_custom_target(bin_libget2 ALL
     DEPENDS gen_git_ver
@@ -189,9 +188,9 @@ add_custom_target(bin_libget2 ALL
         ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX}
         -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
         ${GO_MOD_ARGS}
-        inpxcreator/cmd/libget2
+        libtools/cmd/libget2
     COMMENT "Building libget2..."
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/libtools")
 install(PROGRAMS ${PROJECT_BINARY_DIR}/libget2${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
 add_custom_target(bin_libmerge ALL
@@ -200,9 +199,9 @@ add_custom_target(bin_libmerge ALL
         ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX}
         -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
         ${GO_MOD_ARGS}
-        inpxcreator/cmd/libmerge
+        libtools/cmd/libmerge
     COMMENT "Building libmerge..."
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/libtools")
 install(PROGRAMS ${PROJECT_BINARY_DIR}/libmerge${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
 add_custom_target(bin_libclean ALL
@@ -211,9 +210,9 @@ add_custom_target(bin_libclean ALL
         ${GO_EXECUTABLE} build -o ${PROJECT_BINARY_DIR}/libclean${CMAKE_EXECUTABLE_SUFFIX}
         -ldflags='-X main.LastGitCommit=\$\(shell cat ${PROJECT_BINARY_DIR}/inpxc_git_ver\)'
         ${GO_MOD_ARGS}
-        inpxcreator/cmd/libclean
+        libtools/cmd/libclean
     COMMENT "Building libclean..."
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator")
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/libtools")
 install(PROGRAMS ${PROJECT_BINARY_DIR}/libclean${CMAKE_EXECUTABLE_SUFFIX} DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 
 ########################################################################################################
@@ -221,15 +220,15 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/libclean${CMAKE_EXECUTABLE_SUFFIX} DESTIN
 ########################################################################################################
 
 add_custom_target(deps_tidy
-    SOURCES ${PROJECT_SOURCE_DIR}/src/inpxcreator/go.mod
+    SOURCES ${PROJECT_SOURCE_DIR}/libtools/go.mod
     COMMAND GOPATH=${GO_PATH} ${GO_EXECUTABLE} mod tidy -go=${GO_LANG_VERSION}
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/libtools"
     COMMENT "Cleaning dependencies (go mod tidy)"
     VERBATIM)
 
 add_custom_target(deps_vendor
-    SOURCES ${PROJECT_SOURCE_DIR}/src/inpxcreator/go.mod
+    SOURCES ${PROJECT_SOURCE_DIR}/libtools/go.mod
     COMMAND GOPATH=${GO_PATH} ${GO_EXECUTABLE} mod vendor
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/inpxcreator"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/libtools"
     COMMENT "Creating vendor directory (go mod vendor)"
     VERBATIM)

@@ -1,4 +1,8 @@
+# to build builder image
 podman build -t inpxc:latest . -f ./Dockerfile.build
 
+# to produce release
 podman run -it --network host -v ~/projects/github.com/rupor-github:/root/result --rm inpxc:latest
-podman run -it --network host -e TZ=America/New_York -v  ~/projects/github.com/rupor-github/InpxCreator:/root/result inpxc:latest /bin/bash
+
+# to do local development
+podman run -it --network host -e TZ=America/New_York -v ~/projects/github.com/rupor-github/InpxCreator:/root/result --rm inpxc:latest /bin/bash

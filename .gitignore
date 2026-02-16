@@ -12,7 +12,7 @@
 *.svg
 
 # build specific
-src/*/misc/version.go
+libtools/misc/version.go
 
 lib2inpx-*.7z
 lib2inpx-*.zip

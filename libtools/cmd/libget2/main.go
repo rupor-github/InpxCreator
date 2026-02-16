@@ -18,27 +18,28 @@ import (
 
 	"golang.org/x/net/proxy"
 
-	"inpxcreator/misc"
+	"libtools/misc"
 )
 
 const emptyString = ""
 
-var library string
-var retry int
-var timeout int
-var chunkSize int
-var noSQL bool
-var noRedirect bool
-var dest string
-var destSQL string
-var configPath string
-var verbose bool
-var ranges bool
-
-var reNumbers *regexp.Regexp
-var reMerge *regexp.Regexp
-var lastBook int
-var proxyURL *url.URL
+var (
+	library    string
+	retry      int
+	timeout    int
+	chunkSize  int
+	noSQL      bool
+	noRedirect bool
+	dest       string
+	destSQL    string
+	configPath string
+	verbose    bool
+	ranges     bool
+	reNumbers  *regexp.Regexp
+	reMerge    *regexp.Regexp
+	lastBook   int
+	proxyURL   *url.URL
+)
 
 // LastGitCommit is used during build to inject git sha
 var LastGitCommit string

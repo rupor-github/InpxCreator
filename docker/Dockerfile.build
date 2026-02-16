@@ -1,6 +1,15 @@
 FROM ubuntu:16.04
 
-# Synology is still running very old glibc - 2.5 as of v7. So I have to use old verion of Ubuntu for linux build...
+# Synology ldd --version always reports glibc 2.5
+#
+# But doing /usr/lib/libc.so.6 produces different results
+# 
+#    DSM 7.2: Reports glibc 2.36.
+#    DSM 7.1: Uses glibc 2.26.
+#    Older DSM (e.g., 6.x): Used much older versions (e.g., 2.20).
+#
+# To be on a safe side we will use as build image very old Ubuntu with glibc 2.23
+# NOTE: latest Go versions so far are running fine - but may not be forever!
 
 RUN apt-get -qqy update &&\
 apt-get -qqy install tzdata wget curl build-essential git git-extras automake pkg-config libcurl4-openssl-dev zlib1g-dev libaio-dev libboost-all-dev p7zip-full gdb mingw-w64 binutils-mingw-w64 mingw-w64-tools libz-mingw-w64-dev
