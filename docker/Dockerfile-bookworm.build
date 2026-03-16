@@ -1,0 +1,67 @@
+# FROM arm64v8/golang:1.24-bookworm
+FROM amd64/golang:1.26.1-bookworm
+
+# Synology ldd --version always reports glibc 2.5
+#
+# But doing /usr/lib/libc.so.6 produces different results
+# 
+#    DSM 7.2: Reports glibc 2.36.
+#    DSM 7.1: Uses glibc 2.26.
+#    Older DSM (e.g., 6.x): Used much older versions (e.g., 2.20).
+
+RUN apt -qqy update &&\
+apt -qqy install xxd build-essential bison flex git-extras automake cmake libcurl4-openssl-dev libncurses-dev zlib1g-dev libaio-dev liburing-dev libpcre2-dev libboost-all-dev libmariadbd-dev mariadb-server p7zip-full mingw-w64 binutils-mingw-w64 mingw-w64-tools libz-mingw-w64-dev
+
+WORKDIR /root/
+
+# ---------- mingw does not have expat
+RUN git clone https://github.com/libexpat/libexpat.git \
+    && cd libexpat \
+    && git checkout R_2_5_0 \
+    && cd expat \
+    && ./buildconf.sh \
+    && ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --without-xmlwf --without-docbook \
+    && make install \
+    && cd ../.. \
+    && rm -rf libexpat \
+    && rm /usr/x86_64-w64-mingw32/lib/*.la
+
+# ---------- build static GNU libiconv once for mingw and Linux
+RUN curl -LO https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.19.tar.gz \
+    && tar -xf libiconv-1.19.tar.gz \
+    && cp -a libiconv-1.19 libiconv-1.19-linux \
+    && cd libiconv-1.19 \
+    && ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --enable-static \
+    && make install \
+    && cd ../libiconv-1.19-linux \
+    && ./configure --prefix=/opt/libiconv-static --enable-static --disable-shared \
+    && make install \
+    && cd .. \
+    && rm -rf libiconv-1.19.tar.gz libiconv-1.19 libiconv-1.19-linux \
+    && rm /usr/x86_64-w64-mingw32/lib/*.la /opt/libiconv-static/lib/*.la
+
+# ---------- mingw does not have boost (and we cannot cross build anything older than 1.63)
+RUN ln -s /usr/bin/x86_64-w64-mingw32-windres /usr/bin/windres \
+    && curl -LO http://sourceforge.net/projects/boost/files/boost/1.74.0/boost_1_74_0.tar.gz \
+    && tar -xvf boost_1_74_0.tar.gz \
+    && cd boost_1_74_0 \
+    && ./bootstrap.sh \
+    && echo "using gcc : 12.2.0 : x86_64-w64-mingw32-g++ ;" > user-config.jam \
+    && ./b2 --without-python --without-serialization --user-config=user-config.jam --debug-configuration toolset=gcc-12.2.0 link=shared,static target-os=windows address-model=64 pch=off threading=multi threadapi=win32 variant=release --prefix=/usr/x86_64-w64-mingw32 --layout=tagged --without-python --without-mpi -sICONV_PATH=/usr/x86_64-w64-mingw32 -sICONV_LINK="-L/usr/x86_64-w64-mingw32/lib -liconv" install \
+    && cd .. \
+    && rm -rf boost_1_74_0.tar.gz boost_1_74_0
+
+# ---------- we need proper version of mariadb embedded for Windows build
+# COPY get-maria.sh .
+# RUN ./get-maria.sh
+
+# ---------- prepare empty MariaDB template datadir for embedding
+RUN install -d /usr/local/share/inpxcreator /tmp/mariadb-template/data \
+	&& mariadb-install-db --auth-root-authentication-method=normal --datadir=/tmp/mariadb-template/data --cross-bootstrap --skip-test-db >/tmp/mariadb-install-db.log 2>&1 \
+	&& rm -rf /tmp/mariadb-template/data/sys /tmp/mariadb-template/data/performance_schema \
+	&& rm -f /tmp/mariadb-template/data/ib_buffer_pool /tmp/mariadb-template/data/mysql_upgrade_info /tmp/mariadb-template/data/aria_log_control /tmp/mariadb-template/data/aria_log.00000001 /tmp/mariadb-template/data/ib_logfile0 \
+	&& (cd /tmp/mariadb-template/data && 7z a -tzip /usr/local/share/inpxcreator/mariadb-empty-template.zip ./* >/dev/null) \
+	&& rm -rf /tmp/mariadb-template /tmp/mariadb-install-db.log /tmp/mariadb-template-server.log
+
+COPY build.sh .
+CMD ["./build.sh"]

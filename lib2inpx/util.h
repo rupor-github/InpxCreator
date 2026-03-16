@@ -216,6 +216,8 @@ class unzip : boost::noncopyable {
             m_opened = false;
 
             unzCloseCurrentFile(m_uf);
+            unzClose(m_uf);
+            m_uf = NULL;
         }
     }
 
@@ -407,7 +409,13 @@ class fb2_parser {
     bool operator()(const char* buf, int length, bool done = false)
     {
         if (!m_stop_processing && (XML_STATUS_ERROR == XML_Parse(m_parser, buf, length, done ? 1 : 0)))
-            throw std::runtime_error(tmp_str("%s at line %" XML_FMT_INT_MOD "u", XML_ErrorString(XML_GetErrorCode(m_parser)), XML_GetCurrentLineNumber(m_parser)));
+        {
+            enum XML_Error code = XML_GetErrorCode(m_parser);
+            if ((code == XML_ERROR_UNKNOWN_ENCODING) && !m_unknown_encoding.empty()) {
+                throw std::runtime_error(tmp_str("Unsupported XML encoding \"%s\" at line %" XML_FMT_INT_MOD "u", m_unknown_encoding.c_str(), XML_GetCurrentLineNumber(m_parser)));
+            }
+            throw std::runtime_error(tmp_str("%s at line %" XML_FMT_INT_MOD "u", XML_ErrorString(code), XML_GetCurrentLineNumber(m_parser)));
+        }
         return !m_stop_processing;
     }
 
@@ -451,6 +459,7 @@ class fb2_parser {
     void on_sequence(const std::string& str, const attributes_t& attrs);
 
     std::string m_f, m_m, m_l; // temps
+    std::string m_unknown_encoding;
 
     element_list_t m_path;
     graph_t        m_graph;

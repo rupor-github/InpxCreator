@@ -33,7 +33,8 @@ RED='[38;5;01m'
 YELLOW='[38;5;03m'
 
 readonly ALL_OFF BOLD BLUE GREEN RED YELLOW
-ARCH_INSTALLS="${ARCH_INSTALLS:-win64 linux}"
+# ARCH_INSTALLS="${ARCH_INSTALLS:-win64 linux}"
+ARCH_INSTALLS="${ARCH_INSTALLS:-win64}"
 
 if [ ! -d ${HOME}/result ]; then
 	print_error "directory for the result is not available. Exiting..."
@@ -74,6 +75,11 @@ for _mingw in ${ARCH_INSTALLS}; do
 		
 		print_msg1 "Building ${_arch} release"
 
+		if [ ! -z "${_msystem}" ]; then
+			print_msg2 "Preparing MariaDB embedded sources for ${_arch}"
+			./docker/get-maria.sh ${_arch}
+		fi
+
 		[ -d ${_dist} ] && rm -rf ${_dist}
 
 		[ -d Release_${_arch} ] && rm -rf Release_${_arch}
@@ -109,4 +115,3 @@ for _mingw in ${ARCH_INSTALLS}; do
 done
 
 exit 0
-

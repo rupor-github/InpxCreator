@@ -10,8 +10,8 @@ if(CMAKE_CROSSCOMPILING OR WIN32)
 		file(GLOB SEARCH_LIBS LIST_DIRECTORIES true "$ENV{MYSQL_DIR}/lib")
 	endif()
 else()
-	file(GLOB SEARCH_INCLUDES LIST_DIRECTORIES true "$ENV{HOME}/mariadb-*-linux-*/include/mysql" "${CMAKE_SOURCE_DIR}/mariadb-*-linux-*/include/mysql" "$ENV{MYSQL_DIR}/include")
-	file(GLOB SEARCH_LIBS LIST_DIRECTORIES true "$ENV{HOME}/mariadb-*-linux-*/lib" "${CMAKE_SOURCE_DIR}/mariadb-*-linux-*/lib" "$ENV{MYSQL_DIR}/lib")
+	set(SEARCH_INCLUDES "/usr/include/mariadb")
+	set(SEARCH_LIBS "/usr/lib/x86_64-linux-gnu")
 endif()
 
 if(CMAKE_CROSSCOMPILING OR WIN32)
@@ -32,7 +32,7 @@ else()
 endif()
 
 if(CMAKE_CROSSCOMPILING OR WIN32)
-	find_library(MARIADB_LIBRARIES NAMES mysqld
+	find_library(MARIADB_LIBRARIES NAMES mysqlserver mariadb
 		PATHS ${SEARCH_LIBS} NO_CMAKE_FIND_ROOT_PATH)
 else()
 	find_library(MARIADB_LIBRARIES NAMES mysqld
@@ -49,7 +49,7 @@ else()
 endif()
 
 if(MARIADB_INCLUDE_DIR)
-	file(READ "${MARIADB_INCLUDE_DIR}/mysql_version.h" _MARIADB_VERSION_CONTENTS)
+	file(READ "${MARIADB_INCLUDE_DIR}/mariadb_version.h" _MARIADB_VERSION_CONTENTS)
 	if(_MARIADB_VERSION_CONTENTS)
         	string(REGEX REPLACE "^.*MYSQL_SERVER_VERSION[\t\ ]+\"([0-9.]+)-MariaDB.*$" "\\1" MARIADB_VERSION "${_MARIADB_VERSION_CONTENTS}")
 	Endif()

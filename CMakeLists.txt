@@ -12,11 +12,11 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 # Project version number
-set(PRJ_VERSION_MAJOR 9)
-set(PRJ_VERSION_MINOR 50)
+set(PRJ_VERSION_MAJOR 10)
+set(PRJ_VERSION_MINOR 0)
 
 if(WIN32 AND NOT DEFINED ENV{MSYSTEM})
-    message(FATAL_ERROR "Currently unsuppored environment. Use MINGW for Windows builds. CMake willl exit now.")
+    message(FATAL_ERROR "Currently unsuppored environment. Use MINGW for Windows builds. CMake will exit now.")
 endif()
 
 if(CMAKE_CROSSCOMPILING OR WIN32)
@@ -28,9 +28,10 @@ if(CMAKE_CROSSCOMPILING OR WIN32)
         set(DEST_DIR "${PROJECT_SOURCE_DIR}/bin_win64")
         find_path(WINPTHREAD_DLL_DIR libwinpthread-1.dll)
     else()
-        message(FATAL_ERROR "Currently unsuppored environment. CMake willl exit now.")
+        message(FATAL_ERROR "Currently unsuppored environment. CMake will exit now.")
     endif()
-    # When cross-compiling on Ubuntu libwinpthreadi.dll is not needed
+    message(STATUS "Using winpthread dll from: ${WINPTHREAD_DLL_DIR}")
+    # When cross-compiling on Ubuntu libwinpthread.dll is not needed
     string(COMPARE EQUAL "WINPTHREAD_DLL_DIR-NOTFOUND" WINPTHREAD_DLL_DIR WINPTHREAD_DLL_FOUND)
     # I want static libraries everywhere (but for MySQL on Windows)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_SHARED_LIBRARY_SUFFIX}.a)
@@ -43,7 +44,7 @@ message(STATUS "Destination directory: ${DEST_DIR}")
 
 set(BUILD_SHARED_LIBS OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "** Debug mode")
@@ -86,22 +87,48 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/version.h.in" "${PROJECT_BINARY_DIR}
 
 set(Boost_USE_STATIC_LIBS ON)
 
-find_package(Boost 1.58.0 REQUIRED COMPONENTS "date_time" "program_options" "filesystem")
-find_package(Threads)
-if(DEFINED ENV{MYSQL_PROPER})
-    find_package(MySQL 5.7.17 REQUIRED EXACT)
-else()
-    find_package(MariaDB 10.1.26 REQUIRED EXACT)
-endif()
+find_package(Boost REQUIRED COMPONENTS "date_time" "program_options" "filesystem")
+find_package(Threads REQUIRED)
+find_package(MariaDB REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(EXPAT REQUIRED)
 find_package(Iconv REQUIRED)
 
+if(ICONV_SECOND_ARGUMENT_IS_CONST)
+    add_compile_definitions(ICONV_SECOND_ARGUMENT_IS_CONST=1)
+endif()
+
+message(STATUS "Using Iconv libraries: ${ICONV_LIBRARIES}")
+
 get_filename_component(MYSQL_NAME ${MYSQL_LIBRARIES} NAME_WE)
 
-if(Threads_FOUND AND "${CMAKE_THREAD_LIBS_INIT}" STREQUAL "")
-    message(FATAL_ERROR "We are using old version of database library which requires libpthread - not compatible with newer GLIBC")
+find_program(XXD_EXECUTABLE xxd REQUIRED)
+
+find_file(MARIADB_EMPTY_TEMPLATE_ARCHIVE NAMES mariadb-empty-template.zip 
+    PATHS "/usr/local/share/inpxcreator" "${CMAKE_SOURCE_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+
+if(NOT MARIADB_EMPTY_TEMPLATE_ARCHIVE AND DEFINED ENV{MARIADB_EMPTY_TEMPLATE_ARCHIVE})
+    if(EXISTS "$ENV{MARIADB_EMPTY_TEMPLATE_ARCHIVE}")
+        set(MARIADB_EMPTY_TEMPLATE_ARCHIVE "$ENV{MARIADB_EMPTY_TEMPLATE_ARCHIVE}")
+    endif()
 endif()
+
+if(NOT MARIADB_EMPTY_TEMPLATE_ARCHIVE)
+    message(FATAL_ERROR "Unable to locate mariadb-empty-template.zip. Build the Bookworm container image or set MARIADB_EMPTY_TEMPLATE_ARCHIVE.")
+endif()
+
+message(STATUS "Using MariaDB empty template archive from: ${MARIADB_EMPTY_TEMPLATE_ARCHIVE}")
+
+set(MARIADB_TEMPLATE_SOURCE "${PROJECT_BINARY_DIR}/mariadb_empty_template.cpp")
+add_custom_command(
+    OUTPUT ${MARIADB_TEMPLATE_SOURCE}
+    COMMAND ${XXD_EXECUTABLE} -i -n g_mariadb_empty_template_zip ${MARIADB_EMPTY_TEMPLATE_ARCHIVE} > ${MARIADB_TEMPLATE_SOURCE}
+    DEPENDS ${MARIADB_EMPTY_TEMPLATE_ARCHIVE}
+    COMMENT "Embedding MariaDB empty template archive")
+
+# if(Threads_FOUND AND "${CMAKE_THREAD_LIBS_INIT}" STREQUAL "")
+#     message(FATAL_ERROR "We are using old version of database library which requires libpthread - not compatible with newer GLIBC")
+# endif()
 
 # Prepare history file
 execute_process(COMMAND ${CMAKE_COMMAND} -E env ${GIT_EXECUTABLE} changelog --final-tag ${PRJ_VERSION_MAJOR}.${PRJ_VERSION_MINOR} --stdout OUTPUT_FILE ${PROJECT_BINARY_DIR}/history.txt ERROR_QUIET)
@@ -114,22 +141,40 @@ endif()
 
 include_directories("${PROJECT_SOURCE_DIR}")
 include_directories("${PROJECT_BINARY_DIR}")
+include_directories(${ICONV_INCLUDE_DIR})
 
 add_library(minizip ${SRCS_MINIZIP})
 
-set(SRCS_LIB2INPX lib2inpx/util.cpp lib2inpx/lib2inpx.cpp ${PROJECT_BINARY_DIR}/version.h)
+set(SRCS_LIB2INPX lib2inpx/util.cpp lib2inpx/lib2inpx.cpp ${MARIADB_TEMPLATE_SOURCE} ${PROJECT_BINARY_DIR}/version.h)
 add_executable(lib2inpx ${SRCS_LIB2INPX})
 add_dependencies(lib2inpx gen_git_ver)
 if(UNIX)
-    set(ADD_LIBS "${CMAKE_THREAD_LIBS_INIT} -lm -lrt -ldl -lcrypt -laio")
-    string(STRIP ${ADD_LIBS} ADD_LIBS)
-    if(ICONV_LIBRARIES MATCHES "libc")
-        target_link_libraries(lib2inpx minizip ${Boost_LIBRARIES} ${MYSQL_LIBRARIES} ${ZLIB_LIBRARIES} ${EXPAT_LIBRARIES} ${ADD_LIBS})
-    else()
-        target_link_libraries(lib2inpx minizip ${Boost_LIBRARIES} ${MYSQL_LIBRARIES} ${ZLIB_LIBRARIES} ${EXPAT_LIBRARIES} ${ICONV_LIBRARIES} ${ADD_LIBS})
-    endif()
+    find_library(LIBM_A NAMES libm.a REQUIRED)
+    find_library(LIBRT_A NAMES librt.a REQUIRED)
+    find_library(LIBDL_A NAMES libdl.a REQUIRED)
+    find_library(LIBCRYPT_A NAMES libcrypt.a REQUIRED)
+    find_library(LIBSSL_A NAMES libssl.a REQUIRED)
+    find_library(LIBCRYPTO_A NAMES libcrypto.a REQUIRED)
+    find_library(LIBAIO_A NAMES libaio.a REQUIRED)
+    find_library(LIBPCRE2_8_A NAMES libpcre2-8.a REQUIRED)
+    find_library(LIBNUMA_A NAMES libnuma.a REQUIRED)
+    find_library(LIBURING_A NAMES liburing.a REQUIRED)
+    set(ADD_LIBS
+        Threads::Threads
+        ${LIBM_A}
+        ${LIBRT_A}
+        ${LIBDL_A}
+        ${LIBCRYPT_A}
+        ${LIBSSL_A}
+        ${LIBCRYPTO_A}
+        ${LIBAIO_A}
+        ${LIBPCRE2_8_A}
+        ${LIBNUMA_A}
+        ${LIBURING_A}
+    )
+    target_link_libraries(lib2inpx minizip ${ICONV_LIBRARIES} ${Boost_LIBRARIES} ${MYSQL_LIBRARIES} ${ZLIB_LIBRARIES} ${EXPAT_LIBRARIES} ${ADD_LIBS})
 else()
-    target_link_libraries(lib2inpx minizip ${Boost_LIBRARIES} ${MYSQL_LIBRARIES} ${ZLIB_LIBRARIES} ${EXPAT_LIBRARIES} ${ICONV_LIBRARIES})
+    target_link_libraries(lib2inpx minizip ${ICONV_LIBRARIES} ${Boost_LIBRARIES} ${MYSQL_LIBRARIES} ${ZLIB_LIBRARIES} ${EXPAT_LIBRARIES})
 endif()
 
 install(FILES ${PROJECT_BINARY_DIR}/history.txt DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
@@ -143,7 +188,8 @@ if(CMAKE_CROSSCOMPILING OR WIN32)
         install(PROGRAMS ${WINPTHREAD_DLL_DIR}/libwinpthread-1.dll DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
     endif()
 endif()
-install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${DEST_DIR}/language CONFIGURATIONS Release)
+
+install(FILES "/usr/share/mysql/english/errmsg.sys" DESTINATION ${DEST_DIR}/language CONFIGURATIONS Release)
 install(TARGETS lib2inpx DESTINATION ${DEST_DIR} CONFIGURATIONS Release)
 # for debugging purposes
 if(CMAKE_CROSSCOMPILING OR WIN32)
@@ -152,7 +198,6 @@ if(CMAKE_CROSSCOMPILING OR WIN32)
         install(PROGRAMS ${WINPTHREAD_DLL_DIR}/libwinpthread-1.dll DESTINATION ${PROJECT_BINARY_DIR} CONFIGURATIONS Release Debug)
     endif()
 endif()
-install(FILES ${MYSQL_LIB_DIR}/../share/english/errmsg.sys DESTINATION ${PROJECT_BINARY_DIR}/language CONFIGURATIONS Release Debug)
 
 ########################################################################################################
 # go targets are always out of date, "go build" will figure it out

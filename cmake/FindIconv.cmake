@@ -1,30 +1,44 @@
-# - Try to find Iconv 
-# Once done this will define 
-# 
-#  ICONV_FOUND - system has Iconv 
-#  ICONV_INCLUDE_DIR - the Iconv include directory 
-#  ICONV_LIBRARIES - Link these to use Iconv 
+# - Try to find Iconv
+# Once done this will define
+#
+#  ICONV_FOUND - system has Iconv
+#  ICONV_INCLUDE_DIR - the Iconv include directory
+#  ICONV_LIBRARIES - Link these to use Iconv
 #  ICONV_SECOND_ARGUMENT_IS_CONST - the second argument for iconv() is const
-# 
+#
 include(CheckCXXSourceCompiles)
 
-IF (ICONV_INCLUDE_DIR AND ICONV_LIBRARIES)
+if(ICONV_INCLUDE_DIR AND ICONV_LIBRARIES)
   # Already in cache, be silent
-  SET(ICONV_FIND_QUIETLY TRUE)
-ENDIF (ICONV_INCLUDE_DIR AND ICONV_LIBRARIES)
+  set(ICONV_FIND_QUIETLY TRUE)
+endif()
 
-FIND_PATH(ICONV_INCLUDE_DIR iconv.h) 
- 
-FIND_LIBRARY(ICONV_LIBRARIES NAMES iconv libiconv libiconv-2 c)
- 
-IF(ICONV_INCLUDE_DIR AND ICONV_LIBRARIES) 
-   SET(ICONV_FOUND TRUE) 
-ENDIF(ICONV_INCLUDE_DIR AND ICONV_LIBRARIES) 
+if(NOT CMAKE_CROSSCOMPILING AND NOT WIN32 AND EXISTS "/opt/libiconv-static")
+  find_path(ICONV_INCLUDE_DIR iconv.h PATHS /opt/libiconv-static/include NO_DEFAULT_PATH)
+  find_library(ICONV_LIBICONV NAMES libiconv.a PATHS /opt/libiconv-static/lib NO_DEFAULT_PATH)
+  find_library(ICONV_LIBCHARSET NAMES libcharset.a PATHS /opt/libiconv-static/lib NO_DEFAULT_PATH)
+
+  if(ICONV_INCLUDE_DIR AND ICONV_LIBICONV AND ICONV_LIBCHARSET)
+    set(ICONV_LIBRARIES ${ICONV_LIBICONV} ${ICONV_LIBCHARSET})
+  endif()
+endif()
+
+if(NOT ICONV_INCLUDE_DIR)
+  find_path(ICONV_INCLUDE_DIR iconv.h)
+endif()
+
+if(NOT ICONV_LIBRARIES)
+  find_library(ICONV_LIBRARIES NAMES iconv libiconv libiconv-2 c)
+endif()
+
+if(ICONV_INCLUDE_DIR AND ICONV_LIBRARIES)
+  set(ICONV_FOUND TRUE)
+endif()
 
 set(CMAKE_REQUIRED_INCLUDES ${ICONV_INCLUDE_DIR})
 set(CMAKE_REQUIRED_LIBRARIES ${ICONV_LIBRARIES})
 
-IF(ICONV_FOUND)
+if(ICONV_FOUND)
   check_cxx_source_compiles("
   #include <iconv.h>
   int main(){
@@ -37,23 +51,25 @@ IF(ICONV_FOUND)
     return 0;
   }
 " ICONV_SECOND_ARGUMENT_IS_CONST )
-ENDIF(ICONV_FOUND)
+endif()
 
 set(CMAKE_REQUIRED_INCLUDES)
 set(CMAKE_REQUIRED_LIBRARIES)
 
-IF(ICONV_FOUND) 
-  IF(NOT ICONV_FIND_QUIETLY) 
-    MESSAGE(STATUS "Found Iconv: ${ICONV_LIBRARIES}") 
-  ENDIF(NOT ICONV_FIND_QUIETLY) 
-ELSE(ICONV_FOUND) 
-  IF(Iconv_FIND_REQUIRED) 
-    MESSAGE(FATAL_ERROR "Could not find Iconv") 
-  ENDIF(Iconv_FIND_REQUIRED) 
-ENDIF(ICONV_FOUND)
+if(ICONV_FOUND)
+  if(NOT ICONV_FIND_QUIETLY)
+    message(STATUS "Found Iconv: ${ICONV_LIBRARIES}")
+  endif()
+else()
+  if(Iconv_FIND_REQUIRED)
+    message(FATAL_ERROR "Could not find Iconv")
+  endif()
+endif()
 
-MARK_AS_ADVANCED(
+mark_as_advanced(
   ICONV_INCLUDE_DIR
+  ICONV_LIBICONV
+  ICONV_LIBCHARSET
   ICONV_LIBRARIES
   ICONV_SECOND_ARGUMENT_IS_CONST
 )

@@ -21,6 +21,7 @@
 #include <regex>
 #include <vector>
 #include <map>
+#include <array>
 
 #include <boost/utility.hpp>
 #include <boost/scoped_array.hpp>
@@ -64,6 +65,21 @@ const char* wide_locale_name =
 #else
     "UCS-4LE//IGNORE";
 #endif
+
+#ifdef ICONV_SECOND_ARGUMENT_IS_CONST
+typedef const char* iconv_input_ptr;
+#else
+typedef char* iconv_input_ptr;
+#endif
+
+static iconv_input_ptr iconv_input(const char* s)
+{
+#ifdef ICONV_SECOND_ARGUMENT_IS_CONST
+    return s;
+#else
+    return const_cast<char*>(s);
+#endif
+}
 
 using namespace std;
 
@@ -230,7 +246,7 @@ wstring utf8_to_wchar(const string& str)
     size_t                       len = str.length();
     boost::scoped_array<wchar_t> buf(new wchar_t[len + 1]);
 
-    char*  pin     = (char*)str.c_str();
+    iconv_input_ptr pin = iconv_input(str.c_str());
     size_t inbytes = len;
 
     while (inbytes > 0) {
@@ -270,7 +286,7 @@ string wchar_to_utf8(const wstring& str)
 
     boost::scoped_array<char> buf(new char[len_out + 1]);
 
-    char*  pin     = (char*)str.c_str();
+    iconv_input_ptr pin = reinterpret_cast<iconv_input_ptr>(const_cast<wchar_t*>(str.c_str()));
     size_t inbytes = len * sizeof(wchar_t);
 
     while (inbytes > 0) {
@@ -316,12 +332,60 @@ zlib_filefunc64_def unzip::m_ffunc;
 
 #ifndef DO_NOT_INCLUDE_PARSER
 
-// TODO: for simplicity we are assuming Intel incoding
+static int decode_utf_le_codepoint(const char* bytes, size_t length)
+{
+    const unsigned char* data = reinterpret_cast<const unsigned char*>(bytes);
+
+    switch (length) {
+        case 2:
+            return data[0] | (data[1] << 8);
+        case 4:
+            return data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+        default:
+            return -1;
+    }
+}
+
+typedef array<int, 256> xml_encoding_map_t;
+
+static bool build_xml_encoding_map(iconv_t cd, const XML_Char* name, xml_encoding_map_t& map)
+{
+    for (size_t i = 0; i < map.size(); i++) {
+
+        iconv(cd, NULL, NULL, NULL, NULL);
+
+        size_t inbytes = 1;
+        char   in      = i;
+        iconv_input_ptr pin = iconv_input(&in);
+
+        size_t outbytes = 4;
+        char   out[4]   = {0, 0, 0, 0};
+        char*  pout     = &out[0];
+
+        size_t res = iconv(cd, &pin, &inbytes, &pout, &outbytes);
+
+        if ((size_t)-1 == res) {
+            if (errno == EINVAL) {
+                map[i] = -(int)sizeof(wchar_t);
+            } else {
+                map[i] = -1;
+            }
+        } else {
+            map[i] = decode_utf_le_codepoint(out, 4 - outbytes);
+            if (-1 == map[i]) {
+                DOUT("DBG*** unsupported encoding (%s) length %d for: %02x -> [%02x,%02x,%02x,%02x]\n", name, 4 - outbytes, (unsigned int)i, out[0], out[1], out[2], out[3]);
+            }
+        }
+    }
+
+    return true;
+}
+
 static int XMLCALL xml_convert(void* data, const char* s)
 {
     size_t inbytes = 1;
     char   in      = *s;
-    char*  pin     = &in;
+    iconv_input_ptr pin = iconv_input(&in);
 
     size_t outbytes = 4;
     char   out[4]   = {0, 0, 0, 0};
@@ -333,18 +397,9 @@ static int XMLCALL xml_convert(void* data, const char* s)
         return -1;
     }
 
-    int ret = 0;
-    switch (4 - outbytes) {
-        case 2:
-            ret = *(short int*)&out[0];
-            break;
-        case 4:
-            ret = *(int*)&out[0];
-            break;
-        default:
-            ret = -1;
-            DOUT("DBG*** unsupported conversion length %d for: %s -> [%02x,%02x,%02x,%02x]\n", 4 - outbytes, s, out[0], out[1], out[2], out[3]);
-            break;
+    int ret = decode_utf_le_codepoint(out, 4 - outbytes);
+    if (-1 == ret) {
+        DOUT("DBG*** unsupported conversion length %d for: %s -> [%02x,%02x,%02x,%02x]\n", 4 - outbytes, s, out[0], out[1], out[2], out[3]);
     }
     return ret;
 }
@@ -353,49 +408,29 @@ static void xml_convert_release(void* data) { iconv_close(data); }
 
 int fb2_parser::on_unknown_encoding(const XML_Char* name, XML_Encoding* info)
 {
+    static map<string, xml_encoding_map_t> encoding_cache;
+
     iconv_t cd;
 
     if ((cd = iconv_open(wide_locale_name, name)) == (iconv_t)-1) {
         DOUT("DBG*** unsupported encoding: %s\n", name);
+        m_unknown_encoding = name;
         return XML_STATUS_ERROR;
     }
 
-    for (size_t i = 0; i < 256; i++) {
+    m_unknown_encoding.clear();
 
-        iconv(cd, NULL, NULL, NULL, NULL);
-
-        size_t inbytes = 1;
-        char   in      = i;
-        char*  pin     = &in;
-
-        size_t outbytes = 4;
-        char   out[4]   = {0, 0, 0, 0};
-        char*  pout     = &out[0];
-
-        size_t res = iconv(cd, &pin, &inbytes, &pout, &outbytes);
-
-        if ((size_t)-1 == res) {
-            if (errno == EINVAL) {
-                // Really? I have no way of knowing what the lenght of variable encoding would be
-                info->map[i] = -(int)sizeof(wchar_t);
-            } else {
-                info->map[i] = -1;
-            }
-        } else {
-            switch (4 - outbytes) {
-                case 2:
-                    info->map[i] = *(short int*)&out[0];
-                    break;
-                case 4:
-                    info->map[i] = *(int*)&out[0];
-                    break;
-                default:
-                    info->map[i] = -1;
-                    DOUT("DBG*** unsupported encoding (%s) length %d for: %02x -> [%02x,%02x,%02x,%02x]\n", name, 4 - outbytes, i, out[0], out[1], out[2], out[3]);
-                    break;
-            }
-        }
+    map<string, xml_encoding_map_t>::const_iterator cached = encoding_cache.find(name);
+    if (cached == encoding_cache.end()) {
+        xml_encoding_map_t generated;
+        build_xml_encoding_map(cd, name, generated);
+        cached = encoding_cache.insert(make_pair(string(name), generated)).first;
     }
+
+    for (size_t i = 0; i < cached->second.size(); i++) {
+        info->map[i] = cached->second[i];
+    }
+
     info->data    = cd;
     info->convert = xml_convert;
     info->release = xml_convert_release;

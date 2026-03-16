@@ -1,3 +1,6 @@
+podman pull --platform linux/arm64/v8 docker.io/arm64v8/golang:1.26.1-bookworm
+podman pull --platform linux/amd64 docker.io/amd64/golang:1.26.1-bookworm
+
 # to build builder image
 podman build -t inpxc:latest . -f ./Dockerfile.build
 

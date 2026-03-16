@@ -5,14 +5,19 @@
 #else
 #include <sys/io.h>
 #include <sys/stat.h>
+#include <sys/utsname.h>
 #endif
 #include <stdio.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <time.h>
 #include <limits.h>
 
 #include <mysql.h>
-#include <mysql_version.h>
+
+#ifndef MARIADB_BASE_VERSION
+#error "MariaDB headers are required to build lib2inpx"
+#endif
 
 #include <algorithm>
 #include <string>
@@ -71,6 +76,9 @@ static bool g_clean_when_done  = false;
 static bool g_verbose          = false;
 
 static bool g_mysql_cfg_created = false;
+
+extern unsigned char g_mariadb_empty_template_zip[];
+extern unsigned int  g_mariadb_empty_template_zip_len;
 
 enum checking_type { eFileExt = 0, eFileType, eIgnore };
 static checking_type g_strict = eFileExt;
@@ -133,32 +141,53 @@ static const char* dummy = "dummy:"
                            "\x04"
                            "\r\n";
 
-#ifdef MARIADB_BASE_VERSION
-static const char* options_pattern[] = {"%s", "--defaults-file=%sdata/mysql.cfg", "--language=%s/language", "--datadir=%sdata", "--skip-grant-tables", "--innodb_data_home_dir=%sdata/dbtmp_%s",
-    "--innodb_log_group_home_dir=%sdata/dbtmp_%s", "--innodb_tmpdir=%sdata/dbtmp_%s", "--innodb_stats_persistent=0", "--log_warnings=2", NULL};
-#else
-static const char* options_pattern[] = {"%s", "--defaults-file=%sdata/mysql.cfg", "--language=%s/language", "--datadir=%sdata", "--skip-grant-tables", "--innodb_data_home_dir=%s/data/dbtmp_%s",
-    "--innodb_log_group_home_dir=%sdata/dbtmp_%s", "--innodb_tmpdir=%sdata/dbtmp_%s", "--log_syslog=0", NULL};
+static vector<const char*> build_options_pattern()
+{
+    vector<const char*> patterns = {
+        "%s",
+        "--defaults-file=%sdata/mysql.cfg",
+        "--language=%s/language",
+        "--datadir=%sdata",
+        "--skip-grant-tables",
+        "--innodb_data_home_dir=%sdata/dbtmp_%s",
+        "--innodb_log_group_home_dir=%sdata/dbtmp_%s",
+        "--innodb_tmpdir=%sdata/dbtmp_%s",
+        "--innodb_stats_persistent=0",
+        "--log_warnings=2"
+    };
+
+#ifndef _WIN32
+    struct utsname kernel_info;
+    int kernel_major = 0;
+
+    // disable native AIO for kernels older than 6.0, as it may cause performance degradation and even hangs on such kernels
+    if (uname(&kernel_info) != 0 || sscanf(kernel_info.release, "%d", &kernel_major) != 1 || kernel_major < 6) {
+        patterns.push_back("--innodb_use_native_aio=0");
+    }
 #endif
 
+    patterns.push_back(NULL);
+    return patterns;
+}
+
 class mysql_connection {
-    enum { num_options = sizeof(options_pattern) / sizeof(char*) };
-
-    char* m_options[num_options];
-
   public:
     mysql_connection(const char* module_path, const char* path, const char* name, const char* dbname) : m_mysql(NULL)
     {
         if (0 == m_initialized) {
+            vector<const char*> options_pattern = build_options_pattern();
+
+            m_options.clear();
+            m_options.reserve(options_pattern.size());
 
             if (g_verbose) {
                 wcout << endl << "MySQL options: " << endl << flush;
             }
 
-            for (int ni = 0; ni < num_options; ++ni) {
+            for (size_t ni = 0; ni < options_pattern.size(); ++ni) {
                 const char* pattern = options_pattern[ni];
                 if (NULL == pattern) {
-                    m_options[ni] = NULL;
+                    m_options.push_back(NULL);
                     break;
                 }
                 char* mem = new char[PATH_MAX * 2];
@@ -170,12 +199,12 @@ class mysql_connection {
                 } else {
                     sprintf(mem, pattern, path, dbname);
                 }
-                m_options[ni] = mem;
+                m_options.push_back(mem);
                 if (g_verbose) {
                     wcout << "Option " << setw(4) << ni << ": " << utf8_to_wchar(mem) << endl << flush;
                 }
             }
-            if (mysql_library_init(num_options - 1, m_options, NULL)) {
+            if (mysql_library_init(m_options.size() - 1, m_options.data(), NULL)) {
                 throw runtime_error(tmp_str("Could not initialize MySQL library (%s)", mysql_error(m_mysql)));
             }
 
@@ -188,7 +217,7 @@ class mysql_connection {
         }
         ++m_initialized;
 
-        if (NULL == mysql_real_connect(m_mysql, NULL, NULL, NULL, NULL, 0, NULL, 0)) {
+        if (NULL == mysql_real_connect(m_mysql, NULL, "root", NULL, NULL, 0, NULL, 0)) {
             throw runtime_error(tmp_str("Unable to connect (%s)", mysql_error(m_mysql)));
         }
     }
@@ -203,13 +232,14 @@ class mysql_connection {
             }
 
             if (0 == m_initialized) {
-                for (int ni = 0; ni < num_options; ++ni) {
+                for (size_t ni = 0; ni < m_options.size(); ++ni) {
                     char* pattern = m_options[ni];
                     if (NULL == pattern) {
                         break;
                     }
                     delete[] pattern;
                 }
+                m_options.clear();
                 mysql_library_end();
             }
         }
@@ -237,11 +267,13 @@ class mysql_connection {
 
   private:
     static int m_initialized;
+    static vector<char*> m_options;
 
     MYSQL* m_mysql;
 };
 
 int mysql_connection::m_initialized = 0;
+vector<char*> mysql_connection::m_options;
 
 class mysql_results {
   public:
@@ -297,18 +329,72 @@ bool is_backup(const string& file)
 
 void prepare_mysql(const char* path, const string& dbname)
 {
-    bool rc = true;
-
-    if (0 == access(path, 6)) {
+    if (0 != access(path, 6)) {
         fs::create_directories(path);
     }
 
-    string config = string(path) + "/data";
-    if (0 != access(config.c_str(), 6)) {
-        fs::create_directories(config.c_str());
+    string data_dir = string(path) + "/data";
+    if (0 != access(data_dir.c_str(), 6)) {
+        fs::create_directories(data_dir.c_str());
     }
 
-    config = string(path) + "/data/mysql.cfg";
+    string mysql_dir = data_dir + "/mysql";
+    if (0 != access(mysql_dir.c_str(), 6)) {
+        string archive_path = data_dir + "/mariadb-empty-template.zip";
+        ofstream archive(archive_path.c_str(), ios::binary | ios::trunc);
+
+        if (!archive) {
+            throw runtime_error(tmp_str("Unable to create file \"%s\"", archive_path.c_str()));
+        }
+
+        archive.write(reinterpret_cast<const char*>(g_mariadb_empty_template_zip), g_mariadb_empty_template_zip_len);
+        if (!archive) {
+            throw runtime_error(tmp_str("Unable to write file \"%s\"", archive_path.c_str()));
+        }
+        archive.close();
+
+        {
+            unzip uz(archive_path);
+
+            for (unsigned int ni = 0; ni < uz.count(); ++ni) {
+                string entry_name = uz.current();
+
+                if (!entry_name.empty() && (entry_name.back() == '/')) {
+                    fs::create_directories((data_dir + "/" + entry_name).c_str());
+                } else {
+                    string entry_path = data_dir + "/" + entry_name;
+                    size_t pos = entry_path.find_last_of('/');
+                    if (string::npos != pos) {
+                        fs::create_directories(entry_path.substr(0, pos).c_str());
+                    }
+
+                    unzip_reader ur(uz);
+                    ofstream out(entry_path.c_str(), ios::binary | ios::trunc);
+                    if (!out) {
+                        throw runtime_error(tmp_str("Unable to create file \"%s\"", entry_path.c_str()));
+                    }
+
+                    char buffer[8192];
+                    int bytes = 0;
+                    while (0 < (bytes = ur(buffer, sizeof(buffer)))) {
+                        out.write(buffer, bytes);
+                    }
+
+                    if (!out) {
+                        throw runtime_error(tmp_str("Unable to write file \"%s\"", entry_path.c_str()));
+                    }
+                }
+
+                if (ni < (uz.count() - 1)) {
+                    uz.move_next();
+                }
+            }
+        }
+
+        fs::remove(archive_path);
+    }
+
+    string config = data_dir + "/mysql.cfg";
     if (0 != access(config.c_str(), 6)) {
         ofstream out(config.c_str());
 
@@ -328,7 +414,7 @@ void prepare_mysql(const char* path, const string& dbname)
     }
 #endif
 
-    config = string(path) + "/data/dbtmp_" + dbname;
+    config = data_dir + "/dbtmp_" + dbname;
     if (0 != access(config.c_str(), 6)) {
         fs::create_directories(config.c_str());
     }
@@ -1723,12 +1809,22 @@ int main(int argc, char* argv[])
                 fs::remove(file_to_del);
             }
 
-#ifdef MARIADB_BASE_VERSION
             file_to_del.assign(data_dir + "/aria_log.00000001");
             fs::remove(file_to_del);
             file_to_del.assign(data_dir + "/aria_log_control");
             fs::remove(file_to_del);
-#endif
+
+            file_to_del.assign(data_dir + "/ib_logfile0");
+            fs::remove(file_to_del);
+            file_to_del.assign(data_dir + "/ibdata1");
+            fs::remove(file_to_del);
+
+            string mysql_dir = data_dir + "/mysql/";
+            fs::remove_all(mysql_dir.c_str());
+            string sys_dir = data_dir + "/sys/";
+            fs::remove_all(sys_dir.c_str());
+            string performance_schema_dir = data_dir + "/performance_schema/";
+            fs::remove_all(performance_schema_dir.c_str());
 
             if (fs::is_empty(data_dir)) {
                 fs::remove(data_dir);
