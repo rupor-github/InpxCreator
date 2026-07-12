@@ -3,14 +3,14 @@
 > [!CAUTION]
 > ## As of version 9.50 this project has reached End of Life
 >
-> **InpxCreator** is no longer under development. This repository will be archived soon.
+> **InpxCreator** is no longer under development. This repository is now archived.
 >
 > ### Successor project
 >
 > This project has been superseded by purpose-built replacement that offer better functionality and ongoing support:
 >
 > - **[metabib](https://github.com/rupor-github/metabib)** —  modern multi platform meta data extractor from Flibusta-style SQL dumps and FB2 archives into
-JSON Lines (offers legacy MyHomeLib INPX support).
+JSON Lines (offers legacy MyHomeLib INPX support as well as support for FLibrary extensions).
 >
 > All users are strongly encouraged to migrate.
 
