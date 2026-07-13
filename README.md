@@ -1,4 +1,4 @@
-# InpxCreator
+# [DEPRECATED] InpxCreator
 
 > [!CAUTION]
 > ## As of version 9.50 this project has reached End of Life
